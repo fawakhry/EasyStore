@@ -2,8 +2,5 @@
 /* V3 edit/cascade polish */
 .sectionHead{display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap}.small{font-size:13px}.smallBtn{padding:8px 14px;font-size:13px}.mini{border:1px solid #b7ded6;background:#eefbf8;color:#075e54;border-radius:12px;padding:6px 12px;font-weight:800;cursor:pointer}.mini:hover{background:#d9f5ee}.field input[readonly]{background:#f7fbfb;color:#075e54;font-weight:700}.tablewrap table td:last-child{white-space:nowrap}
 
-/* EasyStore Patch 22 */
-.laser-ai-box{border:1px solid rgba(14,165,233,.25);background:linear-gradient(180deg,#f0f9ff,#ffffff)}
-.laser-ai-box h3{color:#075985}
-.laser-ai-box .pill{display:inline-flex;align-items:center;padding:10px 14px;border-radius:999px;background:#e0f2fe;color:#075985;font-weight:800}
-.profit-good{color:#047857;font-weight:900}.profit-bad{color:#dc2626;font-weight:900}
+/* Batch 24 */
+.dangerMini{border-color:#fecaca!important;background:#fff1f2!important;color:#b91c1c!important}.tabs .tab{margin-bottom:4px}.top h1:after{content:"  • Batch 24";font-size:12px;opacity:.8}

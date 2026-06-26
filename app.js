@@ -76,9 +76,16 @@
   function materialOptions(filter){return (st.data.materials||[]).filter(r=>!filter||filter(r)).map(r=>`<option value="${esc(materialName(r))}">${esc(materialName(r))} - ${esc(r.department||'')}</option>`).join('')}
   function templateOptions(){return filteredTemplates().map((r,i)=>`<option value="${i}">${esc(templateName(r))} - ${esc(r.department||'')}</option>`).join('')}
   function filteredTemplates(){return (st.data.templates||[]).filter(r=>isFull()||['عام','مشترك',dept()].includes(String(r.department||'')))}
-  function tabs(){const list=[]; if(isFull())list.push(['kitchen','مطبخ الحسابات'],['raw','خامات أساسية'],['recipe','أصناف بمكونات'],['templates','بنود الفواتير'],['stock','المخزون'],['reports','تقارير']); else if(isPrint()||isLaser())list.push(['dept','فاتورة القسم'],['waste','هوالك القسم']); else if(isFinal())list.push(['final','تقفيل الفاتورة'],['deptView','أجزاء الأقسام']); else list.push(['dept','فاتورة القسم']); if(!st.active)st.active=list[0][0]; return '<div class="tabs">'+list.map(x=>`<button class="tab ${st.active===x[0]?'active':''}" onclick="ES.go('${x[0]}')">${x[1]}</button>`).join('')+'</div>'}
-  function render(){app.innerHTML=`<div class="wrap"><div class="top"><div><h1>💰 إيزي ستور - مطبخ حسابات مطبعجي V4</h1><p>خامات أساسية ← أصناف بمكونات ← بنود تظهر في فواتير الموظفين ← خصم مخزون تلقائي.</p></div><div class="actions"><span class="badge">${esc(st.user.name)} / ${modeText()}</span><button class="btn secondary" onclick="ES.refresh()">تحديث</button><button class="btn secondary" onclick="window.close()">إغلاق</button></div></div><div id="mainMsg" class="msg"></div>${tabs()}<div id="screen"></div></div>`; renderScreen();}
-  function renderScreen(){if(!$('screen'))return; const a=st.active; $('screen').innerHTML=a==='kitchen'?screenKitchen():a==='raw'?screenRaw():a==='recipe'?screenRecipe():a==='templates'?screenTemplates():a==='dept'?screenDept():a==='final'?screenFinal():a==='stock'?screenStock():a==='reports'?screenReports():a==='waste'?screenWaste():deptTable();}
+  function tabs(){const list=[]; if(isFull())list.push(['dashboard','لوحة الحسابات'],['items','الأصناف'],['purchase','فواتير الشراء'],['sales','فواتير المبيعات'],['stock','المخزون'],['reports','التقارير'],['kitchen','مطبخ الحسابات'],['raw','خامات أساسية'],['recipe','أصناف بمكونات'],['templates','بنود الفواتير']); else if(isPrint()||isLaser())list.push(['dept','فاتورة القسم'],['waste','هوالك القسم']); else if(isFinal())list.push(['final','تقفيل الفاتورة'],['sales','فواتير المبيعات'],['deptView','أجزاء الأقسام']); else list.push(['dept','فاتورة القسم']); if(!st.active)st.active=list[0][0]; return '<div class="tabs">'+list.map(x=>`<button class="tab ${st.active===x[0]?'active':''}" onclick="ES.go('${x[0]}')">${x[1]}</button>`).join('')+'</div>'}
+  function render(){app.innerHTML=`<div class="wrap"><div class="top"><div><h1>💰 إيزي ستور مطبعجي V6 - برنامج الحسابات الكامل</h1><p>أصناف وفواتير شراء ومبيعات ومخزون وتقارير + مطبخ الحسابات والخامات المركبة.</p></div><div class="actions"><span class="badge">${esc(st.user.name)} / ${modeText()}</span><button class="btn secondary" onclick="ES.refresh()">تحديث</button><button class="btn secondary" onclick="window.close()">إغلاق</button></div></div><div id="mainMsg" class="msg"></div>${tabs()}<div id="screen"></div></div>`; renderScreen();}
+  function renderScreen(){if(!$('screen'))return; const a=st.active; $('screen').innerHTML=a==='dashboard'?screenDashboard():a==='items'?screenItems():a==='purchase'?screenPurchase():a==='sales'?screenSales():a==='kitchen'?screenKitchen():a==='raw'?screenRaw():a==='recipe'?screenRecipe():a==='templates'?screenTemplates():a==='dept'?screenDept():a==='final'?screenFinal():a==='stock'?screenStock():a==='reports'?screenReports():a==='waste'?screenWaste():deptTable();}
+
+  function es24LocalList(k){try{return JSON.parse(localStorage.getItem(k)||'[]')}catch(e){return []}}
+  function es24SaveLocal(k,a){localStorage.setItem(k,JSON.stringify(a||[]))}
+  function screenDashboard(){return `<div class="card"><h2>لوحة الحسابات</h2><div class="grid four"><button class="btn" onclick="ES.go('items')">الأصناف</button><button class="btn" onclick="ES.go('purchase')">فواتير الشراء</button><button class="btn" onclick="ES.go('sales')">فواتير المبيعات</button><button class="btn" onclick="ES.go('kitchen')">مطبخ الحسابات</button></div><div class="hint">البرنامج كامل: الأصناف، فواتير الشراء، فواتير المبيعات، المخزون، التقارير، ومطبخ الخامات المركبة.</div></div>${screenReports()}`}
+  function screenItems(){return `<div class="card"><h2>الأصناف</h2><div class="hint small">دي الأصناف والبنود التي تظهر للموظفين في الفواتير. مطبخ الحسابات يبني تكلفة الصنف، وهنا يظهر سعره وبياناته.</div></div>${templatesTable()}${materialsTable()}`}
+  function screenPurchase(){const rows=es24LocalList('ES24_PURCHASES');return `<div class="card"><h2>فاتورة شراء</h2><div class="grid four"><div class="field"><label>رقم الفاتورة</label><input id="purNo"></div><div class="field"><label>المورد</label><input id="purSupplier"></div><div class="field"><label>الخامة</label><select id="purMat"><option></option>${materialOptions()}</select></div><div class="field"><label>الكمية</label><input id="purQty" type="number"></div></div><div class="grid three"><div class="field"><label>سعر الوحدة</label><input id="purUnit" type="number"></div><div class="field"><label>ملاحظات</label><input id="purNotes"></div><div class="field"><label>&nbsp;</label><button class="btn" onclick="ES.savePurchase()">حفظ فاتورة الشراء</button></div></div><div id="purMsg"></div></div><div class="card"><h3>فواتير شراء محفوظة</h3><div class="tablewrap"><table><thead><tr><th>الفاتورة</th><th>المورد</th><th>الخامة</th><th>الكمية</th><th>الوحدة</th><th>الإجمالي</th></tr></thead><tbody>${rows.map(r=>`<tr><td>${esc(r.no)}</td><td>${esc(r.supplier)}</td><td>${esc(r.material)}</td><td>${esc(r.qty)}</td><td>${money(r.unit)}</td><td>${money(r.total)}</td></tr>`).join('')||'<tr><td colspan="6">لا توجد فواتير شراء.</td></tr>'}</tbody></table></div></div>`}
+  function screenSales(){const rows=es24LocalList('ES24_SALES');return `<div class="card"><h2>فاتورة مبيعات</h2><div class="grid four"><div class="field"><label>رقم الفاتورة</label><input id="salNo"></div><div class="field"><label>العميل</label><input id="salCustomer"></div><div class="field"><label>البند</label><select id="salItem"><option></option>${templateOptions()}</select></div><div class="field"><label>الكمية</label><input id="salQty" type="number"></div></div><div class="grid three"><div class="field"><label>سعر الوحدة</label><input id="salUnit" type="number"></div><div class="field"><label>ملاحظات</label><input id="salNotes"></div><div class="field"><label>&nbsp;</label><button class="btn" onclick="ES.saveSale()">حفظ فاتورة المبيعات</button></div></div><div id="salMsg"></div></div><div class="card"><h3>فواتير مبيعات محفوظة</h3><div class="tablewrap"><table><thead><tr><th>الفاتورة</th><th>العميل</th><th>البند</th><th>الكمية</th><th>الوحدة</th><th>الإجمالي</th></tr></thead><tbody>${rows.map(r=>`<tr><td>${esc(r.no)}</td><td>${esc(r.customer)}</td><td>${esc(r.item)}</td><td>${esc(r.qty)}</td><td>${money(r.unit)}</td><td>${money(r.total)}</td></tr>`).join('')||'<tr><td colspan="6">لا توجد فواتير مبيعات.</td></tr>'}</tbody></table></div></div>${finalTable()}`}
   function screenKitchen(){return `<div class="card"><h2>مطبخ الحسابات</h2><div class="hint">ابدأ بتسجيل الخامات الأساسية: رول لامينشن، رول ورق، فوتوبلوك، خشب. بعد ذلك أنشئ أصناف بمكونات مثل قطعة لامينشن 15×21، كارت 15×21، ثم تابلوه 15×21. عند استخدام البند في الفاتورة يتم خصم الاستهلاك تلقائياً من الرول أو الخامة الأصلية.</div><div class="grid four"><button class="btn" onclick="ES.go('raw')">1) خامات أساسية</button><button class="btn" onclick="ES.go('recipe')">2) أصناف بمكونات</button><button class="btn" onclick="ES.go('templates')">3) بنود الفواتير</button><button class="btn secondary" onclick="ES.initSheets()">تجهيز الشيتات</button></div></div>${screenReports()}`}
   function screenRaw(){if(!isFull())return '<div class="card"><div class="msg bad">تسجيل الخامات الأساسية عند ضياء فقط.</div></div>'; return `<div class="card"><h2>خامة أساسية في المخزن</h2><div class="hint small">اكتب أو عدّل الخامة الأساسية. عند تغيير السعر أو المقاس اضغط حفظ ثم تحديث الأسعار؛ سيتم إعادة حساب كل الأصناف المرتبطة بنفس المكونات.</div><input id="rawId" type="hidden"><div class="grid four"><div class="field"><label>القسم</label><select id="rawDept"><option>طباعة</option><option>ليزر</option><option>مشترك</option></select></div><div class="field"><label>اسم الخامة</label><input id="rawName" placeholder="رول لامينشن / رول ورق 30 / فوتوبلوك 15×21"></div><div class="field"><label>الوحدة</label><input id="rawUnit" placeholder="رول / شيت / قطعة"></div><div class="field"><label>رصيد المخزن</label><input id="rawStock" type="number" placeholder="مثلاً 1 رول"></div></div><div class="grid four"><div class="field"><label>سعر الوحدة</label><input id="rawCost" type="number"></div><div class="field"><label>سعر بيع رسمي اختياري</label><input id="rawSale" type="number"></div><div class="field"><label>عرض الخام بالسم</label><input id="rawW" type="number" placeholder="مثلاً 30"></div><div class="field"><label>طول الخام بالسم</label><input id="rawH" type="number" placeholder="مثلاً 5000 لرول 50 متر"></div></div><div class="grid two"><div class="field"><label>حد تنبيه النقص</label><input id="rawMin" type="number"></div><div class="field"><label>ملاحظات</label><input id="rawNotes"></div></div><div class="actions"><button class="btn" onclick="ES.saveRaw()">حفظ / تحديث الخامة الأساسية</button><button class="btn secondary" onclick="ES.recalcMaterials()">تحديث أسعار كل البنود المرتبطة</button><button class="btn secondary" onclick="ES.clearRawForm()">خامة جديدة</button></div><div id="rawMsg"></div></div>${materialsTable()}`}
   function screenRecipe(){if(!isFull())return '<div class="card"><div class="msg bad">إنشاء الأصناف بمكونات عند ضياء فقط.</div></div>'; return `<div class="card"><h2>صنف / خامة بمكونات</h2><div class="hint small">الصنف المركب محفوظ بمعادلاته. عند تعديل سعر أو مقاس أي خامة أصلية، اضغط تحديث الأسعار وسيعاد حساب تكلفة الأصناف المركبة تلقائياً.</div><input id="recId" type="hidden"><div class="grid four"><div class="field"><label>القسم</label><select id="recDept"><option>طباعة</option><option>ليزر</option><option>مشترك</option></select></div><div class="field"><label>اسم الصنف المحفوظ</label><input id="recName" placeholder="قطعة لامينشن 15×21"></div><div class="field"><label>مقاس الناتج</label><input id="recSize" placeholder="15x21" oninput="ES.aiPreviewComp()"></div><div class="field"><label>سعر بيع رسمي</label><input id="recSale" type="number"></div></div><div class="grid four"><div class="field"><label>هالك %</label><input id="recWaste" type="number" value="5" oninput="ES.aiPreviewComp()"></div><div class="field"><label>تكلفة محسوبة</label><input id="recCost" readonly></div><div class="field"><label>عدد الناتج من الأصل</label><input id="recOutputCount" readonly></div><div class="field"><label>استهلاك الأصل للوحدة</label><input id="recUnitCons" readonly></div></div><hr><h3>إضافة مكون للصنف</h3><div class="grid four"><div class="field"><label>اختار خامة / صنف سابق</label><select id="compMat" onchange="ES.aiPreviewComp()"><option></option>${materialOptions()}</select></div><div class="field"><label>كمية المكون للوحدة</label><input id="compQty" type="number" value="1"></div><div class="field"><label>تكلفة المكون</label><input id="compCost" readonly></div><div class="field"><label>الناتج من الرول/الشيت</label><input id="compPieces" readonly></div></div><div class="actions"><button class="btn secondary" onclick="ES.aiPreviewComp()">احسب AI للمكون</button><button class="btn" onclick="ES.addComp()">إضافة المكون</button><button class="btn danger" onclick="ES.clearComps()">تفريغ المكونات</button></div><div id="compMsg"></div><div id="compList"></div><div class="actions"><button class="btn secondary" onclick="ES.calcRecipe()">احسب تكلفة الصنف</button><button class="btn" onclick="ES.saveRecipe()">حفظ / تحديث الصنف</button><button class="btn secondary" onclick="ES.recalcMaterials()">تحديث أسعار كل البنود المرتبطة</button><button class="btn secondary" onclick="ES.clearRecipeForm()">صنف جديد</button></div><div id="recMsg"></div></div>${materialsTable()}`}
@@ -119,7 +126,7 @@
   };
 
   /*********************** EasyStore Patch 22 - Manual Yield + Gross Profit + Gaber Laser Materials ***********************/
-  window.EASYSTORE_MATBAGY_VERSION = "V5 Patch23 - Buttons + SSO Repair";
+  window.EASYSTORE_MATBAGY_VERSION = "V6 Batch24 - Full EasyStore Stable";
 
   function patch22GrossProfit(cost, sale) {
     cost = num(cost); sale = num(sale);
@@ -148,8 +155,8 @@
   }
 
   materialsTable = function () {
-    const rows = st.data.materials || [];
-    return `<div class="card"><div class="sectionHead"><h3>الخامات والأصناف المحفوظة</h3>${isFull()?'<button class="btn secondary smallBtn" onclick="ES.recalcMaterials()">تحديث كل الأسعار المرتبطة</button>':''}</div><div class="hint small">زر تعديل يفتح الخامة أو الصنف بنفس بياناته. عند تغيير سعر/مقاس الخامة الأساسية يتم تحديث الأصناف المرتبطة بعد الحفظ والتحديث.</div><div class="tablewrap"><table><thead><tr><th>القسم</th><th>الاسم</th><th>النوع</th><th>رصيد</th><th>${canSeeCosts()?'تكلفة':''}</th><th>بيع</th><th>${canSeeCosts()?'مجمل الربح':''}</th><th>${canSeeCosts()?'نسبة الربح':''}</th><th>أبعاد</th><th>${isFull()?'إجراء':''}</th></tr></thead><tbody>${rows.map((r,i)=>{const cost=materialCost(r); const sale=materialSale(r); const gp=patch22GrossProfit(cost,sale); return `<tr><td>${esc(r.department)}</td><td>${esc(materialName(r))}</td><td>${esc(r.materialKind)}</td><td>${esc(r.stockQty||'')}</td><td>${canSeeCosts()?money(cost):''}</td><td>${money(sale)}</td><td>${canSeeCosts()?money(gp.profit):''}</td><td>${canSeeCosts()?gp.margin.toFixed(1)+'%':''}</td><td>${esc((r.width||'')+'×'+(r.height||''))}</td><td>${isFull()?`<button class="mini" onclick="ES.editMaterial(${i})">تعديل</button>`:''}</td></tr>`}).join('')||'<tr><td colspan="10">لا توجد خامات.</td></tr>'}</tbody></table></div></div>`;
+    const rows = (st.data.materials || []).filter(r => String(r.active || r['مفعل'] || 'نعم') !== 'لا');
+    return `<div class="card"><div class="sectionHead"><h3>الخامات والأصناف المحفوظة</h3>${isFull()?'<button class="btn secondary smallBtn" onclick="ES.recalcMaterials()">تحديث كل الأسعار المرتبطة</button>':''}</div><div class="hint small">تعديل يفتح الخامة أو الصنف بنفس بياناته. إيقاف يخفيه من اختيارات الموظفين مع الحفاظ على التقارير القديمة.</div><div class="tablewrap"><table><thead><tr><th>القسم</th><th>الاسم</th><th>النوع</th><th>رصيد</th><th>${canSeeCosts()?'تكلفة':''}</th><th>بيع</th><th>${canSeeCosts()?'مجمل الربح':''}</th><th>${canSeeCosts()?'نسبة الربح':''}</th><th>أبعاد</th><th>${isFull()?'إجراء':''}</th></tr></thead><tbody>${rows.map((r,i)=>{const originalIndex=(st.data.materials||[]).indexOf(r); const cost=materialCost(r); const sale=materialSale(r); const gp=patch22GrossProfit(cost,sale); return `<tr><td>${esc(r.department)}</td><td>${esc(materialName(r))}</td><td>${esc(r.materialKind)}</td><td>${esc(r.stockQty||'')}</td><td>${canSeeCosts()?money(cost):''}</td><td>${money(sale)}</td><td>${canSeeCosts()?money(gp.profit):''}</td><td>${canSeeCosts()?gp.margin.toFixed(1)+'%':''}</td><td>${esc((r.width||'')+'×'+(r.height||''))}</td><td>${isFull()?`<button class="mini" onclick="ES.editMaterial(${originalIndex})">تعديل</button> <button class="mini dangerMini" onclick="ES.archiveMaterial(${originalIndex})">إيقاف</button>`:''}</td></tr>`}).join('')||'<tr><td colspan="10">لا توجد خامات.</td></tr>'}</tbody></table></div></div>`;
   };
 
   screenRecipe = function () {
@@ -257,13 +264,37 @@
   };
 
 
+  // Batch 24 - EasyStore full screens + delete/archive + purchase/sales
+  window.EASYSTORE_MATBAGY_VERSION = "V6 Batch24 - Full EasyStore Stable";
+  window.ES.savePurchase = async function(){
+    const qty=num(val('purQty')), unit=num(val('purUnit'));
+    const rec={no:val('purNo')||('PUR-'+Date.now()), supplier:val('purSupplier'), material:val('purMat'), qty, unit, total:qty*unit, notes:val('purNotes')};
+    const arr=es24LocalList('ES24_PURCHASES'); arr.unshift(rec); es24SaveLocal('ES24_PURCHASES',arr);
+    try{ const r=await api('saveEasyStorePurchase',{invoiceNo:rec.no,supplier:rec.supplier,materialName:rec.material,qty:rec.qty,unitPrice:rec.unit,notes:rec.notes}); msg('purMsg',r.message,!r.success); }catch(e){ msg('purMsg','تم الحفظ محليًا مؤقتًا: '+e.message,true); }
+    renderScreen();
+  };
+  window.ES.saveSale = async function(){
+    const t=templateByIndex(val('salItem')); const qty=num(val('salQty')), unit=num(val('salUnit')) || num(t&&t.salePrice);
+    const rec={no:val('salNo')||('SAL-'+Date.now()), customer:val('salCustomer'), item:t?templateName(t):val('salItem'), qty, unit, total:qty*unit, notes:val('salNotes')};
+    const arr=es24LocalList('ES24_SALES'); arr.unshift(rec); es24SaveLocal('ES24_SALES',arr);
+    try{ const r=await api('saveEasyStoreSale',{invoiceNo:rec.no,customer:rec.customer,itemName:rec.item,qty:rec.qty,unitPrice:rec.unit,notes:rec.notes}); msg('salMsg',r.message,!r.success); }catch(e){ msg('salMsg','تم الحفظ محليًا مؤقتًا: '+e.message,true); }
+    renderScreen();
+  };
+  window.ES.archiveMaterial = async function(i){
+    const r=(st.data.materials||[])[num(i)]; if(!r)return;
+    if(!confirm('إيقاف/إخفاء '+materialName(r)+' من اختيارات الموظفين؟\nسيظل محفوظًا للتقارير والفواتير القديمة.'))return;
+    try{ const res=await api('archiveAccountingMaterial',{materialId:r.id||r.ID,materialName:materialName(r),department:r.department||''}); msg('mainMsg',res.message,!res.success); await refresh(); }
+    catch(e){ r.active='لا'; r['مفعل']='لا'; localSave(); msg('mainMsg','تم الإيقاف محليًا مؤقتًا: '+e.message,true); renderScreen(); }
+  };
+
+
   render(); refresh();
 })();
 
 
 /*********************** EasyStore Patch 23 - Button Safety Layer ***********************/
 (function(){
-  window.EASYSTORE_MATBAGY_VERSION = "V5 Patch23 - Buttons + SSO Repair";
+  window.EASYSTORE_MATBAGY_VERSION = "V6 Batch24 - Full EasyStore Stable";
 
   function call(fn, args) {
     try {
@@ -280,6 +311,10 @@
     m.textContent = t || '';
   }
   function goByText(t) {
+    if (/لوحة الحسابات/.test(t)) return call('go',['dashboard']);
+    if (/الأصناف$/.test(t)) return call('go',['items']);
+    if (/فواتير الشراء/.test(t)) return call('go',['purchase']);
+    if (/فواتير المبيعات/.test(t)) return call('go',['sales']);
     if (/مطبخ الحسابات/.test(t)) return call('go',['kitchen']);
     if (/خامات أساسية/.test(t)) return call('go',['raw']);
     if (/أصناف بمكونات|صنف/.test(t)) return call('go',['recipe']);
@@ -312,6 +347,6 @@
   }, true);
 
   setTimeout(function(){
-    note('Patch 23 جاهز: الأزرار مربوطة. لو ظهرت رسالة انتهاء الجلسة افتح EasyStore من زر مطبخ الحسابات داخل TrendOS مرة واحدة.', false);
+    note('Batch 24 جاهز: EasyStore كامل + تحميل تلقائي + أصناف/شراء/مبيعات/مخزون/تقارير.', false);
   }, 1200);
 })();
