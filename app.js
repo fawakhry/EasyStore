@@ -1,4 +1,33 @@
 
+/*********************** EasyStore Patch 23 - SSO Recovery Before Boot ***********************/
+(function(){
+  try {
+    var qs = new URLSearchParams(location.search);
+    var hasUser = qs.get('username') || qs.get('name') || qs.get('token');
+    var handoff = localStorage.getItem('MATBAGY_EMPLOYEE_SSO');
+    if (!hasUser && handoff) {
+      var data = JSON.parse(handoff || '{}');
+      var p = data.params || {};
+      var u = data.user || {};
+      var next = new URLSearchParams(location.search);
+      next.set('from','trendos');
+      next.set('sso','1');
+      next.set('employeeSSO','1');
+      next.set('skipLogin','1');
+      next.set('noPhone','1');
+      next.set('noActivation','1');
+      next.set('username', p.username || u.username || u.name || 'ضياء');
+      next.set('name', p.name || u.name || u.username || 'ضياء');
+      next.set('token', p.token || u.token || '');
+      next.set('mode', p.mode || p.roleMode || u.mode || 'full');
+      next.set('roleMode', p.roleMode || p.mode || u.mode || 'full');
+      next.set('department', p.department || u.department || '');
+      location.replace(location.pathname + '?' + next.toString());
+    }
+  } catch (e) {}
+})();
+
+
 (function(){
   const app=document.getElementById('app');
   const qs=new URLSearchParams(location.search);
@@ -90,7 +119,7 @@
   };
 
   /*********************** EasyStore Patch 22 - Manual Yield + Gross Profit + Gaber Laser Materials ***********************/
-  window.EASYSTORE_MATBAGY_VERSION = "V4 Patch22 - Manual Yield + Gaber Laser Materials";
+  window.EASYSTORE_MATBAGY_VERSION = "V5 Patch23 - Buttons + SSO Repair";
 
   function patch22GrossProfit(cost, sale) {
     cost = num(cost); sale = num(sale);
@@ -229,4 +258,60 @@
 
 
   render(); refresh();
+})();
+
+
+/*********************** EasyStore Patch 23 - Button Safety Layer ***********************/
+(function(){
+  window.EASYSTORE_MATBAGY_VERSION = "V5 Patch23 - Buttons + SSO Repair";
+
+  function call(fn, args) {
+    try {
+      if (window.ES && typeof window.ES[fn] === 'function') return window.ES[fn].apply(window.ES, args || []);
+    } catch (e) {
+      alert((e && e.message) || 'تعذر تنفيذ الأمر.');
+    }
+  }
+  function txt(el){ return (el && el.textContent || '').replace(/\s+/g,' ').trim(); }
+  function note(t, bad){
+    var m = document.getElementById('mainMsg');
+    if (!m) return;
+    m.className = 'msg ' + (bad ? 'bad' : '');
+    m.textContent = t || '';
+  }
+  function goByText(t) {
+    if (/مطبخ الحسابات/.test(t)) return call('go',['kitchen']);
+    if (/خامات أساسية/.test(t)) return call('go',['raw']);
+    if (/أصناف بمكونات|صنف/.test(t)) return call('go',['recipe']);
+    if (/بنود الفواتير/.test(t)) return call('go',['templates']);
+    if (/المخزون/.test(t)) return call('go',['stock']);
+    if (/تقارير/.test(t)) return call('go',['reports']);
+    if (/فاتورة القسم/.test(t)) return call('go',['dept']);
+    if (/هوالك/.test(t)) return call('go',['waste']);
+    if (/تقفيل الفاتورة/.test(t)) return call('go',['final']);
+  }
+  document.addEventListener('click', function(ev){
+    var b = ev.target && ev.target.closest && ev.target.closest('button');
+    if (!b) return;
+    var t = txt(b);
+    if (!t) return;
+    if (t === 'تحديث' || /تحديث$/.test(t)) { ev.preventDefault(); return call('refresh'); }
+    if (t === 'إغلاق') { ev.preventDefault(); try{ window.close(); }catch(e){} if(!window.closed) history.back(); return; }
+    if (/تجهيز الشيتات/.test(t)) { ev.preventDefault(); return call('initSheets'); }
+    if (/تحديث كل الأسعار|تحديث أسعار|تحديث كل البنود/.test(t)) { ev.preventDefault(); return call('recalcMaterials'); }
+    if (/احسب AI|احسب من خامات الليزر/.test(t)) { ev.preventDefault(); return call('aiLaser'); }
+    if (/تطبيق على الفاتورة/.test(t)) { ev.preventDefault(); return call('applyLaserAIToInvoice'); }
+    if (/احسب تكلفة الصنف/.test(t)) { ev.preventDefault(); return call('calcRecipe'); }
+    if (/حفظ \/ تحديث الصنف/.test(t)) { ev.preventDefault(); return call('saveRecipe'); }
+    if (/حفظ \/ تحديث الخامة/.test(t)) { ev.preventDefault(); return call('saveRaw'); }
+    if (/حفظ البند للموظفين/.test(t)) { ev.preventDefault(); return call('saveTemplate'); }
+    if (/حفظ فاتورة القسم/.test(t)) { ev.preventDefault(); return call('saveDeptLine'); }
+    if (/تقفيل الفاتورة النهائية/.test(t)) { ev.preventDefault(); return call('saveFinal'); }
+    if (/طباعة|PDF/.test(t) && /فاتورة/.test(document.body.textContent || '')) { try { return call('printInvoice'); } catch(e){} }
+    goByText(t);
+  }, true);
+
+  setTimeout(function(){
+    note('Patch 23 جاهز: الأزرار مربوطة. لو ظهرت رسالة انتهاء الجلسة افتح EasyStore من زر مطبخ الحسابات داخل TrendOS مرة واحدة.', false);
+  }, 1200);
 })();
