@@ -4,3 +4,8 @@
 
 /* Batch 24 */
 .dangerMini{border-color:#fecaca!important;background:#fff1f2!important;color:#b91c1c!important}.tabs .tab{margin-bottom:4px}.top h1:after{content:"  • Batch 24";font-size:12px;opacity:.8}
+
+
+/**************** Batch 25 Full Accounting Core ****************/
+.es25-head{margin-bottom:12px}.kpi{background:#f0fdfa;border:1px solid #b2f5ea;border-radius:18px;padding:16px;display:flex;flex-direction:column;gap:6px}.kpi b{font-size:22px;color:#0f766e}.kpi span{color:#475569}.grid.five{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:12px}.mini.dangerMini{background:#fff1f2;border-color:#fecdd3;color:#be123c}.actions{display:flex;gap:10px;flex-wrap:wrap;align-items:center}.hint.small{font-size:13px}.tablewrap table td,.tablewrap table th{white-space:nowrap}.es25-head h2{color:#0f172a}
+@media(max-width:900px){.grid.five,.grid.four,.grid.three,.grid.two{grid-template-columns:1fr!important}.tabs{overflow:auto;justify-content:flex-start}.tablewrap{overflow:auto}}
