@@ -126,7 +126,7 @@
   };
 
   /*********************** EasyStore Patch 22 - Manual Yield + Gross Profit + Gaber Laser Materials ***********************/
-  window.EASYSTORE_MATBAGY_VERSION = "V7 Batch25 - Full Accounting Core";
+  window.EASYSTORE_MATBAGY_VERSION = "V7 Batch26 - Emergency Stable Fix";
 
   function patch22GrossProfit(cost, sale) {
     cost = num(cost); sale = num(sale);
@@ -265,7 +265,7 @@
 
 
   // Batch 24 - EasyStore full screens + delete/archive + purchase/sales
-  window.EASYSTORE_MATBAGY_VERSION = "V7 Batch25 - Full Accounting Core";
+  window.EASYSTORE_MATBAGY_VERSION = "V7 Batch26 - Emergency Stable Fix";
   window.ES.savePurchase = async function(){
     const qty=num(val('purQty')), unit=num(val('purUnit'));
     const rec={no:val('purNo')||('PUR-'+Date.now()), supplier:val('purSupplier'), material:val('purMat'), qty, unit, total:qty*unit, notes:val('purNotes')};
@@ -288,13 +288,14 @@
   };
 
 
-  render(); refresh();
+  // Batch 26: تعطيل تشغيل الواجهة القديمة حتى لا تكسر EasyStore Batch25
+  // render(); refresh();
 })();
 
 
 /*********************** EasyStore Patch 23 - Button Safety Layer ***********************/
 (function(){
-  window.EASYSTORE_MATBAGY_VERSION = "V7 Batch25 - Full Accounting Core";
+  window.EASYSTORE_MATBAGY_VERSION = "V7 Batch26 - Emergency Stable Fix";
 
   function call(fn, args) {
     try {
@@ -347,14 +348,14 @@
   }, true);
 
   setTimeout(function(){
-    note('Batch 24 جاهز: EasyStore كامل + تحميل تلقائي + أصناف/شراء/مبيعات/مخزون/تقارير.', false);
+    note('Batch 26 جاهز: EasyStore ثابت + أزرار شغالة + تحميل تلقائي.', false);
   }, 1200);
 })();
 
 
 /*********************** Batch 25 - EasyStore Full Accounting Core Screens ***********************/
 (function(){
-  window.EASYSTORE_MATBAGY_VERSION = "V7 Batch25 - Full Accounting Core";
+  window.EASYSTORE_MATBAGY_VERSION = "V7 Batch26 - Emergency Stable Fix";
   const B25 = { data:{materials:[],templates:[],stockMoves:[],deptLines:[],finalInvoices:[],wasteLines:[],summary:{}}, suppliers:[], purchases:[], sales:[], customers:[], active:'dashboard' };
   const qs = new URLSearchParams(location.search);
   const user = { name: qs.get('name') || qs.get('username') || 'ضياء', username: qs.get('username') || qs.get('name') || 'ضياء', token: qs.get('token') || '' };
@@ -382,18 +383,19 @@
   function totals(list, field){ return (list||[]).reduce((s,r)=>s+num(r[field]||r.total),0); }
   async function loadAll(){
     loadLocal(); msg('جاري تحديث EasyStore تلقائيًا...');
-    try { if (window.ES && typeof window.ES.refresh==='function') await window.ES.refresh(); } catch(e){}
+    // Batch 26: لا نستدعي refresh القديم لأنه كان يفتح شاشة قديمة ويسبب توقف الأزرار
+    // try { if (window.ES && typeof window.ES.refresh==='function') await window.ES.refresh(); } catch(e){}
     loadLocal();
     try { const r=await api('getAccounting'); if(r.success){ B25.data=Object.assign(B25.data,{materials:r.materials||[],templates:r.templates||[],stockMoves:r.stockMoves||[],deptLines:r.deptLines||[],finalInvoices:r.finalInvoices||[],wasteLines:r.wasteLines||[],summary:r.summary||{}}); localStorage.setItem('EASYSTORE_MATBAGY_V3', JSON.stringify(B25.data)); }} catch(e){ msg('تنبيه: البيانات من النسخة المحلية - '+e.message,true); }
     try { const s=await api('getEasyStoreSuppliers'); if(s.success) B25.suppliers=s.suppliers||B25.suppliers; } catch(e){}
     try { const c=await api('searchCustomers',{q:''}); if(c.success) B25.customers=c.customers||c.rows||[]; } catch(e){}
-    saveLocal(); render25(B25.active); msg('تم تحميل EasyStore Batch 25.');
+    saveLocal(); render25(B25.active); msg('تم تحميل EasyStore Batch 26 بنجاح.');
   }
   function ensureExtraTabs(){
     const tabs=document.querySelector('.tabs'); if(!tabs || tabs.dataset.batch25) return; tabs.dataset.batch25='1';
     [['suppliers','الموردين'],['customers','العملاء'],['health','فحص النظام']].forEach(x=>{ const b=document.createElement('button'); b.className='tab'; b.textContent=x[1]; b.onclick=()=>render25(x[0]); tabs.insertBefore(b, tabs.firstChild); });
   }
-  function shell(title, body){ return `<div class="es25-head"><h2>${title}</h2><div class="hint small">EasyStore V7 Batch25 - برنامج حسابات كامل: موردين، أصناف، شراء، مبيعات، مخزون، تقارير، ومطبخ حسابات.</div></div>${body}`; }
+  function shell(title, body){ return `<div class="es25-head"><h2>${title}</h2><div class="hint small">EasyStore V7 Batch26 - برنامج حسابات كامل: موردين، أصناف، شراء، مبيعات، مخزون، تقارير، ومطبخ حسابات.</div></div>${body}`; }
   function table(rows, headers, map){ return `<div class="tablewrap"><table><thead><tr>${headers.map(h=>`<th>${h}</th>`).join('')}</tr></thead><tbody>${rows.map((r,i)=>`<tr>${map(r,i).map(c=>`<td>${c}</td>`).join('')}</tr>`).join('')||`<tr><td colspan="${headers.length}">لا توجد بيانات.</td></tr>`}</tbody></table></div>`; }
   function screenDashboard(){ const sales=totals(B25.sales,'total'); const pur=totals(B25.purchases,'total'); const stock=materials().length; return shell('لوحة الحسابات',`<div class="grid four"><div class="kpi"><b>${money(sales)}</b><span>مبيعات محفوظة</span></div><div class="kpi"><b>${money(pur)}</b><span>مشتريات محفوظة</span></div><div class="kpi"><b>${stock}</b><span>خامات وأصناف</span></div><div class="kpi"><b>${B25.suppliers.length}</b><span>موردين</span></div></div><div class="grid four"><button class="btn" onclick="ES.go('suppliers')">إضافة مورد</button><button class="btn" onclick="ES.go('items')">إضافة صنف</button><button class="btn" onclick="ES.go('purchase')">فاتورة شراء</button><button class="btn" onclick="ES.go('sales')">فاتورة مبيعات</button></div>`); }
   function screenSuppliers(){ return shell('الموردين',`<div class="card"><h3>إضافة / تعديل مورد</h3><div class="grid four"><div class="field"><label>اسم المورد</label><input id="supName"></div><div class="field"><label>تليفون</label><input id="supPhone"></div><div class="field"><label>رصيد افتتاحي</label><input id="supOpening" type="number"></div><div class="field"><label>العنوان</label><input id="supAddress"></div></div><button class="btn" onclick="ES25.saveSupplier()">حفظ المورد</button><div id="supMsg"></div></div>${table(B25.suppliers,['المورد','تليفون','رصيد افتتاحي','مديونية تقديرية','إجراء'],(s,i)=>[esc(s.name),esc(s.phone),money(s.opening),money((B25.purchases||[]).filter(p=>p.supplier===s.name).reduce((a,p)=>a+num(p.remain),0)),`<button class="mini" onclick="ES25.editSupplier(${i})">تعديل</button>`])}`); }
@@ -428,4 +430,27 @@
   };
   setTimeout(function(){ ensureExtraTabs(); loadAll(); }, 900);
   setInterval(ensureExtraTabs, 3000);
+})();
+
+
+/*********************** EasyStore Patch 26 - Emergency Stable Boot ***********************/
+(function(){
+  window.EASYSTORE_MATBAGY_VERSION = "V7 Batch26 - Emergency Stable Fix";
+  window.addEventListener('error', function(e){
+    try{
+      var msg = document.getElementById('mainMsg');
+      if(msg){ msg.className='msg bad'; msg.textContent='تم منع خطأ في الواجهة: '+(e.message||'')+' - افتح التبويب مرة أخرى.'; }
+    }catch(x){}
+  });
+  function forceBatch26(){
+    try{
+      if(window.ES25 && typeof window.ES25.render === 'function'){
+        window.ES25.render('dashboard');
+      }
+      var h=document.querySelector('.top h1');
+      if(h) h.innerHTML='💰 إيزي ستور مطبعجي V7 - Batch 26 Stable';
+    }catch(e){}
+  }
+  setTimeout(forceBatch26, 400);
+  setTimeout(forceBatch26, 1600);
 })();
