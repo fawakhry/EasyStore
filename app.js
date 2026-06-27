@@ -1,7 +1,7 @@
 (function(){
   'use strict';
 
-  const VERSION = 'V8 Batch27 Stable Rebuild';
+  const VERSION = 'V9 Batch28 Mutual Invoice + Operating Expenses';
   window.EASYSTORE_MATBAGY_VERSION = VERSION;
 
   const app = document.getElementById('app');
@@ -38,15 +38,25 @@
   const roleText = () => isAdmin() ? 'ضياء / مطبخ الحسابات' : isLaser() ? 'جابر / الليزر' : isPrint() ? 'وائل / الطباعة' : isFinal() ? 'رحمة أو ريفان / تقفيل فواتير' : 'موظف';
   const userDept = () => isLaser() ? 'ليزر' : isPrint() ? 'طباعة' : (user.department || '');
 
-  const STORE_KEY = 'EASYSTORE_BATCH27_DATA';
+
+  function initialScreen(){
+    const s = String(qs.get('screen') || qs.get('tab') || qs.get('view') || '').toLowerCase();
+    if(/final/.test(s)) return 'final';
+    if(/dept/.test(s)) return 'dept';
+    if(/sales|sale|invoice|فاتورة/.test(s)) return 'sales';
+    if(/kitchen|raw|materials/.test(s)) return 'kitchen';
+    return 'dashboard';
+  }
+
+  const STORE_KEY = 'EASYSTORE_BATCH28_DATA';
   const state = {
-    active: 'dashboard',
+    active: initialScreen(),
     loading: false,
     data: {
       materials: [], templates: [], suppliers: [], purchases: [], sales: [], customers: [],
       stockMoves: [], wasteLines: [], deptLines: [], finalInvoices: [], summary: {}
     },
-    recipeComps: []
+    recipeComps: [], salePulledLines: [], customerSearchTimer: null, customerSearchSeq: 0
   };
 
   function saveLocal(){ localStorage.setItem(STORE_KEY, JSON.stringify(state.data)); }
@@ -168,8 +178,91 @@
     return `<div class="card"><h2>فاتورة شراء</h2><div class="grid four"><div class="field"><label>رقم الفاتورة</label><input id="puNo" value="PUR-${Date.now().toString().slice(-6)}"></div><div class="field"><label>المورد</label><input id="puSupplier" list="supList"><datalist id="supList">${supplierOptions()}</datalist></div><div class="field"><label>نوع الدفع</label><select id="puPay"><option>نقدي</option><option>آجل</option><option>جزئي</option></select></div><div class="field"><label>تاريخ استحقاق</label><input id="puDue" type="date"></div></div><div class="grid six"><div class="field"><label>الخامة/الصنف</label><select id="puMat"><option></option>${materialOptions()}</select></div><div class="field"><label>الكمية</label><input id="puQty" type="number" value="1" oninput="ES27.calcPurchase()"></div><div class="field"><label>سعر الشراء</label><input id="puUnit" type="number" oninput="ES27.calcPurchase()"></div><div class="field"><label>الإجمالي</label><input id="puTotal" readonly></div><div class="field"><label>مدفوع</label><input id="puPaid" type="number" value="0" oninput="ES27.calcPurchase()"></div><div class="field"><label>متبقي</label><input id="puRemain" readonly></div></div><div class="field"><label>ملاحظات</label><input id="puNotes"></div><button class="btn" onclick="ES27.savePurchase()">حفظ فاتورة الشراء وزيادة المخزون</button></div>${table(state.data.purchases,['رقم','مورد','خامة','كمية','إجمالي','مدفوع','متبقي'],p=>[esc(p.no||p.invoiceNo),esc(p.supplier),esc(p.material||p.materialName),esc(p.qty),money(p.total),money(p.paid),money(p.remain)])}`;
   }
 
+
+  function rowLineId(r){ return r.id || r.ID || r.lineId || r['ID'] || r['رقم البند'] || ''; }
+  function rowOrderId(r){ return r.orderId || r['رقم الأوردر'] || ''; }
+  function rowCustomer(r){ return r.customerName || r.customer || r['اسم العميل'] || ''; }
+  function rowDept(r){ return r.department || r['القسم'] || ''; }
+  function rowItem(r){ return r.itemName || r.item || r['اسم البند'] || ''; }
+  function rowQty(r){ return num(r.qty || r['الكمية'] || 1) || 1; }
+  function rowSale(r){ return num(r.sale || r.salePrice || r['سعر البيع'] || r.finalTotal || r.total || 0); }
+  function rowCloseStatus(r){ return String(r.closeStatus || r['حالة التقفيل'] || '').trim(); }
+  function rowFinalInvoice(r){ return String(r.invoiceNo || r['رقم الفاتورة النهائية'] || r['رقم الفاتورة'] || '').trim(); }
+  function isUnbilledDeptLine(r){ const st=nkey(rowCloseStatus(r)); return !rowFinalInvoice(r) && !/تم|مقفل|مقفول|closed|billed/.test(st); }
+  function saleCandidateLines(){
+    const qCustomer = nkey(val('saCustomer'));
+    const qOrder = nkey(val('saOrder'));
+    return (state.data.deptLines||[]).filter(isUnbilledDeptLine).filter(r=>{
+      const okOrder = !qOrder || nkey(rowOrderId(r)).includes(qOrder);
+      const okCustomer = !qCustomer || nkey(rowCustomer(r)).includes(qCustomer);
+      return okOrder && okCustomer;
+    });
+  }
+  function salePulledIds(){ const ids={}; (state.salePulledLines||[]).forEach(r=>{ ids[nkey(rowLineId(r)||JSON.stringify(r))]=true; }); return ids; }
+  function salePulledTotal(){ return (state.salePulledLines||[]).reduce((s,r)=>s + rowSale(r)*rowQty(r),0); }
+  function salePulledLineIds(){ return (state.salePulledLines||[]).map(rowLineId).filter(Boolean); }
+  function updateSaleTotalsFromPulled(){
+    const pulled = salePulledTotal();
+    const manual = num(val('saQty'))*num(val('saUnit'));
+    const total = Math.max(0, pulled + manual - num(val('saDiscount')));
+    set('saTotal', total.toFixed(2));
+    set('saRemain', Math.max(0,total-num(val('saPaid'))).toFixed(2));
+    const b=$('salePulledSummary'); if(b) b.innerHTML = '<b>إجمالي بنود وائل/جابر:</b> '+money(pulled)+' / <b>إجمالي الفاتورة:</b> '+money(total);
+  }
+  function salePulledTable(){
+    const rows = state.salePulledLines || [];
+    if(!rows.length) return '<div class="empty">لم يتم سحب بنود من الأقسام بعد.</div>';
+    return table(rows,['القسم','رقم الأوردر','البند','كمية','سعر','حذف'],(r,i)=>[esc(rowDept(r)),esc(rowOrderId(r)),esc(rowItem(r)),esc(rowQty(r)),money(rowSale(r)),`<button class="btn small danger" onclick="ES27.removePulledLine(${i})">حذف</button>`]);
+  }
+  function saleCandidateTable(rows){
+    rows = rows || saleCandidateLines();
+    if(!rows.length) return '<div class="empty">لا توجد بنود غير مفوترة مطابقة للعميل/الأوردر.</div>';
+    const picked=salePulledIds();
+    return table(rows,['ضم','القسم','الأوردر','العميل','البند','كمية','سعر'],(r,i)=>{
+      const key=nkey(rowLineId(r)||JSON.stringify(r));
+      return [`<input type="checkbox" class="saleLinePick" data-key="${esc(key)}" ${picked[key]?'checked':''}>`,esc(rowDept(r)),esc(rowOrderId(r)),esc(rowCustomer(r)),esc(rowItem(r)),esc(rowQty(r)),money(rowSale(r))];
+    });
+  }
+  function renderSalePulledBoxes(){
+    const p=$('salePulledBox'); if(p) p.innerHTML=salePulledTable();
+    const c=$('saleCandidatesBox'); if(c) c.innerHTML=saleCandidateTable();
+    updateSaleTotalsFromPulled();
+  }
+  function customerLabel(c){ return (c.name||c.customerName||'') + (c.phone||c.mobile? ' - '+(c.phone||c.mobile):'') + (c.type?' - '+c.type:''); }
+  function localCustomerMatches(q){ q=nkey(q); return (state.data.customers||[]).filter(c=>!q || nkey([c.name,c.customerName,c.phone,c.mobile,c.manager,c.type].join(' ')).includes(q)).slice(0,40); }
+  function renderCustomerDropdown(rows){
+    const box=$('saCustomerDrop'); if(!box) return;
+    rows = rows || [];
+    if(!rows.length){ box.innerHTML='<div class="custDropHint">اكتب جزء من الاسم أو الرقم للبحث في عملاء المنصة.</div>'; box.classList.remove('hidden'); return; }
+    box.innerHTML=rows.map((c,i)=>`<button type="button" onclick="ES27.pickSaleCustomer(${i})" data-cust-index="${i}">${esc(customerLabel(c))}</button>`).join('');
+    box.__rows=rows; box.classList.remove('hidden');
+  }
+  function operatingExpenseRows(){ return materials().filter(r=>/تشغيل|مصروف|operation/i.test(String(r.materialClass||r.operationExpense||r['تصنيف الخامة']||r['ضم إلى مصروفات التشغيل']||matType(r)||''))); }
   function screenSales(){
-    return `<div class="card"><h2>فاتورة مبيعات</h2><div class="grid four"><div class="field"><label>رقم الفاتورة</label><input id="saNo" value="SAL-${Date.now().toString().slice(-6)}"></div><div class="field"><label>العميل</label><input id="saCustomer" list="custList"><datalist id="custList">${customerOptions()}</datalist></div><div class="field"><label>رقم الأوردر</label><input id="saOrder"></div><div class="field"><label>نوع الدفع</label><select id="saPay"><option>نقدي</option><option>آجل</option><option>جزئي</option></select></div></div><div class="grid six"><div class="field"><label>الصنف</label><select id="saItem" onchange="ES27.applySaleItem()"><option></option>${itemOptions()}</select></div><div class="field"><label>الكمية</label><input id="saQty" type="number" value="1" oninput="ES27.calcSale()"></div><div class="field"><label>سعر البيع</label><input id="saUnit" type="number" oninput="ES27.calcSale()"></div><div class="field"><label>خصم</label><input id="saDiscount" type="number" value="0" oninput="ES27.calcSale()"></div><div class="field"><label>الإجمالي</label><input id="saTotal" readonly></div><div class="field"><label>مدفوع</label><input id="saPaid" type="number" value="0" oninput="ES27.calcSale()"></div></div><div class="grid two"><div class="field"><label>متبقي</label><input id="saRemain" readonly></div><div class="field"><label>ملاحظات</label><input id="saNotes"></div></div><div class="actions"><button class="btn" onclick="ES27.saveSale()">حفظ فاتورة البيع وخصم المخزون</button><button class="btn secondary" onclick="ES27.printSale()">PDF / طباعة</button></div></div>${table(state.data.sales,['رقم','عميل','صنف','كمية','إجمالي','مدفوع','متبقي'],s=>[esc(s.no||s.invoiceNo),esc(s.customer),esc(s.item||s.itemName),esc(s.qty),money(s.total),money(s.paid),money(s.remain)])}`;
+    const qOrder = esc(qs.get('orderId') || qs.get('order') || '');
+    const qCustomer = esc(qs.get('customer') || qs.get('customerName') || '');
+    return `<div class="card"><h2>فاتورة مبيعات موحدة</h2>
+      <div class="hint">اكتب جزء من اسم العميل أو اضغط على الخانة لتحميل عملاء المنصة. تقدر تسحب بنود وائل وجابر غير المفوترة وتطلع فاتورة واحدة للعميل.</div>
+      <div class="grid four">
+        <div class="field"><label>رقم الفاتورة</label><input id="saNo" value="SAL-${Date.now().toString().slice(-6)}"></div>
+        <div class="field customerField"><label>العميل</label><input id="saCustomer" value="${qCustomer}" autocomplete="off" onfocus="ES27.focusSaleCustomer()" oninput="ES27.searchSaleCustomers(this.value)"><div id="saCustomerDrop" class="customerDrop hidden"></div></div>
+        <div class="field"><label>رقم الأوردر</label><input id="saOrder" value="${qOrder}"></div>
+        <div class="field"><label>نوع الدفع</label><select id="saPay"><option>نقدي</option><option>آجل</option><option>جزئي</option></select></div>
+      </div>
+      <div class="grid six">
+        <div class="field"><label>بند يدوي / صنف إضافي</label><select id="saItem" onchange="ES27.applySaleItem()"><option></option>${itemOptions()}</select></div>
+        <div class="field"><label>الكمية</label><input id="saQty" type="number" value="0" oninput="ES27.calcSale()"></div>
+        <div class="field"><label>سعر البيع</label><input id="saUnit" type="number" value="0" oninput="ES27.calcSale()"></div>
+        <div class="field"><label>خصم</label><input id="saDiscount" type="number" value="0" oninput="ES27.calcSale()"></div>
+        <div class="field"><label>الإجمالي</label><input id="saTotal" readonly></div>
+        <div class="field"><label>مدفوع</label><input id="saPaid" type="number" value="0" oninput="ES27.calcSale()"></div>
+      </div>
+      <div class="grid two"><div class="field"><label>متبقي</label><input id="saRemain" readonly></div><div class="field"><label>ملاحظات</label><input id="saNotes"></div></div>
+      <div class="actions"><button class="btn secondary" onclick="ES27.pullDeptCandidates()">سحب بنود وائل وجابر</button><button class="btn" onclick="ES27.addPickedDeptLines()">ضم البنود المحددة</button><button class="btn" onclick="ES27.saveSale()">حفظ الفاتورة الموحدة</button><span class="menuWrap"><button class="btn secondary" onclick="ES27.toggleClientInvoiceMenu(event)">فاتورة العميل ▾</button><span id="clientInvoiceMenu" class="clientInvoiceMenu hidden"><button onclick="ES27.showPricePreview()">عرض التسعير</button><button onclick="ES27.printSale()">PDF / طباعة</button><button onclick="ES27.downloadSaleImage()">صورة</button><button onclick="ES27.copySaleText()">نسخ نص الفاتورة</button><button onclick="ES27.openSaleWhatsApp()">إرسال واتساب</button></span></span></div>
+      <div id="salePulledSummary" class="softBox"></div>
+    </div>
+    <div class="split"><div class="card"><h3>بنود غير مفوترة من الأقسام</h3><div id="saleCandidatesBox">${saleCandidateTable()}</div></div><div class="card"><h3>البنود المضمومة للفاتورة</h3><div id="salePulledBox">${salePulledTable()}</div></div></div>
+    ${table(state.data.sales,['رقم','عميل','صنف/تجميع','كمية','إجمالي','مدفوع','متبقي'],s=>[esc(s.no||s.invoiceNo),esc(s.customer),esc(s.item||s.itemName||s.description),esc(s.qty),money(s.total),money(s.paid),money(s.remain)])}`;
   }
 
   function screenStock(){ return `<div class="card"><h2>المخزون</h2>${table(materials(),['الخامة/الصنف','القسم','النوع','الرصيد','حد النقص','تكلفة','بيع','حالة'],r=>[esc(materialName(r)),esc(matDept(r)),esc(matType(r)),esc(matStock(r)),esc(matMin(r)),isAdmin()?money(matCost(r)):'<span class="costHidden">مخفي</span>',money(matSale(r)),activeRow(r)?'مفعل':'موقوف'])}</div><div class="card"><h3>حركة المخزون</h3>${table(state.data.stockMoves,['التاريخ','الخامة','داخل','خارج','الرصيد','المصدر'],r=>[esc(r.date||r['وقت التسجيل']||''),esc(r.materialName||r['الخامة']||''),esc(r.inQty||r['داخل']||''),esc(r.outQty||r['خارج']||''),esc(r.balance||r['الرصيد']||''),esc(r.source||r['المصدر']||'')])}</div>`; }
@@ -178,7 +271,7 @@
     if(!isAdmin()) return '<div class="card"><h2>مطبخ الحسابات</h2><div class="warn">هذا القسم يظهر لضياء فقط.</div></div>';
     return `<div class="card"><h2>مطبخ الحسابات</h2><div class="grid three"><button class="btn" onclick="ES27.kitchenMode('raw')">خامة أساسية</button><button class="btn" onclick="ES27.kitchenMode('recipe')">صنف بمكونات</button><button class="btn secondary" onclick="ES27.recalcCascade()">تحديث كل الأسعار المرتبطة</button></div><div id="kitchenBox">${rawForm()}</div></div>${itemsTable()}`;
   }
-  function rawForm(){ return `<div class="softBox"><h3>خامة أساسية</h3><input id="rawId" type="hidden"><div class="grid six"><div class="field"><label>القسم</label><select id="rawDept"><option>طباعة</option><option>ليزر</option><option>مشترك</option></select></div><div class="field"><label>اسم الخامة</label><input id="rawName"></div><div class="field"><label>سعر/تكلفة الأصل</label><input id="rawCost" type="number"></div><div class="field"><label>سعر بيع رسمي</label><input id="rawSale" type="number"></div><div class="field"><label>الرصيد</label><input id="rawStock" type="number"></div><div class="field"><label>حد النقص</label><input id="rawMin" type="number"></div></div><div class="grid four"><div class="field"><label>عرض الخام سم</label><input id="rawW" type="number"></div><div class="field"><label>طول الخام سم</label><input id="rawH" type="number"></div><div class="field"><label>نوع الخامة</label><select id="rawKind"><option>raw</option><option>laser</option><option>paper roll</option><option>lamination roll</option></select></div><div class="field"><label>ملاحظات</label><input id="rawNotes"></div></div><button class="btn" onclick="ES27.saveRaw()">حفظ / تحديث الخامة</button></div>`; }
+  function rawForm(){ return `<div class="softBox"><h3>خامة / مصروف تشغيل</h3><input id="rawId" type="hidden"><div class="grid six"><div class="field"><label>القسم</label><select id="rawDept"><option>طباعة</option><option>ليزر</option><option>مشترك</option></select></div><div class="field"><label>اسم الخامة</label><input id="rawName"></div><div class="field"><label>تصنيف الخامة</label><select id="rawClass"><option>خامة إنتاج</option><option>مصروف تشغيل</option><option>خامة مشتركة</option><option>متوقفة</option></select></div><div class="field"><label>سعر/تكلفة الأصل</label><input id="rawCost" type="number"></div><div class="field"><label>سعر بيع رسمي</label><input id="rawSale" type="number"></div><div class="field"><label>الرصيد</label><input id="rawStock" type="number"></div></div><div class="grid six"><div class="field"><label>حد النقص</label><input id="rawMin" type="number"></div><div class="field"><label>عرض الخام سم</label><input id="rawW" type="number"></div><div class="field"><label>طول الخام سم</label><input id="rawH" type="number"></div><div class="field"><label>نوع الخامة</label><select id="rawKind"><option>raw</option><option>laser</option><option>paper roll</option><option>lamination roll</option><option>ink</option><option>machine expense</option></select></div><div class="field"><label>ضم إلى بند</label><select id="rawOperatingBand"><option>إنتاج مباشر</option><option>مصروفات تشغيل الطباعة</option><option>مصروفات تشغيل الليزر</option><option>مصروفات تشغيل مشتركة</option></select></div><div class="field"><label>طريقة توزيع التشغيل</label><select id="rawOpMethod"><option>لا يوزع</option><option>ثابت على الفاتورة</option><option>بالمتر</option><option>بالمتر المربع</option><option>نسبة من الفاتورة</option><option>يدوي</option></select></div></div><div class="grid two"><div class="field"><label>قيمة التشغيل للوحدة / النسبة</label><input id="rawOpCost" type="number" placeholder="مثال: 5 جنيه للمتر أو 3%"></div><div class="field"><label>ملاحظات</label><input id="rawNotes"></div></div><button class="btn" onclick="ES27.saveRaw()">حفظ / تحديث الخامة</button></div>`; }
   function recipeForm(){ return `<div class="softBox"><h3>صنف بمكونات</h3><div class="grid six"><div class="field"><label>القسم</label><select id="recDept"><option>طباعة</option><option>ليزر</option><option>مشترك</option></select></div><div class="field"><label>اسم الصنف</label><input id="recName"></div><div class="field"><label>مقاس الناتج</label><input id="recSize" placeholder="مثال 15x21"></div><div class="field"><label>سعر بيع رسمي</label><input id="recSale" type="number" oninput="ES27.calcRecipe()"></div><div class="field"><label>تكلفة محسوبة</label><input id="recCost" readonly></div><div class="field"><label>مجمل الربح</label><input id="recProfit" readonly></div></div><div class="grid six"><div class="field"><label>المكون</label><select id="compMat"><option></option>${materialOptions()}</select></div><div class="field"><label>كمية المكون للوحدة</label><input id="compQty" type="number" value="1"></div><div class="field"><label>الناتج AI</label><input id="compAiPieces" readonly></div><div class="field"><label>الناتج اليدوي</label><input id="compManualPieces" type="number"></div><div class="field"><label>هالك</label><input id="compWaste" readonly></div><div class="field"><label>تكلفة المكون</label><input id="compCost" readonly></div></div><div class="actions"><button class="btn secondary" onclick="ES27.aiComp()">احسب AI للمكون</button><button class="btn" onclick="ES27.addComp()">إضافة المكون</button><button class="btn danger" onclick="ES27.clearComps()">تفريغ</button></div><div id="compList">${compTable()}</div><button class="btn" onclick="ES27.saveRecipe()">حفظ / تحديث الصنف</button></div>`; }
   function compTable(){ return table(state.recipeComps,['المكون','استهلاك','تكلفة'],c=>[esc(c.materialName),esc(c.qty),money(c.cost)]); }
 
@@ -187,7 +280,8 @@
     const sales = (state.data.sales||[]).reduce((s,r)=>s+num(r.total||r.amount),0);
     const purchases = (state.data.purchases||[]).reduce((s,r)=>s+num(r.total||r.amount),0);
     const waste = (state.data.wasteLines||[]).reduce((s,r)=>s+num(r.amount||r.wasteAmount||r.remain),0);
-    return `<div class="card"><h2>التقارير</h2><div class="grid four"><div class="kpi"><b>${money(sales)}</b><span>مبيعات</span></div><div class="kpi"><b>${money(purchases)}</b><span>مشتريات</span></div><div class="kpi"><b>${money(sales-purchases-waste)}</b><span>ربح تقديري</span></div><div class="kpi"><b>${money(waste)}</b><span>هوالك</span></div></div></div>`;
+    const operating = operatingExpenseRows().reduce((s,r)=>s + num(r.operatingUnitCost || r['قيمة التشغيل'] || r.unitCost || r.cost),0);
+    return `<div class="card"><h2>التقارير</h2><div class="grid four"><div class="kpi"><b>${money(sales)}</b><span>مبيعات</span></div><div class="kpi"><b>${money(purchases)}</b><span>مشتريات</span></div><div class="kpi"><b>${money(waste)}</b><span>هوالك</span></div><div class="kpi"><b>${money(sales-purchases-waste-operating)}</b><span>صافي تقديري بعد التشغيل</span></div></div></div><div class="card"><h3>مصروفات التشغيل المسجلة</h3>${table(operatingExpenseRows(),['البند','القسم','باند التشغيل','طريقة التوزيع','القيمة'],r=>[esc(materialName(r)),esc(matDept(r)),esc(r.operatingBand||r['بند التشغيل']||''),esc(r.operatingCalcMethod||r['طريقة توزيع التشغيل']||''),money(r.operatingUnitCost||r['قيمة التشغيل']||r.unitCost)])}</div>`;
   }
   function screenHealth(){ return `<div class="card"><h2>فحص النظام</h2><button class="btn" onclick="ES27.health()">فحص الآن</button><div id="healthBox" class="hint">اضغط فحص الآن.</div></div>`; }
 
@@ -223,7 +317,7 @@
         finalInvoices: r.finalInvoices || [],
         summary: r.summary || {}
       });
-      saveLocal(); render(); msg('تم التحديث من الشيتات: ' + now());
+      saveLocal(); render(); if(state.active==='sales' && qs.get('pullLines')) setTimeout(()=>{ try{ ES27.pullDeptCandidates(); }catch(e){} },100); msg('تم التحديث من الشيتات: ' + now());
     }catch(e){
       mergeData(); render(); msg('تنبيه: يعمل بنسخة محلية مؤقتة - ' + e.message, true);
     }finally{ state.loading = false; }
@@ -232,11 +326,35 @@
   window.ES27 = {
     go(t){ state.active = t; shell(); },
     load,
-    hardReload(){ const url = location.pathname + '?v=es8-batch27-' + Date.now() + '&name=' + encodeURIComponent(user.name) + '&username=' + encodeURIComponent(user.username) + '&token=' + encodeURIComponent(user.token || ''); location.href = url; },
+    hardReload(){ const url = location.pathname + '?v=es9-batch28-' + Date.now() + '&name=' + encodeURIComponent(user.name) + '&username=' + encodeURIComponent(user.username) + '&token=' + encodeURIComponent(user.token || ''); location.href = url; },
     quickSearch(q){ q=nkey(q); if(!q) return; const found = templates().find(r=>nkey(templateName(r)).includes(q)) || materials().find(r=>nkey(materialName(r)).includes(q)); if(found) flash('تم العثور على: ' + (templateName(found)||materialName(found))); },
     saveSupplier(){ const s={name:val('supName'),phone:val('supPhone'),opening:num(val('supOpening')),address:val('supAddress')}; if(!s.name) return flash('اكتب اسم المورد',true); const i=state.data.suppliers.findIndex(x=>nkey(x.name||x.supplier)===nkey(s.name)); if(i>=0) state.data.suppliers[i]=s; else state.data.suppliers.unshift(s); saveLocal(); api('saveEasyStoreSupplier',s).catch(()=>{}); shell(); flash('تم حفظ المورد'); },
     editSupplier(i){ const s=state.data.suppliers[i]; if(!s) return; set('supName',s.name||s.supplier); set('supPhone',s.phone); set('supOpening',s.opening||s.openingBalance); set('supAddress',s.address); },
     filterCustomers(){ const q=nkey(val('custSearch')); const rows=(state.data.customers||[]).filter(c=>nkey([c.name,c.customerName,c.phone,c.mobile].join(' ')).includes(q)); const box=$('custTable'); if(box) box.innerHTML=customersTable(rows); },
+    async focusSaleCustomer(){
+      const local=localCustomerMatches(val('saCustomer'));
+      if(local.length){ renderCustomerDropdown(local); return; }
+      renderCustomerDropdown([]);
+      try{ const r=await api('getEasyStoreCustomers',{limit:80}); if(r&&r.success){ state.data.customers=r.customers||[]; saveLocal(); renderCustomerDropdown(localCustomerMatches(val('saCustomer'))); } }catch(e){}
+    },
+    searchSaleCustomers(q){
+      renderCustomerDropdown(localCustomerMatches(q));
+      clearTimeout(state.customerSearchTimer);
+      state.customerSearchTimer=setTimeout(async()=>{
+        try{ const r=await api('searchCustomers',{q:q||'ا'}); if(r&&r.success){ const map={}; (state.data.customers||[]).forEach(c=>{map[nkey((c.name||c.customerName)+'|'+(c.phone||c.mobile))]=c}); (r.customers||[]).forEach(c=>{map[nkey((c.name||c.customerName)+'|'+(c.phone||c.mobile))]=c}); state.data.customers=Object.values(map); saveLocal(); renderCustomerDropdown(localCustomerMatches(q)); } }catch(e){}
+      },260);
+    },
+    pickSaleCustomer(i){ const box=$('saCustomerDrop'); const rows=(box&&box.__rows)||[]; const c=rows[i]; if(!c) return; set('saCustomer',c.name||c.customerName||''); if(!$('saOrder')?.value && qs.get('orderId')) set('saOrder',qs.get('orderId')); if(box) box.classList.add('hidden'); this.pullDeptCandidates(); },
+    pullDeptCandidates(){ renderSalePulledBoxes(); flash('تم تحميل بنود الأقسام غير المفوترة المطابقة.'); },
+    addPickedDeptLines(){ const rows=saleCandidateLines(); const picked={}; document.querySelectorAll('.saleLinePick:checked').forEach(ch=>picked[ch.dataset.key]=true); const cur=salePulledIds(); rows.forEach(r=>{ const key=nkey(rowLineId(r)||JSON.stringify(r)); if(picked[key] && !cur[key]) state.salePulledLines.push(r); }); renderSalePulledBoxes(); },
+    removePulledLine(i){ state.salePulledLines.splice(i,1); renderSalePulledBoxes(); },
+    toggleClientInvoiceMenu(ev){ ev&&ev.preventDefault(); const m=$('clientInvoiceMenu'); if(m) m.classList.toggle('hidden'); },
+    invoicePlainText(){ const rows=state.salePulledLines||[]; const lines=['فاتورة مطبعجي','رقم الفاتورة: '+val('saNo'),'رقم الأوردر: '+val('saOrder'),'العميل: '+val('saCustomer'),'--------------------']; if(rows.length){ rows.forEach((r,i)=>lines.push((i+1)+') '+rowDept(r)+' - '+rowItem(r)+' × '+rowQty(r)+' = '+money(rowSale(r)*rowQty(r)))); } else { lines.push('1) '+(val('saItem')||'بند مطبعجي')+' × '+(val('saQty')||1)+' = '+money(num(val('saQty'))*num(val('saUnit')))); } lines.push('--------------------','الإجمالي: '+money(val('saTotal')),'المدفوع: '+money(val('saPaid')),'المتبقي: '+money(val('saRemain'))); return lines.join('\n'); },
+    invoiceHtml(){ const rows=state.salePulledLines||[]; const trs=(rows.length?rows:[{department:'',itemName:val('saItem')||'بند مطبعجي',qty:val('saQty')||1,sale:val('saUnit')}]).map((r,i)=>`<tr><td>${i+1}</td><td>${esc(rowDept(r))}</td><td>${esc(rowItem(r))}</td><td>${esc(rowQty(r))}</td><td>${esc(money(rowSale(r)*rowQty(r)))}</td></tr>`).join(''); return `<html dir="rtl"><head><title>فاتورة مطبعجي</title><style>body{font-family:Tahoma;padding:30px;background:#f8fafc}.box{max-width:780px;margin:auto;background:white;border:1px solid #ddd;padding:25px;border-radius:18px}h1{color:#0f766e}table{width:100%;border-collapse:collapse}td,th{border:1px solid #ddd;padding:9px;text-align:right}.total{font-size:22px;color:#0f766e;font-weight:bold}</style></head><body><div class="box"><h1>فاتورة مطبعجي</h1><p>رقم: ${esc(val('saNo'))}</p><p>العميل: ${esc(val('saCustomer'))}</p><p>الأوردر: ${esc(val('saOrder'))}</p><table><thead><tr><th>#</th><th>القسم</th><th>البند</th><th>كمية</th><th>القيمة</th></tr></thead><tbody>${trs}</tbody></table><p class="total">الإجمالي: ${esc(money(val('saTotal')))}</p><p>المدفوع: ${esc(money(val('saPaid')))} / المتبقي: ${esc(money(val('saRemain')))}</p></div><script>setTimeout(()=>print(),400)<\/script></body></html>`; },
+    showPricePreview(){ alert(this.invoicePlainText()); },
+    async copySaleText(){ const t=this.invoicePlainText(); try{ await navigator.clipboard.writeText(t); flash('تم نسخ نص الفاتورة'); }catch(e){ prompt('انسخ نص الفاتورة',t); } },
+    openSaleWhatsApp(){ const t=this.invoicePlainText(); window.open('https://wa.me/?text='+encodeURIComponent(t),'_blank'); },
+    downloadSaleImage(){ const canvas=document.createElement('canvas'); canvas.width=1200; canvas.height=900; const ctx=canvas.getContext('2d'); ctx.fillStyle='#fff'; ctx.fillRect(0,0,1200,900); ctx.fillStyle='#0f766e'; ctx.fillRect(0,0,1200,120); ctx.fillStyle='#fff'; ctx.font='bold 44px Arial'; ctx.textAlign='right'; ctx.fillText('فاتورة مطبعجي',1120,75); ctx.fillStyle='#111827'; ctx.font='28px Arial'; const lines=this.invoicePlainText().split('\n'); let y=170; lines.forEach(l=>{ ctx.fillText(l,1120,y); y+=42; }); const a=document.createElement('a'); a.download='matbagy-sale-'+(val('saNo')||Date.now())+'.png'; a.href=canvas.toDataURL('image/png'); a.click(); },
     saveItem(){ const p={department:val('itDept'),itemName:val('itName'),category:val('itType'),size:val('itSize'),salePrice:num(val('itSale')),fixedCost:num(val('itCost')),active:'نعم'}; if(!p.itemName) return flash('اكتب اسم الصنف',true); const i=state.data.templates.findIndex(x=>nkey(templateName(x))===nkey(p.itemName)&&nkey(matDept(x))===nkey(p.department)); if(i>=0) state.data.templates[i]=Object.assign({},state.data.templates[i],p); else state.data.templates.unshift(p); saveLocal(); api('saveAccountingTemplate',p).catch(()=>{}); shell(); flash('تم حفظ الصنف'); },
     editItem(i){ const r=templates()[i]; if(!r) return; set('itDept',matDept(r)); set('itName',templateName(r)); set('itType',r.category||matType(r)); set('itSize',r.size); set('itSale',matSale(r)); set('itCost',matCost(r)); },
     clearItemForm(){ ['itName','itSize','itSale','itCost'].forEach(id=>set(id,'')); },
@@ -244,11 +362,30 @@
     calcPurchase(){ const total=num(val('puQty'))*num(val('puUnit')); set('puTotal',total.toFixed(2)); set('puRemain',Math.max(0,total-num(val('puPaid'))).toFixed(2)); },
     savePurchase(){ this.calcPurchase(); const p={no:val('puNo'),supplier:val('puSupplier'),paymentType:val('puPay'),dueDate:val('puDue'),material:val('puMat'),qty:num(val('puQty')),unit:num(val('puUnit')),paid:num(val('puPaid')),total:num(val('puTotal')),remain:num(val('puRemain')),notes:val('puNotes'),date:new Date().toISOString()}; state.data.purchases.unshift(p); state.data.stockMoves.unshift({date:now(),materialName:p.material,inQty:p.qty,outQty:0,balance:'',source:'فاتورة شراء '+p.no}); saveLocal(); api('saveEasyStorePurchaseV2',p).catch(()=>{}); shell(); flash('تم حفظ فاتورة الشراء'); },
     applySaleItem(){ const r=visibleTemplates()[num(val('saItem'))]; if(!r) return; set('saUnit',matSale(r)); this.calcSale(); },
-    calcSale(){ const total=Math.max(0,num(val('saQty'))*num(val('saUnit'))-num(val('saDiscount'))); set('saTotal',total.toFixed(2)); set('saRemain',Math.max(0,total-num(val('saPaid'))).toFixed(2)); },
-    saveSale(){ this.calcSale(); const r=visibleTemplates()[num(val('saItem'))]; const p={no:val('saNo'),customer:val('saCustomer'),orderId:val('saOrder'),paymentType:val('saPay'),item:r?templateName(r):val('saItem'),qty:num(val('saQty')),unit:num(val('saUnit')),discount:num(val('saDiscount')),paid:num(val('saPaid')),total:num(val('saTotal')),remain:num(val('saRemain')),notes:val('saNotes'),date:new Date().toISOString()}; state.data.sales.unshift(p); state.data.stockMoves.unshift({date:now(),materialName:p.item,inQty:0,outQty:p.qty,balance:'',source:'فاتورة بيع '+p.no}); saveLocal(); api('saveEasyStoreSaleV2',p).catch(()=>{}); shell(); flash('تم حفظ فاتورة البيع'); },
-    printSale(){ const w=window.open('','_blank'); w.document.write(`<html dir="rtl"><head><title>فاتورة مطبعجي</title><style>body{font-family:Tahoma;padding:30px}.box{max-width:720px;margin:auto;border:1px solid #ddd;padding:25px;border-radius:14px}h1{color:#0f766e}</style></head><body><div class="box"><h1>فاتورة مطبعجي</h1><p>العميل: ${esc(val('saCustomer'))}</p><p>الإجمالي: ${esc(val('saTotal'))}</p><p>المدفوع: ${esc(val('saPaid'))}</p><p>المتبقي: ${esc(val('saRemain'))}</p></div><script>print()<\/script></body></html>`); },
+    calcSale(){ updateSaleTotalsFromPulled(); },
+    async saveSale(){
+      this.calcSale();
+      const r=visibleTemplates()[num(val('saItem'))];
+      const lineIds=salePulledLineIds();
+      const desc = (state.salePulledLines||[]).map(x=>rowDept(x)+': '+rowItem(x)+' × '+rowQty(x)).join(' / ');
+      const p={no:val('saNo'),customer:val('saCustomer'),orderId:val('saOrder'),paymentType:val('saPay'),item:desc || (r?templateName(r):val('saItem')) || 'فاتورة مبيعات موحدة',qty:num(val('saQty'))||1,unit:num(val('saUnit')),discount:num(val('saDiscount')),paid:num(val('saPaid')),total:num(val('saTotal')),remain:num(val('saRemain')),notes:val('saNotes'),lineIds:JSON.stringify(lineIds),date:new Date().toISOString()};
+      state.data.sales.unshift(p);
+      if(p.item) state.data.stockMoves.unshift({date:now(),materialName:p.item,inQty:0,outQty:p.qty,balance:'',source:'فاتورة بيع '+p.no});
+      (state.salePulledLines||[]).forEach(x=>{ x.closeStatus='تم التقفيل'; x.invoiceNo=p.no; x['حالة التقفيل']='تم التقفيل'; x['رقم الفاتورة النهائية']=p.no; });
+      saveLocal();
+      try{ await api('saveEasyStoreSaleV2',p); }catch(e){}
+      if(lineIds.length){ try{ await api('saveAccountingFinalInvoice',{orderId:p.orderId,customerName:p.customer,subtotal:p.total,discount:num(val('saDiscount')),finalTotal:p.total,paid:p.paid,remaining:p.remain,lineIds:JSON.stringify(lineIds),notes:p.notes,status:p.remain>0?'عليها باقي':'مدفوعة'}); }catch(e){} }
+      state.salePulledLines=[]; shell(); flash('تم حفظ فاتورة البيع الموحدة وربطها ببنود وائل/جابر');
+    },
+    printSale(){ const w=window.open('','_blank'); if(!w) return alert('اسمح بفتح نافذة الطباعة.'); w.document.write(this.invoiceHtml()); w.document.close(); },
     kitchenMode(mode){ const b=$('kitchenBox'); if(b) b.innerHTML = mode==='recipe' ? recipeForm() : rawForm(); },
-    saveRaw(){ const p={department:val('rawDept'),materialName:val('rawName'),materialKind:val('rawKind'),unitCost:num(val('rawCost')),salePrice:num(val('rawSale')),stockQty:num(val('rawStock')),minStock:num(val('rawMin')),width:num(val('rawW')),height:num(val('rawH')),notes:val('rawNotes'),active:'نعم'}; if(!p.materialName) return flash('اكتب اسم الخامة',true); const i=state.data.materials.findIndex(x=>nkey(materialName(x))===nkey(p.materialName)&&nkey(matDept(x))===nkey(p.department)); if(i>=0) state.data.materials[i]=Object.assign({},state.data.materials[i],p); else state.data.materials.unshift(p); saveLocal(); api('saveAccountingMaterial',p).catch(()=>{}); shell(); state.active='kitchen'; shell(); flash('تم حفظ الخامة'); },
+    saveRaw(){
+      const p={department:val('rawDept'),materialName:val('rawName'),materialKind:val('rawKind'),materialClass:val('rawClass'),operationExpense:val('rawClass')==='مصروف تشغيل'?'نعم':'لا',operatingBand:val('rawOperatingBand'),operatingCalcMethod:val('rawOpMethod'),operatingUnitCost:num(val('rawOpCost')),unitCost:num(val('rawCost')),salePrice:num(val('rawSale')),stockQty:num(val('rawStock')),minStock:num(val('rawMin')),width:num(val('rawW')),height:num(val('rawH')),notes:val('rawNotes'),active:val('rawClass')==='متوقفة'?'لا':'نعم'};
+      if(!p.materialName) return flash('اكتب اسم الخامة',true);
+      const i=state.data.materials.findIndex(x=>nkey(materialName(x))===nkey(p.materialName)&&nkey(matDept(x))===nkey(p.department));
+      if(i>=0) state.data.materials[i]=Object.assign({},state.data.materials[i],p); else state.data.materials.unshift(p);
+      saveLocal(); api('saveAccountingMaterial',p).catch(()=>{}); shell(); state.active='kitchen'; shell(); flash('تم حفظ الخامة وتصنيفها ضمن '+p.materialClass);
+    },
     aiComp(){ const m=matByName(val('compMat')); if(!m) return flash('اختار المكون',true); const sz=String(val('recSize')).replace(/[×*]/g,'x').split('x').map(num); const outW=sz[0]||0,outH=sz[1]||0, rawW=num(m.width||m.rawWidth||m['عرض']), rawH=num(m.height||m.rawHeight||m['طول']); let pieces=0; if(rawW&&rawH&&outW&&outH){ pieces=Math.max(Math.floor(rawW/outW)*Math.floor(rawH/outH),Math.floor(rawW/outH)*Math.floor(rawH/outW)); } const manual=num(val('compManualPieces')); const adopted=manual||pieces||1; const waste=Math.max(0,(pieces||adopted)-adopted); const qty=1/adopted; const cost=matCost(m)*qty; set('compAiPieces',pieces||''); set('compWaste',waste||''); set('compQty',qty.toFixed(6)); set('compCost',cost.toFixed(4)); },
     addComp(){ const name=val('compMat'); if(!name) return; const m=matByName(name); const qty=num(val('compQty'))||1; const cost=num(val('compCost'))||(m?matCost(m)*qty:0); state.recipeComps.push({materialName:name,qty,cost}); const c=$('compList'); if(c) c.innerHTML=compTable(); this.calcRecipe(); },
     clearComps(){ state.recipeComps=[]; const c=$('compList'); if(c) c.innerHTML=compTable(); this.calcRecipe(); },
