@@ -17,3 +17,7 @@
 
 /* Batch 28 - mutual invoices + operating expenses */
 .customerField{position:relative}.customerDrop{position:absolute;z-index:50;top:72px;right:0;left:0;background:#fff;border:1px solid #99f6e4;border-radius:14px;box-shadow:0 16px 40px rgba(15,23,42,.18);max-height:280px;overflow:auto;padding:6px}.customerDrop button{display:block;width:100%;background:#fff;border:0;border-bottom:1px solid #f1f5f9;text-align:right;padding:10px 12px;cursor:pointer}.customerDrop button:hover{background:#ecfdf5}.custDropHint{padding:12px;color:#64748b}.menuWrap{position:relative;display:inline-flex}.clientInvoiceMenu{position:absolute;z-index:60;top:44px;right:0;background:#fff;border:1px solid #dbeafe;border-radius:14px;box-shadow:0 16px 40px rgba(15,23,42,.18);padding:6px;min-width:190px}.clientInvoiceMenu button{display:block;width:100%;background:#fff;color:#0f172a;border:0;text-align:right;padding:10px;border-radius:10px;cursor:pointer}.clientInvoiceMenu button:hover{background:#ecfdf5}.split{align-items:start}.softBox b{color:#0f766e}
+
+/* Batch 29 - فاتورة القسم + البند المشترك + حاسبة جابر */
+.checkLine{display:flex;gap:8px;align-items:center;background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:10px;font-weight:800;color:#0f172a}
+.checkboxField label:first-child{margin-bottom:6px}.strongHint{border:1px solid #99f6e4;background:#ecfeff;color:#0f766e;font-weight:900}.laserCalcInner h3{margin-top:0}.empty{padding:12px;border:1px dashed #cbd5e1;border-radius:14px;color:#64748b;background:#f8fafc}.softBox.card{box-shadow:none}
