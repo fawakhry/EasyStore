@@ -1,7 +1,7 @@
 (function(){
   'use strict';
 
-  const VERSION = 'V10 Batch29 Dept Invoice + Gaber Calculator';
+  const VERSION = 'V11 Batch30 Dept Invoice Fix + Gaber Calculator';
   window.EASYSTORE_MATBAGY_VERSION = VERSION;
 
   const app = document.getElementById('app');
@@ -32,8 +32,8 @@
   const user = readSso();
   const roleKey = () => nkey([user.name,user.username,user.mode,user.department].join(' '));
   const isAdmin = () => /ضياء|diaa|admin|full|kitchen|اداره|إدارة/.test(roleKey());
-  const isLaser = () => /جابر|gaber|jaber|laser|ليزر/.test(roleKey());
-  const isPrint = () => /وائل|wael|print|طباع/.test(roleKey());
+  const isLaser = () => /جابر|gaber|jaber|laser|ليزر/.test(roleKey()) || qs.get('laserAi') === '1' || qs.get('mode') === 'laser' || qs.get('department') === 'ليزر';
+  const isPrint = () => !isLaser() && (/وائل|wael|print|طباع/.test(roleKey()) || qs.get('mode') === 'print' || qs.get('department') === 'طباعة');
   const isFinal = () => /رحمه|رحمة|ريفان|ريڤان|rahma|revan|rivan|final/.test(roleKey());
   const roleText = () => isAdmin() ? 'ضياء / مطبخ الحسابات' : isLaser() ? 'جابر / الليزر' : isPrint() ? 'وائل / الطباعة' : isFinal() ? 'رحمة أو ريفان / تقفيل فواتير' : 'موظف';
   const userDept = () => isLaser() ? 'ليزر' : isPrint() ? 'طباعة' : (user.department || '');
@@ -45,6 +45,7 @@
     if(/dept/.test(s)) return 'dept';
     if(/sales|sale|invoice|فاتورة/.test(s)) return 'sales';
     if(/kitchen|raw|materials/.test(s)) return 'kitchen';
+    if(qs.get('laserAi') === '1' || qs.get('mode') === 'laser') return 'dept';
     return 'dashboard';
   }
 
@@ -319,7 +320,7 @@
     return `<div class="card"><h2>فاتورة القسم - ${esc(d)}</h2><div class="hint">افتح على اسم العميل، اختار الصنف من مطبخ الحسابات، اكتب الكمية والسعر، ثم سجل البند. البنود المشتركة المسجلة من القسم الآخر تظهر هنا إجباريًا.</div>
       <div class="grid four"><div class="field"><label>اسم العميل</label><input id="dlCustomer" value="${qCustomer}" oninput="ES27.renderDeptSharedLines()" placeholder="اسم العميل"></div><div class="field"><label>رقم الأوردر</label><input id="dlOrder" value="${qOrder}" oninput="ES27.renderDeptSharedLines()"></div><div class="field"><label>الصنف</label><select id="dlItemSel" onchange="ES27.applyDeptItem()"><option></option>${itemOptions()}</select><input id="dlItem" placeholder="اسم الصنف المختار"></div><div class="field"><label>قسم الصنف</label><input id="dlItemDept" readonly></div></div>
       <div class="grid six"><div class="field"><label>الكمية</label><input id="dlQty" type="number" value="1" oninput="ES27.calcDept()"></div><div class="field"><label>سعر السيستم</label><input id="dlSystemSale" readonly></div><div class="field"><label>سعر الفاتورة</label><input id="dlSale" type="number" oninput="ES27.calcDept()"></div><div class="field"><label>فرق للهوالك</label><input id="dlDiff" readonly></div><div class="field checkboxField"><label>بند مشترك</label><label class="checkLine"><input id="dlSharedLine" type="checkbox"> يظهر عند القسم الآخر</label></div><div class="field"><label>ملاحظات</label><input id="dlNotes"></div></div>
-      ${isLaser()?'<div class="actions"><button class="btn secondary" onclick="ES27.toggleLaserCalc()">حاسبة الليزر / حساب شغلانة</button></div><div id="laserCalcBox" class="card softBox hidden">'+laserBox()+'</div>':''}
+      ${isLaser()?'<div class="actions"><button class="btn secondary" onclick="ES27.toggleLaserCalc()">حاسبة الليزر / حساب شغلانة</button></div><div id="laserCalcBox" class="card softBox">'+laserBox()+'</div>':''}
       <div class="actions"><button class="btn" onclick="ES27.saveDeptLine()">تسجيل البند</button><button class="btn secondary" onclick="ES27.saveDeptLineAndOpenSales()">تسجيل وإرسال للفاتورة</button></div><div id="deptMsg"></div></div>
       <div class="card"><h3>البنود المشتركة من القسم الآخر</h3><div id="deptSharedBox">${deptSharedTable()}</div></div>`;
   }
@@ -426,7 +427,7 @@
     calcDept(){ const q=num(val('dlQty'))||1, sys=num(val('dlSystemSale')), sale=num(val('dlSale')); set('dlDiff',((sale-sys)*q).toFixed(2)); },
     renderDeptSharedLines(){ const b=$('deptSharedBox'); if(b) b.innerHTML=deptSharedTable(); },
     toggleLaserCalc(){ const b=$('laserCalcBox'); if(b) b.classList.toggle('hidden'); },
-    saveDeptLineAndOpenSales(){ this.saveDeptLine(); const order=encodeURIComponent(val('dlOrder')); const customer=encodeURIComponent(val('dlCustomer')); setTimeout(()=>{ location.href='?screen=sales&orderId='+order+'&customer='+customer+'&v=es10-batch29'; }, 500); },
+    saveDeptLineAndOpenSales(){ this.saveDeptLine(); const order=encodeURIComponent(val('dlOrder')); const customer=encodeURIComponent(val('dlCustomer')); setTimeout(()=>{ location.href='?screen=sales&orderId='+order+'&customer='+customer+'&v=es11-batch30'; }, 500); },
     saveDeptLine(){ this.calcDept(); const tpl=selectedDeptTemplate(); const itemDept=tpl?matDept(tpl):val('dlItemDept'); const shared=($('dlSharedLine')&&$('dlSharedLine').checked)||isSharedDeptName(itemDept); const p={lineId:'DLINE-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,6),orderId:val('dlOrder'),customerName:val('dlCustomer'),department:userDept(),itemDepartment:itemDept||userDept(),sharedLine:shared?'نعم':'لا',billingStatus:'جاهز للفوترة',itemName:val('dlItem'),qty:num(val('dlQty')),systemSale:num(val('dlSystemSale')),sale:num(val('dlSale')),diff:num(val('dlDiff')),notes:val('dlNotes'),user:user.name,date:new Date().toISOString()}; if(!p.customerName||!p.orderId||!p.itemName){ return flash('اسم العميل ورقم الأوردر والصنف مطلوبين.',true); } if(shared){ const dup=(state.data.deptLines||[]).find(x=>isSharedLineRecord(x)&&sameDeptInvoiceContext(x,p.orderId,p.customerName)&&nkey(rowItem(x))===nkey(p.itemName)&&isUnbilledDeptLine(x)); if(dup){ return flash('البند المشترك مسجل بالفعل بواسطة '+rowDept(dup)+' وسيظهر تلقائيًا عند القسم الآخر. لا تسجله مرتين.',true); } } state.data.deptLines.unshift(p); if(p.diff) state.data.wasteLines.unshift({department:p.department,orderId:p.orderId,reason:'فرق سعر عن السيستم',amount:p.diff,paid:0}); saveLocal(); api('saveAccountingDeptLine',p).then(r=>{ if(r&&r.lineId) p.id=r.lineId; }).catch(()=>{}); shell(); flash(shared?'تم حفظ بند مشترك وسيظهر عند القسم الآخر':'تم حفظ فاتورة القسم'); },
     aiLaser(){ const m=matByName(val('aiMat')); const w=num(val('aiW')),h=num(val('aiH')),q=num(val('aiQty'))||1; if(!m||!w||!h) return flash('اختار خامة الليزر واكتب المقاس',true); const rawW=num(m.width||m.rawWidth), rawH=num(m.height||m.rawHeight); let pieces=rawW&&rawH?Math.max(Math.floor(rawW/w)*Math.floor(rawH/h),Math.floor(rawW/h)*Math.floor(rawH/w)):1; const waste=num(val('aiWaste')); const adopted=Math.max(1,Math.floor(pieces/(1+waste/100))); const cost=matCost(m)/adopted; const sale=(cost*(num(val('aiFactor'))||2.2)); set('dlItem','ليزر '+materialName(m)+' '+w+'×'+h); set('dlItemDept','ليزر'); const sh=$('dlSharedLine'); if(sh){ sh.checked=false; sh.disabled=false; } set('dlQty',q); set('dlSystemSale',sale.toFixed(2)); set('dlSale',sale.toFixed(2)); this.calcDept(); const a=$('aiMsg'); if(a) a.textContent='الناتج '+pieces+' / المعتمد '+adopted+' / سعر مقترح '+money(sale); },
     saveWaste(){ const p={department:userDept(),orderId:val('waOrder'),reason:val('waReason'),amount:num(val('waAmount')),paid:num(val('waPaid')),user:user.name,date:new Date().toISOString()}; state.data.wasteLines.unshift(p); saveLocal(); api('saveAccountingWaste',p).catch(()=>{}); shell(); flash('تم حفظ الهالك'); },
