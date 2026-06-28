@@ -1,14 +1,16 @@
 
-/*********************** EasyStore ES15 / V1858 ************************
+/*********************** EasyStore ES15.1 / V1858 ************************
   Fixes requested by Diaa:
   - Strong close for فاتورة العميل dropdown.
   - Customer/Supplier accounts ledger: debts, payments, balances, history.
   - Customers: edit/debt buttons and account panel.
+  - Fix: debt buttons appear only in Customers, supplier account buttons only in Suppliers, never in Items.
   - Keeps ES14 Fix5 behaviors: activation, edit prices, paper pack, multi-row dept invoice.
 ****************************************************************************/
 (function(){
   'use strict';
   window.EASYSTORE_ES15_V1858_LEDGER_FIX = true;
+  window.EASYSTORE_ES15_V1858_CUSTOMER_BUTTON_FIX = true;
   var qs = new URLSearchParams(location.search);
   function $(id){ return document.getElementById(id); }
   function txt(v){ return String(v == null ? '' : v).replace(/\s+/g,' ').trim(); }
@@ -92,7 +94,7 @@
   async function loadParties(){
     try{ var c=await api('getEasyStoreCustomers',{limit:800}); ledgerState.customers=c.customers||[]; }catch(e){}
     try{ var s=await api('getEasyStoreSuppliers',{}); ledgerState.suppliers=s.suppliers||[]; }catch(e){}
-    renderPartyOptions(); decorateCustomerRows();
+    renderPartyOptions(); decorateCustomerRows(); decorateSupplierRows(); hydrateSalesCustomerPickers(); removeLedgerButtonsFromWrongPlaces();
   }
   function partyNameFromRow(r,type){ return type==='supplier' ? txt(r.name||r.supplier||r.supplierName||r['اسم المورد']||r['المورد']) : txt(r.name||r.customerName||r.customer||r['اسم العميل']||r['اسم الشات / المكتب']); }
   function renderPartyOptions(){
@@ -121,18 +123,137 @@
     var host=document.querySelector('.top .menu')||document.querySelector('.menu')||document.querySelector('.tabs')||document.querySelector('.top-actions')||document.body;
     var b=document.createElement('button'); b.id='es15LedgerTopBtn'; b.type='button'; b.className='ghost'; b.textContent='حسابات العملاء والموردين'; b.onclick=function(){openLedgerPanel('customer');}; host.appendChild(b);
   }
-  function decorateCustomerRows(){
-    document.querySelectorAll('table tr').forEach(function(tr){
-      if(tr.dataset.es15DebtBtn)return;
-      var cells=Array.from(tr.children||[]); var text=txt(tr.textContent); if(!text||/اسم العميل|العميل/.test(text)&&tr.querySelector('th'))return;
-      var maybe=cells.map(function(c){return txt(c.textContent);}).filter(Boolean)[0]||'';
-      if(!maybe || maybe.length<2)return;
-      if(/عميل|customer|هاتف|موبايل|مديونية/.test(norm(text)) || ledgerState.customers.some(function(c){return norm(partyNameFromRow(c,'customer'))===norm(maybe)||norm(text).indexOf(norm(partyNameFromRow(c,'customer')))>=0;})){
-        tr.dataset.es15DebtBtn='1';
-        var td=document.createElement('td'); var btn=document.createElement('button'); btn.type='button'; btn.className='es15-debt-btn'; btn.textContent='تعديل/مديونية'; btn.onclick=function(ev){ev.preventDefault(); openLedgerPanel('customer', maybe);}; td.appendChild(btn); tr.appendChild(td);
-      }
+  function rowHeaderText(table){
+    var head='';
+    if(table){
+      var h=table.querySelector('thead') || table.querySelector('tr');
+      if(h) head=norm(h.textContent||'');
+    }
+    return head;
+  }
+  function nearestTitleText(el){
+    var box=el && el.closest ? (el.closest('section,.card,.content,main,.page') || document.body) : document.body;
+    var title='';
+    if(box){
+      var h=box.querySelector('h1,h2,h3,.section-title,.table-tools h3');
+      if(h) title=norm(h.textContent||'');
+    }
+    return title;
+  }
+  function isItemsTable(table){
+    var h=rowHeaderText(table), title=nearestTitleText(table);
+    return /الاصناف|الصنف|الخامات|مطبخ الحسابات/.test(title) || (/الصنف|القسم|التكلفه|التكلفة|البيع|نسبه الربح|نسبة الربح/.test(h) && !/اسم العميل|العميل|الهاتف|الموبايل|كود العميل/.test(h));
+  }
+  function isCustomersTable(table){
+    var h=rowHeaderText(table), title=nearestTitleText(table);
+    if(isItemsTable(table)) return false;
+    if(/العملاء|عميل/.test(title) && !/الاصناف|الصنف/.test(title)) return true;
+    return /اسم العميل|العميل|الهاتف|الموبايل|كود العميل|مديونيه|مديونية/.test(h) && !/الصنف|التكلفه|التكلفة|نسبه الربح|نسبة الربح/.test(h);
+  }
+  function isSuppliersTable(table){
+    var h=rowHeaderText(table), title=nearestTitleText(table);
+    if(isItemsTable(table)) return false;
+    if(/الموردين|مورد/.test(title) && !/الاصناف|الصنف/.test(title)) return true;
+    return /اسم المورد|المورد|هاتف المورد|رصيد المورد/.test(h) && !/الصنف|التكلفه|التكلفة/.test(h);
+  }
+  function removeLedgerButtonsFromWrongPlaces(){
+    document.querySelectorAll('button.es15-debt-btn').forEach(function(btn){
+      var tr=btn.closest('tr'), table=btn.closest('table');
+      if(!tr || !table) return;
+      var type=btn.getAttribute('data-party-type')||'customer';
+      var ok = type==='supplier' ? isSuppliersTable(table) : isCustomersTable(table);
+      if(!ok){ var cell=btn.closest('td,th'); if(cell) cell.remove(); else btn.remove(); if(tr) delete tr.dataset.es15DebtBtn; }
     });
   }
+  function firstUsefulCellText(tr){
+    var cells=Array.from(tr.children||[]);
+    for(var i=0;i<cells.length;i++){
+      var v=txt(cells[i].textContent).replace(/تعديل\/مديونية|كشف حساب|تسجيل سداد|تعديل|إيقاف|ايقاف|تفعيل/g,'').trim();
+      if(v && !/^[-—]+$/.test(v)) return v;
+    }
+    return '';
+  }
+  function appendLedgerButton(tr, type, label, partyName){
+    if(tr.dataset.es15DebtBtn===type) return;
+    tr.dataset.es15DebtBtn=type;
+    var td=document.createElement('td');
+    var btn=document.createElement('button');
+    btn.type='button'; btn.className='es15-debt-btn'; btn.setAttribute('data-party-type', type);
+    btn.textContent=label;
+    btn.onclick=function(ev){ ev.preventDefault(); ev.stopPropagation(); openLedgerPanel(type, partyName); return false; };
+    td.appendChild(btn); tr.appendChild(td);
+  }
+  function decorateCustomerRows(){
+    removeLedgerButtonsFromWrongPlaces();
+    document.querySelectorAll('table').forEach(function(table){
+      if(!isCustomersTable(table)) return;
+      Array.from(table.querySelectorAll('tbody tr, tr')).forEach(function(tr){
+        if(tr.querySelector('th')) return;
+        if(tr.dataset.es15DebtBtn) return;
+        var maybe=firstUsefulCellText(tr); if(!maybe || maybe.length<2)return;
+        appendLedgerButton(tr,'customer','تعديل/مديونية',maybe);
+      });
+    });
+  }
+  function decorateSupplierRows(){
+    removeLedgerButtonsFromWrongPlaces();
+    document.querySelectorAll('table').forEach(function(table){
+      if(!isSuppliersTable(table)) return;
+      Array.from(table.querySelectorAll('tbody tr, tr')).forEach(function(tr){
+        if(tr.querySelector('th')) return;
+        if(tr.dataset.es15DebtBtn) return;
+        var maybe=firstUsefulCellText(tr); if(!maybe || maybe.length<2)return;
+        appendLedgerButton(tr,'supplier','حساب المورد',maybe);
+      });
+    });
+  }
+
+  function bestCustomerMatch(value){
+    var q=norm(value); if(!q || q.length<2) return null;
+    var rows=ledgerState.customers||[];
+    var exact=null, contains=null, starts=null;
+    rows.forEach(function(r){
+      var name=partyNameFromRow(r,'customer'), phone=txt(r.phone||r.mobile||r.customerPhone||r['الهاتف']||r['رقم العميل']||''), code=txt(r.code||r.customerCode||r['كود العميل']||'');
+      var blob=norm([name,phone,code].join(' '));
+      if(norm(name)===q || norm(phone)===q || norm(code)===q) exact=r;
+      else if(norm(name).indexOf(q)===0 && !starts) starts=r;
+      else if(blob.indexOf(q)>=0 && !contains) contains=r;
+    });
+    return exact||starts||contains;
+  }
+  function fillCustomerInputFromMatch(input, r){
+    if(!input||!r)return;
+    var name=partyNameFromRow(r,'customer'); if(name) input.value=name;
+    input.dataset.es15CustomerSelected='1';
+    var scope=input.closest('form,.card,section,main')||document;
+    var phone=txt(r.phone||r.mobile||r.customerPhone||r['الهاتف']||r['رقم العميل']||''), code=txt(r.code||r.customerCode||r['كود العميل']||''), bal=num(r.currentBalance||r.balance||r.debt||r['مديونية']||r['رصيد العميل']);
+    Array.from(scope.querySelectorAll('input')).forEach(function(el){
+      var meta=norm([el.id,el.name,el.placeholder,el.getAttribute('aria-label')].join(' '));
+      if(code && /كود|code/.test(meta) && !/اوردر|order/.test(meta)) el.value=code;
+      if(phone && /تليفون|هاتف|موبايل|phone|mobile/.test(meta)) el.value=phone;
+      if(/مديونيه|مديونية|رصيد|balance|debt/.test(meta)) el.value=bal||'';
+    });
+    toast('تم تحميل بيانات العميل: '+name, false);
+  }
+  function hydrateSalesCustomerPickers(){
+    document.querySelectorAll('input,select').forEach(function(el){
+      if(el.dataset.es15CustomerPickerBound) return;
+      var meta=norm([el.id,el.name,el.placeholder,el.getAttribute('aria-label'), el.previousElementSibling&&el.previousElementSibling.textContent].join(' '));
+      var scope=el.closest('form,.card,section,main')||document.body;
+      var scopeText=norm(scope.textContent||'');
+      var isCustomerField=/عميل|customer/.test(meta) && !/مورد|supplier/.test(meta);
+      var inInvoice=/فاتوره مبيعات|فاتورة مبيعات|فاتوره موحده|فاتورة موحدة|الفاتوره الموحده|الفاتورة الموحدة/.test(scopeText);
+      if(!isCustomerField || !inInvoice) return;
+      el.dataset.es15CustomerPickerBound='1';
+      var handler=function(){
+        if(el.tagName==='SELECT') return;
+        var r=bestCustomerMatch(el.value); if(r) fillCustomerInputFromMatch(el,r);
+      };
+      el.addEventListener('change',handler); el.addEventListener('blur',handler);
+      el.addEventListener('keydown',function(ev){ if(ev.key==='Enter') setTimeout(handler,0); });
+    });
+  }
+
 
   /******** Carry ES14 Fix5 helpers where possible ********/
   function decorateItemRows(){
@@ -160,9 +281,9 @@
   function calcPaperPack(){ var price=num(($('rawPackPrice')||{}).value), sheets=num(($('rawPackSheets')||{}).value); var cost=price&&sheets?price/sheets:0; set('rawSheetCost',cost?cost.toFixed(4):''); if(cost)set('rawCost',cost.toFixed(4)); }
 
   function apply(){
-    closeMenus(false); installLedgerButtons(); ensureLedgerPanel(); decorateItemRows(); ensurePaperPackUI(); decorateCustomerRows();
-    document.title='إيزي ستور مطبعجي ES15 V1858 - Ledger Fix';
-    document.querySelectorAll('.version-badge,.top .muted,.brand p').forEach(function(el){ if(/V13|Batch32|V8|الإصدار|app\.js/.test(el.textContent||'')) el.textContent='ES15 V1858 Ledger Fix / app.js'; });
+    closeMenus(false); installLedgerButtons(); ensureLedgerPanel(); decorateItemRows(); ensurePaperPackUI(); decorateCustomerRows(); decorateSupplierRows(); hydrateSalesCustomerPickers(); removeLedgerButtonsFromWrongPlaces();
+    document.title='إيزي ستور مطبعجي ES15.1 V1858 - Ledger Placement Fix';
+    document.querySelectorAll('.version-badge,.top .muted,.brand p').forEach(function(el){ if(/V13|Batch32|V8|الإصدار|app\.js/.test(el.textContent||'')) el.textContent='ES15.1 V1858 Ledger Placement Fix / app.js'; });
   }
   document.addEventListener('DOMContentLoaded',function(){setTimeout(apply,250);setTimeout(loadParties,900);setTimeout(apply,1600);});
   setInterval(apply,3000);
