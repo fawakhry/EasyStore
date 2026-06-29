@@ -6,10 +6,10 @@
   <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate, max-age=0" />
   <meta http-equiv="Pragma" content="no-cache" />
   <meta http-equiv="Expires" content="0" />
-  <title>إيزي ستور مطبعجي ES29 V1872 Dept Invoice Rows Clean</title>
+  <title>إيزي ستور مطبعجي ES30 V1877 Dept Invoice Rows Clean</title>
   <script>
   (function(){
-    var LOCK_VERSION = 'ES29 V1872 Dept Invoice Rows Clean';
+    var LOCK_VERSION = 'ES30 V1877 Dept Invoice Rows Clean';
     var CACHE_TAG = 'es28-v1871-dept-rows-clean-20260629-0325';
     window.EASYSTORE_VERSION_LOCK = LOCK_VERSION;
     window.EASYSTORE_CACHE_TAG = CACHE_TAG;
@@ -30,12 +30,12 @@
 <body>
   <div id="app"></div>
   <script src="config.js?v=es28-v1871-dept-rows-clean-20260629-0325"></script>
-  <script src="app.js?v=es29-v1872-invoice-comfort-duplicate-guard-20260629-0345"></script>
+  <script src="app.js?v=es30-v1877-unified-clean-zero-reset-fix-20260629-0505"></script>
   <script src="matbagy_theme_v1860.js?v=es28-v1871-dept-rows-clean-20260629-0325"></script>
   <script>
   (function(){
-    var LOCK_VERSION = 'ES29 V1872 Dept Invoice Rows Clean';
-    var SHORT_VERSION = 'ES29 V1872';
+    var LOCK_VERSION = 'ES30 V1877 Dept Invoice Rows Clean';
+    var SHORT_VERSION = 'ES30 V1877';
     function lockVersionText(){
       try{ document.title = 'إيزي ستور مطبعجي ' + SHORT_VERSION; }catch(e){}
       try{ window.EASYSTORE_VERSION = LOCK_VERSION; window.EASYSTORE_MATBAGY_VERSION = LOCK_VERSION; }catch(e){}
@@ -53,8 +53,8 @@
         if(t.length < 180 && (/Batch32|Customer Pick Lock|V13|ES1\d|ES2[0-5]/i.test(t))){
           el.textContent = t
             .replace(/V13\s*Batch32\s*UI\s*Close\s*Fix\s*\+\s*Customer\s*Pick\s*Lock\s*\/\s*app\.js/gi, SHORT_VERSION + ' / app.js')
-            .replace(/ES1\d|ES2[0-7]/gi, 'ES29')
-            .replace(/V18\d{2}/gi, 'V1872')
+            .replace(/ES1\d|ES2[0-7]/gi, 'ES30')
+            .replace(/V18\d{2}/gi, 'V1877')
             .replace(/Batch\s*28\s*Mutual/gi, 'Clean Single Loader');
         }
       });
