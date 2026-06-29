@@ -1,7 +1,7 @@
 (function(){
   'use strict';
 
-  const VERSION = 'ES27 V1870 Event Refresh + Invoice Rows';
+  const VERSION = 'ES28 V1871 Dept Invoice Rows Clean';
   window.EASYSTORE_MATBAGY_VERSION = VERSION;
 
   const app = document.getElementById('app');
@@ -150,7 +150,7 @@
   function shell(){
     app.innerHTML = `<div class="wrap">
       <div class="top">
-        <div><h1>💰 إيزي ستور مطبعجي - برنامج الحسابات ES27</h1><p>أصناف، موردين، فواتير شراء ومبيعات، مخزون، تقارير، ومطبخ الحسابات.</p><div class="versionLine">${VERSION} / app.js محمل: ${new Date().toLocaleTimeString('ar-EG')}</div></div>
+        <div><h1>💰 إيزي ستور مطبعجي V8 - برنامج الحسابات الكامل</h1><p>أصناف، موردين، فواتير شراء ومبيعات، مخزون، تقارير، ومطبخ الحسابات.</p><div class="versionLine">${VERSION} / app.js محمل: ${new Date().toLocaleTimeString('ar-EG')}</div></div>
         <div class="actions"><span class="badge">${esc(user.name)} - ${esc(roleText())}</span><button class="btn secondary" onclick="ES27.load(true)">تحديث البيانات</button><button class="btn secondary" onclick="ES27.hardReload()">تحديث البرنامج</button><button class="btn secondary" onclick="history.back()">إغلاق</button></div>
       </div>
       <div id="mainMsg" class="msg"></div>
@@ -583,7 +583,7 @@
   window.addEventListener('error', e => { console.error(e.error || e.message); msg('تم منع خطأ في EasyStore: ' + (e.message || ''), true); });
   mergeData();
   shell();
-  /* ES27: auto refresh disabled - update after actions only */
+  if(window.EASYSTORE_AUTO_REFRESH !== false) setTimeout(()=>load(true), 350);
 })();
 
 
@@ -598,7 +598,7 @@
 **********************************************************************************************/
 (function(){
   'use strict';
-  window.EASYSTORE_VERSION='ES27 V1870 Event Refresh + Invoice Rows';
+  window.EASYSTORE_VERSION='ES28 V1871 Dept Invoice Rows Clean';
   window.EASYSTORE_ES16_V1859_ACCOUNTING_MANAGER_CORE=true;
   window.EASYSTORE_ES17_V1860_UI_THEME=true;
   window.EASYSTORE_ES18_V1861_ERROR_FIX=true;
@@ -615,7 +615,7 @@
   function api(action,data){return new Promise(function(resolve,reject){var base=txt(window.TREND_API_URL||'');if(!base){reject(new Error('TREND_API_URL missing'));return;}var cb='ES16_'+Date.now()+'_'+Math.floor(Math.random()*99999);var u=userData();var p=new URLSearchParams(Object.assign({action:action,callback:cb,username:u.username||u.name,name:u.name||u.username,token:u.token||'',_ts:Date.now()},data||{}));var s=document.createElement('script'),done=false;function clean(){if(done)return;done=true;try{delete window[cb];}catch(e){window[cb]=undefined;}if(s.parentNode)s.parentNode.removeChild(s);}window[cb]=function(r){clean();resolve(r||{});};s.onerror=function(){clean();reject(new Error('server'));};s.src=base+(base.indexOf('?')<0?'?':'&')+p.toString();document.body.appendChild(s);setTimeout(function(){if(!done){clean();reject(new Error('timeout'));}},25000);});}
   function toast(t,bad){var m=$('es16Msg')||$('mainMsg')||document.querySelector('.msg');if(m){m.textContent=t||'';m.classList.toggle('error',!!bad);m.classList.toggle('ok',!!t&&!bad);}else if(t){alert(t);}}
   var style=document.createElement('style');style.textContent='.es16-panel{background:#fff;border:1px solid #d8e4ea;border-radius:18px;padding:16px;margin:14px 0;box-shadow:0 10px 24px #0001}.es16-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}.es16-grid .wide{grid-column:span 2}.es16-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}.es16-table{width:100%;border-collapse:collapse;margin-top:12px}.es16-table th,.es16-table td{border:1px solid #e5edf5;padding:7px;text-align:right}.es16-btn{background:#eef6f5;color:#0f6f5c;border:1px solid #d2e8e4;border-radius:10px;padding:8px 11px;cursor:pointer;font-weight:800}.es16-btn.primary{background:#0f8a70;color:#fff;border-color:#0f8a70}.es16-btn.danger{background:#d64545;color:#fff;border-color:#d64545}.es16-version{position:fixed;left:10px;bottom:10px;z-index:9999;background:#111827;color:white;border-radius:999px;padding:6px 10px;font-size:11px}.hidden#clientInvoiceMenu,.hidden.clientInvoiceMenu,.hidden.client-invoice-menu{display:none!important}@media(max-width:900px){.es16-grid{grid-template-columns:1fr}.es16-grid .wide{grid-column:auto}}';document.head.appendChild(style);
-  function versionBind(){document.title='إيزي ستور مطبعجي ES27 V1870';document.querySelectorAll('.version-badge,.version,.app-version').forEach(function(el){el.textContent='ES27 V1870 Event Refresh + Invoice Rows';});if(!$('es16Version')){var v=document.createElement('div');v.id='es16Version';v.className='es16-version';v.textContent='ES27 V1870';document.body.appendChild(v);}}
+  function versionBind(){document.title='إيزي ستور مطبعجي ES28 V1871';document.querySelectorAll('.version-badge,.version,.app-version').forEach(function(el){el.textContent='ES28 V1871 Dept Invoice Rows Clean';});if(!$('es16Version')){var v=document.createElement('div');v.id='es16Version';v.className='es16-version';v.textContent='ES28 V1871';document.body.appendChild(v);}}
   function closeInvoiceMenus(force){['clientInvoiceMenu','saCustomerDrop','customerInvoiceMenu','invoiceCustomerMenu'].forEach(function(id){var el=$(id);if(el){el.classList.add('hidden');el.style.display='none';el.setAttribute('aria-hidden','true');}});document.querySelectorAll('.clientInvoiceMenu,.client-invoice-menu,.dropdown-menu,.floating-menu,.invoice-menu,[data-invoice-menu]').forEach(function(el){var key=((el.id||'')+' '+(el.className||'')+' '+(el.textContent||'')).toLowerCase();if(force||/invoice|فاتورة|menu|dropdown/.test(key)){el.classList.add('hidden');el.style.display='none';el.setAttribute('aria-hidden','true');}});} 
   window.toggleClientInvoiceMenu=function(ev){if(ev){ev.preventDefault();ev.stopPropagation();}var m=$('clientInvoiceMenu')||document.querySelector('.clientInvoiceMenu,.client-invoice-menu,[data-invoice-menu]');if(!m)return false;var open=m.classList.contains('hidden')||m.style.display==='none'||getComputedStyle(m).display==='none';closeInvoiceMenus(true);if(open){m.classList.remove('hidden');m.style.display='block';m.setAttribute('aria-hidden','false');}return false;};['pointerdown','mousedown','click','touchstart','focusin'].forEach(function(evt){document.addEventListener(evt,function(ev){var t=ev.target;if(t&&t.closest&&t.closest('#clientInvoiceMenu,.clientInvoiceMenu,.client-invoice-menu,[data-invoice-menu],[onclick*="toggleClientInvoiceMenu"]'))return;closeInvoiceMenus(true);},true);});document.addEventListener('keydown',function(ev){if(ev.key==='Escape')closeInvoiceMenus(true);},true);window.addEventListener('scroll',function(){closeInvoiceMenus(true);},true);
   var customers=[];
@@ -713,7 +713,7 @@
   }
   function sendInvoiceReview(customer, invoiceNo, total, paid, remaining){api('createInvoiceReviewMessageV1859',{customerName:customer,invoiceNo:invoiceNo,total:total,paid:paid,remaining:remaining}).then(function(r){if(!r.success){toast(r.message,true);return;}try{navigator.clipboard&&navigator.clipboard.writeText(r.text||'');}catch(e){} if(r.whatsappUrl) window.open(r.whatsappUrl,'Matbagy_Invoice_Review'); toast('تم تجهيز رسالة مراجعة الفاتورة ونسخها.',false);}).catch(function(){toast('تعذر تجهيز رسالة مراجعة الفاتورة.',true);});}
   function installInvoiceReviewButtons(){document.querySelectorAll('tr,.invoice-row,.sale-row').forEach(function(row){if(row.dataset.es16ReviewBtn)return;var text=norm(row.textContent||'');if(!/فاتورة|عميل|مدفوع|باقي|الباقي/.test(text))return;row.dataset.es16ReviewBtn='1';var b=document.createElement('button');b.type='button';b.className='es16-btn';b.textContent='إرسال رابط الفاتورة';b.onclick=function(ev){ev.preventDefault();ev.stopPropagation();var raw=txt(row.textContent);var customer=(raw.match(/عميل[:：]?\s*([^\n\|]+)/)||[])[1]||'';sendInvoiceReview(customer,'','','','');};var cell=document.createElement(row.tagName==='TR'?'td':'div');cell.appendChild(b);row.appendChild(cell);});}
-  function bind(){versionBind();loadCustomers();hydrateCustomerPickers();bindItemButtons();ensureManagerPanel();installInvoiceReviewButtons();closeInvoiceMenus(true);}document.addEventListener('DOMContentLoaded',bind);setTimeout(bind,300);setTimeout(bind,1500);// ES27: disabled old polling interval;
+  function bind(){versionBind();loadCustomers();hydrateCustomerPickers();bindItemButtons();ensureManagerPanel();installInvoiceReviewButtons();closeInvoiceMenus(true);}document.addEventListener('DOMContentLoaded',bind);setTimeout(bind,300);setTimeout(bind,1500);// ES25: disabled old polling interval;
 })();
 
 
@@ -727,7 +727,7 @@
 **********************************************************************************************/
 (function(){
   'use strict';
-  window.EASYSTORE_VERSION = 'ES27 V1870 Event Refresh + Invoice Rows';
+  window.EASYSTORE_VERSION = 'ES28 V1871 Dept Invoice Rows Clean';
   window.EASYSTORE_ES19_V1862_EDIT_PROFIT_FIX = true;
 
   var qs = new URLSearchParams(location.search || '');
@@ -780,8 +780,8 @@
   document.head.appendChild(style);
 
   function setVersion(){
-    document.title='إيزي ستور مطبعجي ES27 V1870';
-    document.querySelectorAll('.version-badge,.version,.app-version').forEach(function(el){ el.textContent = 'ES27 V1870 Event Refresh + Invoice Rows'; });
+    document.title='إيزي ستور مطبعجي ES28 V1871';
+    document.querySelectorAll('.version-badge,.version,.app-version').forEach(function(el){ el.textContent = 'ES28 V1871 Dept Invoice Rows Clean'; });
     var candidates = Array.from(document.querySelectorAll('h1,h2,.brand h1,.top h1,.topbar h2'));
     candidates.forEach(function(el){
       if(/إيزي|ستور|برنامج الحسابات|Easy/i.test(text(el.textContent))){
@@ -1017,7 +1017,7 @@
   document.addEventListener('DOMContentLoaded', boot);
   setTimeout(boot, 300);
   setTimeout(boot, 1200);
-  // ES27: disabled old polling interval;
+  // ES25: disabled old polling interval;
 })();
 
 
@@ -1029,18 +1029,18 @@
 **********************************************************************************************/
 (function(){
   'use strict';
-  window.EASYSTORE_VERSION = 'ES27 V1870 Event Refresh + Invoice Rows';
+  window.EASYSTORE_VERSION = 'ES28 V1871 Dept Invoice Rows Clean';
   window.EASYSTORE_ES20_V1863_TEMPLATE_HELPER_FIX = true;
   function t(v){ return String(v == null ? '' : v); }
   function setVersion(){
-    try { document.title='إيزي ستور مطبعجي ES27 V1870'; } catch(e){}
+    try { document.title='إيزي ستور مطبعجي ES28 V1871'; } catch(e){}
     try {
       document.querySelectorAll('.version-badge,.version,.app-version').forEach(function(el){
-        el.textContent = 'ES27 V1870 Event Refresh + Invoice Rows';
+        el.textContent = 'ES28 V1871 Dept Invoice Rows Clean';
       });
       Array.from(document.querySelectorAll('h1,h2,.brand h1,.top h1,.topbar h2')).forEach(function(el){
         if(/إيزي|ستور|برنامج الحسابات|Easy|مدير الحسابات/i.test(t(el.textContent))){
-          el.textContent = 'إيزي ستور مطبعجي - برنامج الحسابات ES27';
+          el.textContent = 'إيزي ستور مطبعجي - برنامج الحسابات ES25';
         }
       });
     } catch(e){}
@@ -1061,7 +1061,7 @@
 **********************************************************************************************/
 (function(){
   'use strict';
-  window.EASYSTORE_VERSION = 'ES27 V1870 Event Refresh + Invoice Rows';
+  window.EASYSTORE_VERSION = 'ES28 V1871 Dept Invoice Rows Clean';
   window.EASYSTORE_ES21_V1864_NUMBER_FORMAT_FIX = true;
 
   function text(v){ return String(v == null ? '' : v).replace(/\s+/g,' ').trim(); }
@@ -1157,10 +1157,10 @@
     });
   }
   function setVersion(){
-    document.title='إيزي ستور مطبعجي ES27 V1870';
-    document.querySelectorAll('.version-badge,.version,.app-version').forEach(function(el){ el.textContent = 'ES27 V1870 Event Refresh + Invoice Rows'; });
+    document.title='إيزي ستور مطبعجي ES28 V1871';
+    document.querySelectorAll('.version-badge,.version,.app-version').forEach(function(el){ el.textContent = 'ES28 V1871 Dept Invoice Rows Clean'; });
     document.querySelectorAll('h1,h2,.brand h1,.top h1,.topbar h2').forEach(function(el){
-      if(/إيزي|ستور|برنامج الحسابات|Easy/i.test(text(el.textContent))) el.textContent = 'إيزي ستور مطبعجي - برنامج الحسابات ES27';
+      if(/إيزي|ستور|برنامج الحسابات|Easy/i.test(text(el.textContent))) el.textContent = 'إيزي ستور مطبعجي - برنامج الحسابات ES28';
     });
   }
   var css = document.createElement('style');
@@ -1171,7 +1171,7 @@
   document.addEventListener('DOMContentLoaded',function(){ setVersion(); applyNumberFormatFix(); });
   setTimeout(function(){ setVersion(); applyNumberFormatFix(); },300);
   setTimeout(applyNumberFormatFix,1200);
-  // ES27: disabled old polling interval;
+  // ES25: disabled old polling interval;
 })();
 
 
@@ -1183,22 +1183,22 @@
 **********************************************************************************************/
 (function(){
   'use strict';
-  window.EASYSTORE_VERSION = 'ES27 V1870 Event Refresh + Invoice Rows';
+  window.EASYSTORE_VERSION = 'ES28 V1871 Dept Invoice Rows Clean';
   window.EASYSTORE_ES22_V1865_KITCHEN_SPLIT_FIX = true;
 
   function text(v){ return String(v == null ? '' : v).replace(/\s+/g,' ').trim(); }
   function norm(v){ return text(v).toLowerCase().replace(/[إأآا]/g,'ا').replace(/[ى]/g,'ي').replace(/[ةه]/g,'ه').replace(/[ؤ]/g,'و').replace(/[ئ]/g,'ي'); }
   function visible(el){ return !!(el && el.offsetParent !== null && getComputedStyle(el).display !== 'none' && getComputedStyle(el).visibility !== 'hidden'); }
   function setVersion(){
-    try { document.title='إيزي ستور مطبعجي ES27 V1870'; } catch(e){}
+    try { document.title='إيزي ستور مطبعجي ES28 V1871'; } catch(e){}
     try {
-      document.querySelectorAll('.version-badge,.version,.app-version').forEach(function(el){ el.textContent = 'ES27 V1870 Event Refresh + Invoice Rows'; });
+      document.querySelectorAll('.version-badge,.version,.app-version').forEach(function(el){ el.textContent = 'ES28 V1871 Dept Invoice Rows Clean'; });
       document.querySelectorAll('h1,h2,.brand h1,.top h1,.topbar h2').forEach(function(el){
-        if(/إيزي|ستور|برنامج الحسابات|Easy|مدير الحسابات/i.test(text(el.textContent))) el.textContent = 'إيزي ستور مطبعجي - برنامج الحسابات ES27';
+        if(/إيزي|ستور|برنامج الحسابات|Easy|مدير الحسابات/i.test(text(el.textContent))) el.textContent = 'إيزي ستور مطبعجي - برنامج الحسابات ES28';
       });
       var v = document.getElementById('es22Version');
       if(!v){ v = document.createElement('div'); v.id = 'es22Version'; document.body.appendChild(v); }
-      v.textContent = 'ES27 V1870';
+      v.textContent = 'ES28 V1871';
       v.style.cssText = 'position:fixed;left:10px;bottom:10px;z-index:99999;background:#111827;color:white;border-radius:999px;padding:6px 10px;font-size:11px;font-family:Tahoma,Arial,sans-serif;box-shadow:0 6px 16px rgba(0,0,0,.18)';
     } catch(e){}
   }
@@ -1313,7 +1313,7 @@
   if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', applyKitchenSplit); else applyKitchenSplit();
   setTimeout(applyKitchenSplit, 300);
   setTimeout(applyKitchenSplit, 1200);
-  // ES27: disabled old kitchen polling interval;
+  // ES25: disabled old kitchen polling interval;
 })();
 
 
@@ -1325,7 +1325,7 @@
 **********************************************************************************************/
 (function(){
   'use strict';
-  window.EASYSTORE_VERSION = 'ES27 V1870 Event Refresh + Invoice Rows';
+  window.EASYSTORE_VERSION = 'ES28 V1871 Dept Invoice Rows Clean';
   window.EASYSTORE_ES24_V1866_KITCHEN_CUSTOMER_FIX = true;
 
   var qs = new URLSearchParams(location.search || '');
@@ -1384,8 +1384,8 @@
   document.head.appendChild(css);
 
   function setVersion(){
-    try{ document.title='إيزي ستور مطبعجي ES27 V1870'; }catch(e){}
-    document.querySelectorAll('.version-badge,.version,.app-version').forEach(function(el){ el.textContent='ES27 V1870 Event Refresh + Invoice Rows'; });
+    try{ document.title='إيزي ستور مطبعجي ES28 V1871'; }catch(e){}
+    document.querySelectorAll('.version-badge,.version,.app-version').forEach(function(el){ el.textContent='ES28 V1871 Dept Invoice Rows Clean'; });
     document.querySelectorAll('h1,h2,.brand h1,.top h1,.topbar h2').forEach(function(el){
       if(/إيزي|ستور|برنامج الحسابات|Easy|مدير الحسابات/i.test(text(el.textContent))) el.textContent='إيزي ستور مطبعجي - برنامج الحسابات ES24';
     });
@@ -1909,7 +1909,7 @@
 
 
 
-/*********************** EasyStore ES27 / V1868 - Clean Single Loader Guard ***********************
+/*********************** EasyStore ES25 / V1868 - Clean Single Loader Guard ***********************
   نسخة نظيفة: ملف app.js واحد فقط + config/styles/theme.
   - تثبيت رقم النسخة ومنع تقليب ES19/ES22/ES24.
   - منع التحديث التلقائي المزعج.
@@ -1918,7 +1918,7 @@
 **********************************************************************************************/
 (function(){
   'use strict';
-  var VERSION = 'ES27 V1870 Event Refresh + Invoice Rows';
+  var VERSION = 'ES28 V1871 Dept Invoice Rows Clean';
   window.EASYSTORE_VERSION = VERSION;
   window.EASYSTORE_AUTO_REFRESH = false;
   window.EASYSTORE_CLEAN_SINGLE_LOADER = true;
@@ -1931,7 +1931,7 @@
   function $(id){ return document.getElementById(id); }
 
   function setVersion(){
-    try{ document.title='إيزي ستور مطبعجي ES27 V1870'; }catch(e){}
+    try{ document.title='إيزي ستور مطبعجي ES28 V1871'; }catch(e){}
     try{
       window.EASYSTORE_VERSION = VERSION;
       document.querySelectorAll('.version-badge,.version,.app-version').forEach(function(el){
@@ -1941,7 +1941,7 @@
         var s = text(el.textContent);
         if(/إيزي|ستور|برنامج الحسابات|مدير الحسابات|Easy/i.test(s)){
           if(/مطبخ الحسابات|الأصناف|فاتورة|العملاء|الموردين/.test(s)) return;
-          el.textContent = 'إيزي ستور مطبعجي - برنامج الحسابات ES27';
+          el.textContent = 'إيزي ستور مطبعجي - برنامج الحسابات ES25';
         }
       });
     }catch(e){}
@@ -2017,27 +2017,27 @@
 })();
 
 
-/*********************** EasyStore ES27 / V1869 - Cache Killer & Version Lock ************************/
+/*********************** EasyStore ES28 / V1869 - Cache Killer & Version Lock ************************/
 (function(){
   'use strict';
-  var LOCK_VERSION = 'ES27 V1870 Event Refresh + Invoice Rows';
-  var SHORT_VERSION = 'ES27 V1870';
+  var LOCK_VERSION = 'ES28 V1871 Dept Invoice Rows Clean';
+  var SHORT_VERSION = 'ES28 V1871';
   try{
     Object.defineProperty(window, 'EASYSTORE_VERSION', { configurable:true, get:function(){return LOCK_VERSION;}, set:function(){} });
   }catch(e){ window.EASYSTORE_VERSION = LOCK_VERSION; }
   window.EASYSTORE_MATBAGY_VERSION = LOCK_VERSION;
-  window.EASYSTORE_CACHE_TAG = 'es26-v1869-cache-killer-20260629-0315';
+  window.EASYSTORE_CACHE_TAG = 'es28-v1871-dept-rows-clean-20260629-0325';
   window.EASYSTORE_AUTO_REFRESH = false;
   function lockText(){
     try{ document.title='إيزي ستور مطبعجي '+SHORT_VERSION; }catch(e){}
-    try{ localStorage.setItem('EASYSTORE_ACTIVE_BUILD', LOCK_VERSION); localStorage.setItem('EASYSTORE_CACHE_TAG', 'es26-v1869-cache-killer-20260629-0315'); }catch(e){}
+    try{ localStorage.setItem('EASYSTORE_ACTIVE_BUILD', LOCK_VERSION); localStorage.setItem('EASYSTORE_CACHE_TAG', 'es28-v1871-dept-rows-clean-20260629-0325'); }catch(e){}
     document.querySelectorAll('.version-badge,.version,.app-version,#es16Version,#es25Version,#es26Version,[data-version],[data-app-version]').forEach(function(el){el.textContent=LOCK_VERSION;});
     document.querySelectorAll('h1,h2,b,p,small,span,div').forEach(function(el){
       if(el.children && el.children.length>0) return;
       var t=el.textContent||'';
-      if(t.length<180 && (/Batch32|Customer Pick Lock|V13|ES1\d|ES2[0-6]/i.test(t))){
+      if(t.length<180 && (/Batch32|Customer Pick Lock|V13|ES1\d|ES2[0-5]/i.test(t))){
         el.textContent=t.replace(/V13\s*Batch32\s*UI\s*Close\s*Fix\s*\+\s*Customer\s*Pick\s*Lock\s*\/\s*app\.js/gi, SHORT_VERSION+' / app.js')
-          .replace(/ES1\d|ES2[0-6]/gi,'ES27')
+          .replace(/ES1\d|ES2[0-5]/gi,'ES28')
           .replace(/V18\d{2}/gi,'V1869')
           .replace(/Batch\s*28\s*Mutual/gi,'Clean Single Loader');
       }
@@ -2054,14 +2054,16 @@
 })();
 
 
-/*********************** ES27 V1870 - Event Driven Refresh + Universal Invoice Rows ***********************
-  - إيقاف أي polling مزعج في EasyStore.
-  - فاتورة القسم / فاتورة الموظف بنظام صفوف لأي موظف عنده صلاحية.
-  - فاتورة المبيعات تدعم صفوف يدوية مع اختيار صنف بالكتابة أو من القائمة.
+/*********************** ES28 V1871 - فاتورة الموظف / القسم صفوف نظيفة ************************
+  - لا يعتمد على ملفات ES24/ES27 القديمة.
+  - يحمّل الأصناف المحفوظة فقط من مطبخ الحسابات، ويستبعد الخامات.
+  - يستبدل فورم البند الواحد بجدول صفوف: صنف، نوع/وصف، كمية، سعر، ملاحظات، مشترك.
+  - لا يوجد تحديث لحظي؛ التحديث بعد الحفظ فقط أو زر تحديث البيانات.
 **********************************************************************************************/
 (function(){
   'use strict';
-  var VERSION='ES27 V1870 Event Refresh + Invoice Rows';
+  var VERSION='ES28 V1871 Dept Invoice Rows Clean';
+  var CACHE_TAG='es28-v1871-dept-rows-clean-20260629-0325';
   window.EASYSTORE_VERSION=VERSION;
   window.EASYSTORE_MATBAGY_VERSION=VERSION;
   window.EASYSTORE_AUTO_REFRESH=false;
@@ -2070,50 +2072,46 @@
   function txt(v){return String(v==null?'':v).replace(/\s+/g,' ').trim();}
   function norm(v){return txt(v).toLowerCase().replace(/[إأآا]/g,'ا').replace(/[ى]/g,'ي').replace(/[ةه]/g,'ه').replace(/[ؤ]/g,'و').replace(/[ئ]/g,'ي');}
   function esc(s){return txt(s).replace(/[&<>"']/g,function(m){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m];});}
-  function num(v){var n=parseFloat(String(v==null?'':v).replace(/[٠-٩]/g,function(d){return {'٠':'0','١':'1','٢':'2','٣':'3','٤':'4','٥':'5','٦':'6','٧':'7','٨':'8','٩':'9'}[d]||d;}).replace(/[٬,]/g,'.').replace(/[^0-9.\-]/g,''));return isFinite(n)?n:0;}
+  function num(v){var s=String(v==null?'':v).replace(/[٠-٩]/g,function(d){return {'٠':'0','١':'1','٢':'2','٣':'3','٤':'4','٥':'5','٦':'6','٧':'7','٨':'8','٩':'9'}[d]||d;}).replace(/[٬,]/g,'.').replace(/[^0-9.\-]/g,'');var n=parseFloat(s);return isFinite(n)?n:0;}
   function money(v){return num(v).toFixed(2)+' ج';}
   function qs(id){return document.getElementById(id);}
-  function userData(){var q=new URLSearchParams(location.search);var hand={};try{hand=JSON.parse(localStorage.getItem('MATBAGY_EMPLOYEE_SSO')||'{}')}catch(e){};var hp=hand.params||{},hu=hand.user||{};return {name:q.get('name')||q.get('username')||hp.name||hp.username||hu.name||hu.username||'ضياء',username:q.get('username')||q.get('name')||hp.username||hp.name||hu.username||hu.name||'ضياء',token:q.get('token')||hp.token||hu.token||'',department:q.get('department')||hp.department||hu.department||'',mode:q.get('mode')||hp.mode||hu.mode||''};}
-  function currentDept(){var u=userData(),s=norm([u.department,u.mode,u.name,u.username,document.body.textContent.slice(0,800)].join(' '));if(/ليزر|laser|جابر/.test(s))return 'ليزر';if(/طباعة|print|وائل/.test(s))return 'طباعة';return u.department||'';}
-  function api(action,data){return new Promise(function(resolve,reject){var base=txt(window.TREND_API_URL||'');if(!base){reject(new Error('TREND_API_URL missing'));return;}var cb='ES27R_'+Date.now()+'_'+Math.floor(Math.random()*999999);var u=userData();var p=new URLSearchParams(Object.assign({action:action,callback:cb,username:u.username||u.name,name:u.name||u.username,token:u.token||'',_ts:Date.now()},data||{}));var s=document.createElement('script'),done=false;function clean(){if(done)return;done=true;try{delete window[cb];}catch(e){window[cb]=undefined;}if(s.parentNode)s.parentNode.removeChild(s);}window[cb]=function(r){clean();resolve(r||{});};s.onerror=function(){clean();reject(new Error('server'));};s.src=base+(base.indexOf('?')<0?'?':'&')+p.toString();document.body.appendChild(s);setTimeout(function(){if(!done){clean();reject(new Error('timeout'));}},22000);});}
+  function userData(){var q=new URLSearchParams(location.search);var hand={};try{hand=JSON.parse(localStorage.getItem('MATBAGY_EMPLOYEE_SSO')||'{}')}catch(e){};var hp=hand.params||{},hu=hand.user||{};return {name:q.get('name')||q.get('username')||hp.name||hp.username||hu.name||hu.username||'ضياء',username:q.get('username')||q.get('name')||hp.username||hp.name||hu.username||hu.name||'ضياء',token:q.get('token')||hp.token||hu.token||'',department:q.get('department')||hp.department||hu.department||'',mode:q.get('mode')||q.get('roleMode')||hp.mode||hu.mode||''};}
+  function currentDept(){var u=userData();var s=norm([u.department,u.mode,u.name,u.username,document.body.textContent.slice(0,1200)].join(' '));if(/ليزر|laser|جابر|gaber|jaber/.test(s))return 'ليزر';if(/طباعة|طباعه|print|وائل|wael/.test(s))return 'طباعة';return u.department||'';}
+  function api(action,data){return new Promise(function(resolve,reject){var base=txt(window.TREND_API_URL||window.API_URL||'');if(!base){reject(new Error('رابط Apps Script غير مضبوط في config.js'));return;}var cb='ES28R_'+Date.now()+'_'+Math.floor(Math.random()*999999);var u=userData();var p=new URLSearchParams(Object.assign({action:action,callback:cb,username:u.username||u.name,name:u.name||u.username,token:u.token||'',department:u.department||'',mode:u.mode||'',_ts:Date.now()},data||{}));var s=document.createElement('script'),done=false;function clean(){if(done)return;done=true;try{delete window[cb];}catch(e){window[cb]=undefined;}if(s.parentNode)s.parentNode.removeChild(s);}window[cb]=function(r){clean();resolve(r||{});};s.onerror=function(){clean();reject(new Error('فشل الاتصال بالسيرفر'));};s.src=base+(base.indexOf('?')<0?'?':'&')+p.toString();document.body.appendChild(s);setTimeout(function(){if(!done){clean();reject(new Error('انتهت مهلة الاتصال بالسيرفر'));}},22000);});}
 
   var itemCache=[], itemCacheAt=0;
-  function itemName(r){return txt(r.itemName||r.templateName||r.productName||r.name||r['اسم الصنف']||r['الصنف']||r['اسم البند']||'');}
+  function itemName(r){return txt(r.itemName||r.templateName||r.productName||r.name||r['اسم الصنف']||r['الصنف']||r['اسم البند']||r['البند']||'');}
   function itemDept(r){return txt(r.department||r.dept||r['القسم']||'عام');}
-  function itemSale(r){return num(r.salePrice||r.officialSalePrice||r.price||r.systemSale||r['سعر البيع']||r['سعر بيع رسمي']||r['البيع']||0);}
+  function itemSale(r){return num(r.salePrice||r.officialSalePrice||r.systemSale||r.price||r['سعر البيع']||r['سعر بيع رسمي']||r['البيع']||r.sale||0);}
   function itemActive(r){var a=txt(r.active||r.status||r['الحالة']||'نعم');return !/لا|موقوف|متوقف|inactive|false|0/i.test(a);}
-  function isItemRecord(r){var n=norm(itemName(r));if(!n)return false;var blob=norm(JSON.stringify(r).slice(0,1200));if(/materialname|اسم الخامة|اسم الخامه|نوع الخامة|نوع الخامه|unitcost|rawkind|paper roll|lamination roll|machine expense|باكيت ورق|رول ورق|رول لامينشن/.test(blob)&&!/itemname|اسم الصنف|template|componentsjson|bom/.test(blob))return false;return /itemname|template|componentsjson|bom|اسم الصنف|اسم البند|صنف|منتج|كارت|تابلوه|مج|قطعة|استيكر|رول طباعة/.test(blob+n)||itemSale(r)>0;}
-  async function loadItems(force){if(!force&&itemCache.length&&Date.now()-itemCacheAt<60000)return itemCache;itemCacheAt=Date.now();var out=[];try{var r=await api('getAccounting',{});if(r&&r.success){[].concat(r.templates||[],r.items||[],r.products||[]).forEach(function(x){if(!isItemRecord(x)||!itemActive(x))return;var key=norm(itemName(x)+'|'+itemDept(x));if(out.some(function(o){return norm(o.name+'|'+o.dept)===key;}))return;out.push({name:itemName(x),dept:itemDept(x),sale:itemSale(x),raw:x});});}}catch(e){}
-    if(!out.length){try{var local=JSON.parse(localStorage.getItem('EASYSTORE_BATCH29_DATA')||'{}');[].concat(local.templates||[],local.items||[],local.products||[]).forEach(function(x){if(isItemRecord(x)&&itemActive(x))out.push({name:itemName(x),dept:itemDept(x),sale:itemSale(x),raw:x});});}catch(e){}}
+  function isMaterialLike(r){var b=norm(JSON.stringify(r).slice(0,1500));return /materialname|rawkind|rawclass|اسم الخامة|اسم الخامه|نوع الخامة|نوع الخامه|paper roll|lamination roll|machine expense|باكيت ورق|رول ورق|رول لامينشن|حبر|خامة انتاج|خامه انتاج|مصروف تشغيل/.test(b) && !/componentsjson|bom|itemname|templatename|اسم الصنف|صنف بمكونات/.test(b);}
+  function isItemLike(r){var n=norm(itemName(r));if(!n)return false;if(isMaterialLike(r))return false;var b=norm(JSON.stringify(r).slice(0,1500));return /template|itemname|templatename|componentsjson|bom|اسم الصنف|صنف|منتج|كارت|تابلوه|مج|قطعة|قطعه|استيكر|رول طباعة/.test(b+n)||itemSale(r)>0;}
+  async function loadItems(force){if(!force&&itemCache.length&&Date.now()-itemCacheAt<60000)return itemCache;itemCacheAt=Date.now();var out=[];try{var r=await api('getAccounting',{});if(r&&r.success!==false){[].concat(r.templates||[],r.items||[],r.products||[]).forEach(function(x){if(!isItemLike(x)||!itemActive(x))return;var nm=itemName(x);var dep=itemDept(x)||'عام';var key=norm(nm+'|'+dep);if(!out.some(function(o){return norm(o.name+'|'+o.dept)===key;}))out.push({name:nm,dept:dep,sale:itemSale(x),raw:x});});}}catch(e){}
+    // fallback من جدول الأصناف الظاهر فقط إذا كانت API فاضية
+    if(!out.length){document.querySelectorAll('table tbody tr').forEach(function(tr){var vals=Array.from(tr.cells||[]).map(function(td){return txt(td.textContent);});var row=vals.join(' | ');if(/خامة|خامه|رول لامينشن|رول ورق|حبر|مصروف ماكينة/.test(row)&&!/كارت|تابلوه|مج|قطعة|استيكر|صنف/.test(row))return;var dep=vals.find(function(v){return /^(طباعة|ليزر|مشترك|عام)$/.test(v);})||'عام';var nm=vals.find(function(v){return v&&v!==dep&&!/^\d/.test(v)&&!/مفعل|موقوف|تعديل|إيقاف|تفعيل|%|ج$/.test(v);})||'';var sale=0;vals.forEach(function(v){if(/ج/.test(v))sale=num(v)||sale;});if(nm&&/كارت|تابلوه|مج|قطعة|استيكر|رول طباعة|صنف/.test(nm+row))out.push({name:nm,dept:dep,sale:sale,raw:{}});});}
     itemCache=out;return out;}
-  function filteredItems(items,dept){var d=norm(dept||currentDept());var rows=items.filter(function(i){var id=norm(i.dept);return !d||!id||id===d||/مشترك|عام/.test(id);});return rows.length?rows:items;}
-  function findItemByName(name,items){var k=norm(name);return items.find(function(i){return norm(i.name)===k;})||items.find(function(i){return norm(i.name).indexOf(k)>=0&&k;});}
-  function labelFor(el){var id=el&&el.id;var lbl=id?document.querySelector('label[for="'+CSS.escape(id)+'"]'):null;if(lbl)return txt(lbl.textContent);var p=el;for(var i=0;i<4&&p;i++,p=p.parentElement){var l=p.querySelector&&p.querySelector('label');if(l)return txt(l.textContent);}return '';}
-  function fieldByLabel(scope,rx){return Array.from(scope.querySelectorAll('input,textarea,select')).find(function(el){return rx.test(labelFor(el));})||null;}
-  function context(scope){return {customer:txt((fieldByLabel(scope,/اسم العميل|العميل|customer/)||{}).value),order:txt((fieldByLabel(scope,/رقم الاوردر|رقم الأوردر|order/)||{}).value)};}
-  function isDeptScope(scope){return scope&&/فاتورة القسم|تسجيل البند|بند مشترك|ملاحظات القسم|فاتوره القسم/.test(txt(scope.textContent).slice(0,2500));}
-  function currentDeptScope(){return Array.from(document.querySelectorAll('.modal,.modal-card,section,.card,main,.content')).filter(function(x){return x.offsetParent!==null&&isDeptScope(x);})[0]||null;}
-  function isSalesScope(scope){return scope&&/فاتورة مبيعات موحدة|حفظ الفاتورة الموحدة|فاتورة العميل|سعر البيع|خصم/.test(txt(scope.textContent).slice(0,2500));}
-  function currentSalesScope(){return Array.from(document.querySelectorAll('.card,section,main,.content')).filter(function(x){return x.offsetParent!==null&&isSalesScope(x);})[0]||null;}
-  function datalist(id,items,dept){var rows=filteredItems(items,dept);return '<datalist id="'+id+'">'+rows.map(function(i){return '<option value="'+esc(i.name)+'" label="'+esc(i.dept+' - '+money(i.sale))+'"></option>';}).join('')+'</datalist>';}
-
-  function rowHtml(kind,items,dept){var id='es27_'+kind+'_items';return '<tr class="es27-row"><td><input class="es27-item" list="'+id+'" placeholder="اكتب أو اختار الصنف"></td><td><input class="es27-kind" placeholder="نوع / وصف"></td><td><input class="es27-qty" type="number" value="1" min="0" step="0.01"></td><td><input class="es27-price" type="number" min="0" step="0.01"></td><td><input class="es27-notes" placeholder="ملاحظات"></td><td><label class="es27-check"><input class="es27-shared" type="checkbox"> مشترك</label></td><td><button type="button" class="es27-del">×</button></td></tr>';}
-  function tableHtml(kind,items,dept){return '<div class="es27-box" data-kind="'+kind+'"><h4>'+ (kind==='sales'?'بنود فاتورة المبيعات':'بنود فاتورة القسم') +'</h4><div class="es27-help">اكتب الصنف أو اختاره من القائمة. Enter أو Tab في آخر خانة يفتح صف جديد. التحديث يتم بعد الحفظ فقط.</div>'+datalist('es27_'+kind+'_items',items,dept)+'<table class="es27-table"><thead><tr><th>الصنف</th><th>النوع/الوصف</th><th>الكمية</th><th>السعر</th><th>ملاحظات</th><th>مشترك</th><th></th></tr></thead><tbody>'+rowHtml(kind,items,dept)+'</tbody></table><div class="es27-footer"><b>الإجمالي: <span class="es27-total">0.00 ج</span></b><button type="button" class="es27-add">صف جديد</button><button type="button" class="es27-save">'+(kind==='sales'?'حفظ الفاتورة بالصفوف':'تسجيل الفاتورة')+'</button><button type="button" class="es27-clear">تفريغ</button></div><div class="es27-msg"></div></div>';}
-  function collect(box){return Array.from(box.querySelectorAll('tbody tr')).map(function(tr){return {item:txt((tr.querySelector('.es27-item')||{}).value),kind:txt((tr.querySelector('.es27-kind')||{}).value),qty:num((tr.querySelector('.es27-qty')||{}).value)||0,price:num((tr.querySelector('.es27-price')||{}).value)||0,notes:txt((tr.querySelector('.es27-notes')||{}).value),shared:!!((tr.querySelector('.es27-shared')||{}).checked)};}).filter(function(r){return r.item&&r.qty>0;});}
-  function updateTotal(box){var t=collect(box).reduce(function(s,r){return s+r.qty*r.price;},0);var v=box.querySelector('.es27-total');if(v)v.textContent=money(t);return t;}
-  function bindBox(box,items,dept,scope){if(box.dataset.bound)return;box.dataset.bound='1';function addRow(){var tb=box.querySelector('tbody');tb.insertAdjacentHTML('beforeend',rowHtml(box.dataset.kind,items,dept));wireRows();var x=tb.querySelector('tr:last-child .es27-item');if(x)x.focus();updateTotal(box);}function wireRows(){Array.from(box.querySelectorAll('tbody tr')).forEach(function(tr){if(tr.dataset.bound)return;tr.dataset.bound='1';var item=tr.querySelector('.es27-item'),qty=tr.querySelector('.es27-qty'),price=tr.querySelector('.es27-price'),notes=tr.querySelector('.es27-notes'),del=tr.querySelector('.es27-del');function apply(){var it=findItemByName(item.value,filteredItems(items,dept));if(it&&!num(price.value))price.value=it.sale?Number(it.sale).toFixed(2):'';updateTotal(box);}if(item){item.addEventListener('change',apply);item.addEventListener('input',function(){setTimeout(apply,0);});} [qty,price].forEach(function(el){if(el)el.addEventListener('input',function(){updateTotal(box);});});[item,tr.querySelector('.es27-kind'),qty,price,tr.querySelector('.es27-shared'),notes].forEach(function(el,idx,arr){if(!el)return;el.addEventListener('keydown',function(ev){if((ev.key==='Enter'||ev.key==='Tab')&&idx===arr.length-1){ev.preventDefault();addRow();}});});if(del)del.onclick=function(){var tb=box.querySelector('tbody');if(tb.children.length>1)tr.remove();else tr.querySelectorAll('input').forEach(function(i){if(i.type==='checkbox')i.checked=false;else i.value=i.classList.contains('es27-qty')?'1':'';});updateTotal(box);};});}wireRows();box.querySelector('.es27-add').onclick=addRow;box.querySelector('.es27-clear').onclick=function(){box.querySelector('tbody').innerHTML=rowHtml(box.dataset.kind,items,dept);box.dataset.bound='';bindBox(box,items,dept,scope);updateTotal(box);};box.querySelector('.es27-save').onclick=function(){if(box.dataset.kind==='sales')saveSalesRows(box,scope);else saveDeptRows(box,scope,dept);};}
-  function say(box,t,bad){var m=box.querySelector('.es27-msg');if(m){m.textContent=t;m.className='es27-msg '+(bad?'bad':'ok');}}
-  async function saveDeptRows(box,scope,dept){var rows=collect(box),ctx=context(scope);if(!rows.length)return say(box,'اكتب بند واحد على الأقل.',true);if(!ctx.order)return say(box,'رقم الأوردر مطلوب.',true);say(box,'جاري تسجيل '+rows.length+' صف...',false);var ok=0,fail=[];for(var i=0;i<rows.length;i++){var r=rows[i];try{var res=await api('saveAccountingDeptLine',{lineId:'DLINE-'+Date.now().toString(36)+'-'+i,orderId:ctx.order,customerName:ctx.customer,department:dept||currentDept(),itemName:r.item,itemType:r.kind,qty:r.qty,sale:r.price,salePrice:r.price,systemSale:r.price,notes:[r.kind,r.notes].filter(Boolean).join(' | '),sharedLine:r.shared?'نعم':'لا',shared:r.shared?'نعم':'لا',billingStatus:'جاهز للفوترة'});if(res&&res.success!==false)ok++;else fail.push(r.item);}catch(e){fail.push(r.item);}}
-    if(fail.length)say(box,'تم تسجيل '+ok+' صف وفشل: '+fail.join(' / '),true);else{say(box,'تم تسجيل الفاتورة بنجاح. اضغط تحديث الآن عند الحاجة.',false);box.querySelector('tbody').innerHTML=rowHtml('dept',[],dept);box.dataset.bound='';bindBox(box,[],dept,scope);try{window.dispatchEvent(new CustomEvent('matbagy:data-changed',{detail:{section:'deptInvoice'}}));}catch(e){}}
-  }
-  function saveSalesRows(box,scope){var rows=collect(box),total=updateTotal(box);if(!rows.length)return say(box,'اكتب بند واحد على الأقل.',true);var desc=rows.map(function(r){return r.item+' × '+r.qty+(r.kind?' - '+r.kind:'');}).join(' / ');var saItem=qs('saItem'),saQty=qs('saQty'),saUnit=qs('saUnit'),saTotal=qs('saTotal'),saNotes=qs('saNotes');if(saItem){var opt=document.createElement('option');opt.value='ES27_ROWS';opt.textContent='بنود يدوية متعددة';saItem.appendChild(opt);saItem.value='ES27_ROWS';}if(saQty)saQty.value=1;if(saUnit)saUnit.value=total.toFixed(2);if(saTotal)saTotal.value=total.toFixed(2);if(saNotes)saNotes.value=(txt(saNotes.value)?txt(saNotes.value)+' | ':'')+'بنود الصفوف: '+desc;try{if(window.ES27&&typeof window.ES27.calcSale==='function')window.ES27.calcSale();}catch(e){} if(window.ES27&&typeof window.ES27.saveSale==='function'){say(box,'جاري حفظ فاتورة المبيعات...',false);window.ES27.saveSale();}else say(box,'تم تجهيز البنود. اضغط حفظ الفاتورة الموحدة.',false);}
-
-  async function hydrate(){var deptScope=currentDeptScope(),saleScope=currentSalesScope();var items=await loadItems(false);if(deptScope&&!deptScope.querySelector('.es27-box[data-kind="dept"]')){deptScope.querySelectorAll('.es24-rows-box,.es24-actions,.es24-total').forEach(function(x){x.style.display='none';});var anchor=Array.from(deptScope.querySelectorAll('label,b,strong,h3')).find(function(el){return /ملاحظات القسم|بند مشترك|سعر الفاتورة|الصنف/.test(txt(el.textContent));});var wrap=document.createElement('div');wrap.innerHTML=tableHtml('dept',items,currentDept());var node=wrap.firstElementChild;if(anchor&&anchor.closest('.field'))anchor.closest('.field').parentNode.insertBefore(node,anchor.closest('.field').nextSibling);else deptScope.appendChild(node);bindBox(node,items,currentDept(),deptScope);}if(saleScope&&!saleScope.querySelector('.es27-box[data-kind="sales"]')){var anchor2=Array.from(saleScope.querySelectorAll('h2,h3,label')).find(function(el){return /فاتورة مبيعات|بند يدوي|صنف إضافي/.test(txt(el.textContent));});var wrap2=document.createElement('div');wrap2.innerHTML=tableHtml('sales',items,'');var node2=wrap2.firstElementChild;if(anchor2&&anchor2.parentNode)anchor2.parentNode.insertBefore(node2,anchor2.nextSibling);else saleScope.appendChild(node2);bindBox(node2,items,'',saleScope);}}
-
-  var css=document.createElement('style');css.textContent='.es27-box{background:#fff;border:1px solid #cdeee4;border-radius:18px;padding:12px;margin:12px 0;box-shadow:0 8px 22px rgba(15,23,42,.06)}.es27-box h4{margin:0 0 7px;color:#0f766e}.es27-help{font-size:12px;color:#64748b;margin-bottom:9px}.es27-table{width:100%;border-collapse:collapse}.es27-table th,.es27-table td{border:1px solid #e5edf5;padding:7px;text-align:right}.es27-table th{background:#ecfdf5;color:#065f46}.es27-table input{width:100%;min-height:38px;border:1px solid #cad9e0;border-radius:10px;padding:7px}.es27-check{display:flex;gap:5px;align-items:center;font-size:12px;font-weight:800}.es27-check input{width:18px;height:18px}.es27-del{background:#fee2e2;color:#991b1b;border:1px solid #fecaca;border-radius:10px;padding:7px 10px}.es27-footer{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:10px}.es27-footer button{border:0;border-radius:12px;padding:10px 14px;font-weight:900;cursor:pointer}.es27-add{background:#eef6f5;color:#0f6f5c}.es27-save{background:#0f8a70;color:#fff}.es27-clear{background:#fee2e2;color:#991b1b}.es27-total{direction:ltr;unicode-bidi:isolate}.es27-msg{font-weight:800;min-height:22px;margin-top:8px}.es27-msg.ok{color:#047857}.es27-msg.bad{color:#b91c1c}@media(max-width:760px){.es27-table,.es27-table tbody,.es27-table tr,.es27-table td{display:block;width:100%}.es27-table thead{display:none}.es27-table tr{border:1px solid #e5edf5;border-radius:14px;margin-bottom:10px;padding:8px}.es27-table td{border:0}}';document.head.appendChild(css);
-  function tick(){try{document.title='إيزي ستور مطبعجي ES27 V1870';document.querySelectorAll('.versionLine,.version-badge,.app-version').forEach(function(el){el.textContent=VERSION+' / تحديث بعد الإجراء فقط';});}catch(e){} hydrate();}
-  document.addEventListener('click',function(){setTimeout(tick,90);},true);
-  document.addEventListener('change',function(){setTimeout(function(){itemCacheAt=0;tick();},90);},true);
-  document.addEventListener('input',function(){setTimeout(tick,90);},true);
-  document.addEventListener('DOMContentLoaded',tick);setTimeout(tick,400);setTimeout(tick,1400);
+  function filtered(items,dept){var d=norm(dept||'');var arr=items.filter(function(it){var id=norm(it.dept);return !d||!id||id===d||/مشترك|عام/.test(id);});return arr.length?arr:items;}
+  function datalist(id,items,dept){return '<datalist id="'+esc(id)+'">'+filtered(items,dept).map(function(i){return '<option value="'+esc(i.name)+'" label="'+esc((i.dept||'عام')+' - '+money(i.sale))+'"></option>';}).join('')+'</datalist>';}
+  function findItem(name,items){var n=norm(name);return items.find(function(i){return norm(i.name)===n;})||items.find(function(i){return norm(i.name).indexOf(n)>=0||n.indexOf(norm(i.name))>=0;})||null;}
+  function rowHtml(kind){return '<tr class="es28-row"><td><input class="es28-item" list="es28_'+kind+'_items" placeholder="اكتب أو اختار الصنف"></td><td><input class="es28-kind" placeholder="نوع / وصف"></td><td><input class="es28-qty" type="number" min="0" step="0.01" value="1"></td><td><input class="es28-price" type="number" min="0" step="0.01"></td><td><input class="es28-notes" placeholder="ملاحظات"></td><td><label class="es28-check"><input class="es28-shared" type="checkbox"> مشترك</label></td><td><button type="button" class="es28-del">×</button></td></tr>';}
+  function tableHtml(kind,items,dept){var title=kind==='sales'?'بنود فاتورة المبيعات':'بنود فاتورة القسم';return '<div class="es28-box" data-kind="'+kind+'"><h4>'+title+'</h4><div class="es28-help">اكتب الصنف أو اختاره من القائمة. Enter أو Tab في آخر خانة يفتح صف جديد. الخامات لا تظهر هنا؛ تظهر الأصناف المحفوظة فقط.</div>'+datalist('es28_'+kind+'_items',items,dept)+'<table class="es28-table"><thead><tr><th>الصنف</th><th>النوع/الوصف</th><th>الكمية</th><th>السعر</th><th>ملاحظات</th><th>مشترك</th><th></th></tr></thead><tbody>'+rowHtml(kind)+'</tbody></table><div class="es28-footer"><b>الإجمالي: <span class="es28-total">0.00 ج</span></b><button type="button" class="es28-add">صف جديد</button><button type="button" class="es28-save">'+(kind==='sales'?'حفظ الفاتورة بالصفوف':'تسجيل الفاتورة')+'</button><button type="button" class="es28-clear">تفريغ</button></div><div class="es28-msg"></div></div>';}
+  function collect(box){return Array.from(box.querySelectorAll('tbody tr')).map(function(tr){return {item:txt((tr.querySelector('.es28-item')||{}).value),kind:txt((tr.querySelector('.es28-kind')||{}).value),qty:num((tr.querySelector('.es28-qty')||{}).value)||0,price:num((tr.querySelector('.es28-price')||{}).value)||0,notes:txt((tr.querySelector('.es28-notes')||{}).value),shared:!!((tr.querySelector('.es28-shared')||{}).checked)};}).filter(function(r){return r.item&&r.qty>0;});}
+  function updateTotal(box){var total=collect(box).reduce(function(s,r){return s+r.qty*r.price;},0);var el=box.querySelector('.es28-total');if(el)el.textContent=money(total);return total;}
+  function bindBox(box,items,dept,scope){if(box.dataset.bound)return;box.dataset.bound='1';function addRow(){var tb=box.querySelector('tbody');tb.insertAdjacentHTML('beforeend',rowHtml(box.dataset.kind));wire();var x=tb.querySelector('tr:last-child .es28-item');if(x)x.focus();updateTotal(box);}function wire(){Array.from(box.querySelectorAll('tbody tr')).forEach(function(tr){if(tr.dataset.bound)return;tr.dataset.bound='1';var item=tr.querySelector('.es28-item'),qty=tr.querySelector('.es28-qty'),price=tr.querySelector('.es28-price'),notes=tr.querySelector('.es28-notes'),del=tr.querySelector('.es28-del');function apply(){var it=findItem(item.value,filtered(items,dept));if(it&&price&&!num(price.value))price.value=it.sale?Number(it.sale).toFixed(2):'';updateTotal(box);}if(item){item.addEventListener('change',apply);item.addEventListener('input',function(){setTimeout(apply,0);});} [qty,price].forEach(function(el){if(el)el.addEventListener('input',function(){updateTotal(box);});});[item,tr.querySelector('.es28-kind'),qty,price,tr.querySelector('.es28-shared'),notes].forEach(function(el,idx,arr){if(!el)return;el.addEventListener('keydown',function(ev){if((ev.key==='Enter'||ev.key==='Tab')&&idx===arr.length-1){ev.preventDefault();addRow();}});});if(del)del.onclick=function(){var tb=box.querySelector('tbody');if(tb.children.length>1)tr.remove();else tr.querySelectorAll('input').forEach(function(i){if(i.type==='checkbox')i.checked=false;else i.value=i.classList.contains('es28-qty')?'1':'';});updateTotal(box);};});}wire();box.querySelector('.es28-add').onclick=addRow;box.querySelector('.es28-clear').onclick=function(){box.querySelector('tbody').innerHTML=rowHtml(box.dataset.kind);box.dataset.bound='';bindBox(box,items,dept,scope);updateTotal(box);};box.querySelector('.es28-save').onclick=function(){if(box.dataset.kind==='sales')saveSales(box,scope);else saveDept(box,scope,dept);};}
+  function labelFor(el){var p=el.closest('.field,label,div')||el.parentNode;return txt((p&&p.textContent)||'');}
+  function field(scope,rx){return Array.from(scope.querySelectorAll('input,select,textarea')).find(function(el){return rx.test(labelFor(el));})||null;}
+  function context(scope){return {customer:txt((field(scope,/اسم العميل|العميل|customer/)||{}).value),order:txt((field(scope,/رقم الاوردر|رقم الأوردر|order/)||{}).value)};}
+  function say(box,t,bad){var m=box.querySelector('.es28-msg');if(m){m.textContent=t;m.className='es28-msg '+(bad?'bad':'ok');}}
+  async function saveDept(box,scope,dept){var rows=collect(box),ctx=context(scope);if(!rows.length)return say(box,'اكتب بند واحد على الأقل.',true);if(!ctx.order)return say(box,'رقم الأوردر مطلوب.',true);say(box,'جاري تسجيل '+rows.length+' صف...',false);var ok=0,fail=[];for(var i=0;i<rows.length;i++){var r=rows[i];try{var res=await api('saveAccountingDeptLine',{lineId:'DLINE-'+Date.now().toString(36)+'-'+i,orderId:ctx.order,customerName:ctx.customer,department:dept||currentDept(),itemName:r.item,itemType:r.kind,qty:r.qty,sale:r.price,salePrice:r.price,systemSale:r.price,systemSalePrice:r.price,notes:[r.kind,r.notes].filter(Boolean).join(' | '),sharedLine:r.shared?'نعم':'لا',shared:r.shared?'نعم':'لا',billingStatus:'جاهز للفوترة'});if(res&&res.success!==false)ok++;else fail.push(r.item);}catch(e){fail.push(r.item);}}
+    if(fail.length)say(box,'تم تسجيل '+ok+' صف، وفشل: '+fail.join(' / '),true);else{say(box,'تم تسجيل كل صفوف الفاتورة بنجاح.',false);box.querySelector('tbody').innerHTML=rowHtml('dept');box.dataset.bound='';bindBox(box,itemCache,dept,scope);}}
+  function saveSales(box,scope){var rows=collect(box),total=updateTotal(box);if(!rows.length)return say(box,'اكتب بند واحد على الأقل.',true);var desc=rows.map(function(r){return r.item+' × '+r.qty+(r.kind?' - '+r.kind:'');}).join(' / ');var ids=['saItem','saQty','saUnit','saTotal','saNotes'];var saItem=qs(ids[0]),saQty=qs(ids[1]),saUnit=qs(ids[2]),saTotal=qs(ids[3]),saNotes=qs(ids[4]);if(saItem){var op=document.createElement('option');op.value='ES28_ROWS';op.textContent='بنود صفوف متعددة';saItem.appendChild(op);saItem.value='ES28_ROWS';}if(saQty)saQty.value=1;if(saUnit)saUnit.value=total.toFixed(2);if(saTotal)saTotal.value=total.toFixed(2);if(saNotes)saNotes.value=(txt(saNotes.value)?txt(saNotes.value)+' | ':'')+'بنود الصفوف: '+desc;if(window.ES28&&typeof window.ES28.calcSale==='function')try{window.ES28.calcSale();}catch(e){};if(window.ES28&&typeof window.ES28.saveSale==='function'){say(box,'جاري حفظ الفاتورة...',false);window.ES28.saveSale();}else if(window.ES&&typeof window.ES.saveSale==='function'){say(box,'جاري حفظ الفاتورة...',false);window.ES.saveSale();}else say(box,'تم تجهيز البنود. اضغط حفظ الفاتورة الموحدة.',false);}
+  function findDeptScope(){return Array.from(document.querySelectorAll('.modal:not(.hidden),.modal-card,.card,section,main')).find(function(el){var s=norm(el.textContent).slice(0,1800);return /فاتوره القسم|فاتورة القسم|تسجيل البند|بند مشترك|ملاحظات القسم/.test(s);})||null;}
+  function findSalesScope(){return Array.from(document.querySelectorAll('.card,section,main')).find(function(el){var s=norm(el.textContent).slice(0,1800);return /فاتوره مبيعات موحده|فاتورة مبيعات موحدة|فاتوره مبيعات|فواتير المبيعات/.test(s)&&/العميل|رقم الفاتوره|رقم الفاتورة/.test(s);})||null;}
+  function hideOld(scope){if(!scope)return;scope.querySelectorAll('.es24-rows-box,.es27-box').forEach(function(x){x.style.display='none';});Array.from(scope.querySelectorAll('button')).forEach(function(b){var t=norm(b.textContent);if(/اضافه صنف|إضافة صنف|اضافة بند|إضافة بند|تسجيل كل الصفوف|تسجيل البند/.test(t)&&!b.closest('.es28-box'))b.classList.add('es28-hide-old');});}
+  async function hydrate(force){var items=await loadItems(!!force);var ds=findDeptScope();if(ds&&!ds.querySelector('.es28-box[data-kind="dept"]')){hideOld(ds);var dept=currentDept();var wrap=document.createElement('div');wrap.innerHTML=tableHtml('dept',items,dept);var node=wrap.firstElementChild;var anchor=Array.from(ds.querySelectorAll('label,b,strong,h3,h2')).find(function(el){return /الصنف|ملاحظات القسم|بند مشترك|سعر الفاتورة/.test(txt(el.textContent));});if(anchor&&anchor.parentNode)anchor.parentNode.insertBefore(node,(anchor.closest('.field')||anchor).nextSibling);else ds.appendChild(node);bindBox(node,items,dept,ds);if(!filtered(items,dept).length)say(node,'لا توجد أصناف مفعلة لهذا القسم. احفظ الأصناف أولاً من مطبخ الحسابات / صنف بمكونات.',true);}var ss=findSalesScope();if(ss&&!ss.querySelector('.es28-box[data-kind="sales"]')){var wrap2=document.createElement('div');wrap2.innerHTML=tableHtml('sales',items,'');var node2=wrap2.firstElementChild;var anc=Array.from(ss.querySelectorAll('h2,h3,label')).find(function(el){return /بند يدوي|صنف إضافي|فاتورة مبيعات/.test(txt(el.textContent));});if(anc&&anc.parentNode)anc.parentNode.insertBefore(node2,(anc.closest('.grid')||anc).nextSibling);else ss.appendChild(node2);bindBox(node2,items,'',ss);}}
+  var css=document.createElement('style');css.textContent='.es28-hide-old{display:none!important}.es28-box{background:#fff;border:1px solid #cdeee4;border-radius:18px;padding:12px;margin:12px 0;box-shadow:0 8px 22px rgba(15,23,42,.06)}.es28-box h4{margin:0 0 7px;color:#0f766e}.es28-help{font-size:12px;color:#64748b;margin-bottom:9px}.es28-table{width:100%;border-collapse:collapse}.es28-table th,.es28-table td{border:1px solid #e5edf5;padding:7px;text-align:right}.es28-table th{background:#ecfdf5;color:#065f46}.es28-table input{width:100%;min-height:38px;border:1px solid #cad9e0;border-radius:10px;padding:7px}.es28-check{display:flex;gap:5px;align-items:center;font-size:12px;font-weight:800}.es28-check input{width:18px;height:18px}.es28-del{background:#fee2e2;color:#991b1b;border:1px solid #fecaca;border-radius:10px;padding:7px 10px}.es28-footer{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:10px}.es28-footer button{border:0;border-radius:12px;padding:10px 14px;font-weight:900;cursor:pointer}.es28-add{background:#eef6f5;color:#0f6f5c}.es28-save{background:#0f8a70;color:#fff}.es28-clear{background:#fee2e2;color:#991b1b}.es28-total{direction:ltr;unicode-bidi:isolate}.es28-msg{font-weight:800;min-height:22px;margin-top:8px}.es28-msg.ok{color:#047857}.es28-msg.bad{color:#b91c1c}@media(max-width:760px){.es28-table,.es28-table tbody,.es28-table tr,.es28-table td{display:block;width:100%}.es28-table thead{display:none}.es28-table tr{border:1px solid #e5edf5;border-radius:14px;margin-bottom:10px;padding:8px}.es28-table td{border:0}}';document.head.appendChild(css);
+  function versionLock(){try{document.title='إيزي ستور مطبعجي ES28 V1871';}catch(e){};document.querySelectorAll('.versionLine,.version-badge,.app-version,#es16Version,#es25Version,#es26Version,#es28Version').forEach(function(el){el.textContent=VERSION+' / فاتورة صفوف نظيفة';});}
+  function tick(force){versionLock();hydrate(force).catch(function(e){console.warn('ES28 hydrate',e);});}
+  document.addEventListener('click',function(){setTimeout(function(){tick(false);},120);},true);document.addEventListener('change',function(){itemCacheAt=0;setTimeout(function(){tick(true);},120);},true);document.addEventListener('DOMContentLoaded',function(){tick(true);});setTimeout(function(){tick(true);},450);setTimeout(function(){tick(true);},1500);
+  try{new MutationObserver(function(){clearTimeout(window.__es28mt);window.__es28mt=setTimeout(function(){tick(false);},160);}).observe(document.body,{childList:true,subtree:true});}catch(e){}
 })();
