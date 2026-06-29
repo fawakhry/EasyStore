@@ -1,21 +1,10 @@
 window.TREND_API_URL = "https://script.google.com/macros/s/AKfycbwGHOduL0BHvH-o4up9nbk1wYFi54D2KOnW1AFDigpBzyuAOTWzPfpSFPGSyFVj_fmTmg/exec";
-window.EASYSTORE_VERSION = "ES9_BATCH28_MUTUAL_INVOICE_OPERATING_EXPENSES";
 
-window.EASYSTORE_AUTO_REFRESH = true;
+window.EASYSTORE_VERSION = "ES25 V1868 Clean Single Loader";
+window.EASYSTORE_AUTO_REFRESH = false;
 window.EASYSTORE_DISABLE_PHONE_ACTIVATION = true;
-
-// Batch 25
-window.EASYSTORE_VERSION = "ES9_BATCH28_MUTUAL_INVOICE_OPERATING_EXPENSES";
-window.EASYSTORE_AUTO_REFRESH = true;
 window.EASYSTORE_FULL_ACCOUNTING = true;
+window.EASYSTORE_CLEAN_SINGLE_LOADER = true;
 
-window.EASYSTORE_BATCH28_MUTUAL_INVOICE = true;
-window.EASYSTORE_OPERATING_EXPENSES = true;
-
-window.EASYSTORE_VERSION = "ES10_BATCH29_DEPT_INVOICE_GABER_CALC";
-window.EASYSTORE_BATCH29_DEPT_INVOICE = true;
-window.EASYSTORE_GABER_CALCULATOR_IN_DEPT_INVOICE = true;
-
-// Batch 32 - close stuck dropdowns and invoice menu
-window.EASYSTORE_VERSION = "ES13_BATCH32_UI_CLOSE_FIX";
-window.EASYSTORE_BATCH32_UI_CLOSE_FIX = true;
+// EasyStore clean build: لا ترفع أي ملفات EasyStore_ES*.js قديمة مع هذه النسخة.
+// التحديثات تتم بعد الإجراء فقط، مع زر تحديث يدوي عند الحاجة.

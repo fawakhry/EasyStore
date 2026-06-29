@@ -1,0 +1,23 @@
+احذف من EasyStore repo أي ملف قديم يبدأ بـ:
+EasyStore_ES14
+EasyStore_ES15
+EasyStore_ES16
+EasyStore_ES18
+EasyStore_ES19
+EasyStore_ES20
+EasyStore_ES21
+EasyStore_ES22
+EasyStore_ES23
+EasyStore_ES24
+
+واحذف أي README قديم لهذه النسخ.
+
+ارفع فقط الملفات الموجودة بجوار هذا الملف:
+index.html
+app.js
+config.js
+styles.css
+matbagy_theme_v1860.css
+matbagy_theme_v1860.js
+
+ممنوع رفع ملفات EasyStore_ES*.js القديمة مع هذه النسخة، لأن وجودها أو تحميلها من index.html يسبب تقليب رقم النسخة وتداخل الوظائف.
