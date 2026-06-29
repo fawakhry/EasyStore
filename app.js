@@ -1,7 +1,7 @@
 (function(){
   'use strict';
 
-  const VERSION = 'ES25 V1868 Clean Single Loader';
+  const VERSION = 'ES26 V1869 Cache Killer';
   window.EASYSTORE_MATBAGY_VERSION = VERSION;
 
   const app = document.getElementById('app');
@@ -598,7 +598,7 @@
 **********************************************************************************************/
 (function(){
   'use strict';
-  window.EASYSTORE_VERSION='ES25 V1868 Clean Single Loader';
+  window.EASYSTORE_VERSION='ES26 V1869 Cache Killer';
   window.EASYSTORE_ES16_V1859_ACCOUNTING_MANAGER_CORE=true;
   window.EASYSTORE_ES17_V1860_UI_THEME=true;
   window.EASYSTORE_ES18_V1861_ERROR_FIX=true;
@@ -615,7 +615,7 @@
   function api(action,data){return new Promise(function(resolve,reject){var base=txt(window.TREND_API_URL||'');if(!base){reject(new Error('TREND_API_URL missing'));return;}var cb='ES16_'+Date.now()+'_'+Math.floor(Math.random()*99999);var u=userData();var p=new URLSearchParams(Object.assign({action:action,callback:cb,username:u.username||u.name,name:u.name||u.username,token:u.token||'',_ts:Date.now()},data||{}));var s=document.createElement('script'),done=false;function clean(){if(done)return;done=true;try{delete window[cb];}catch(e){window[cb]=undefined;}if(s.parentNode)s.parentNode.removeChild(s);}window[cb]=function(r){clean();resolve(r||{});};s.onerror=function(){clean();reject(new Error('server'));};s.src=base+(base.indexOf('?')<0?'?':'&')+p.toString();document.body.appendChild(s);setTimeout(function(){if(!done){clean();reject(new Error('timeout'));}},25000);});}
   function toast(t,bad){var m=$('es16Msg')||$('mainMsg')||document.querySelector('.msg');if(m){m.textContent=t||'';m.classList.toggle('error',!!bad);m.classList.toggle('ok',!!t&&!bad);}else if(t){alert(t);}}
   var style=document.createElement('style');style.textContent='.es16-panel{background:#fff;border:1px solid #d8e4ea;border-radius:18px;padding:16px;margin:14px 0;box-shadow:0 10px 24px #0001}.es16-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}.es16-grid .wide{grid-column:span 2}.es16-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}.es16-table{width:100%;border-collapse:collapse;margin-top:12px}.es16-table th,.es16-table td{border:1px solid #e5edf5;padding:7px;text-align:right}.es16-btn{background:#eef6f5;color:#0f6f5c;border:1px solid #d2e8e4;border-radius:10px;padding:8px 11px;cursor:pointer;font-weight:800}.es16-btn.primary{background:#0f8a70;color:#fff;border-color:#0f8a70}.es16-btn.danger{background:#d64545;color:#fff;border-color:#d64545}.es16-version{position:fixed;left:10px;bottom:10px;z-index:9999;background:#111827;color:white;border-radius:999px;padding:6px 10px;font-size:11px}.hidden#clientInvoiceMenu,.hidden.clientInvoiceMenu,.hidden.client-invoice-menu{display:none!important}@media(max-width:900px){.es16-grid{grid-template-columns:1fr}.es16-grid .wide{grid-column:auto}}';document.head.appendChild(style);
-  function versionBind(){document.title='إيزي ستور مطبعجي ES18 V1861';document.querySelectorAll('.version-badge,.version,.app-version').forEach(function(el){el.textContent='ES25 V1868 Clean Single Loader';});if(!$('es16Version')){var v=document.createElement('div');v.id='es16Version';v.className='es16-version';v.textContent='ES18 V1861';document.body.appendChild(v);}}
+  function versionBind(){document.title='إيزي ستور مطبعجي ES26 V1869';document.querySelectorAll('.version-badge,.version,.app-version').forEach(function(el){el.textContent='ES26 V1869 Cache Killer';});if(!$('es16Version')){var v=document.createElement('div');v.id='es16Version';v.className='es16-version';v.textContent='ES26 V1869';document.body.appendChild(v);}}
   function closeInvoiceMenus(force){['clientInvoiceMenu','saCustomerDrop','customerInvoiceMenu','invoiceCustomerMenu'].forEach(function(id){var el=$(id);if(el){el.classList.add('hidden');el.style.display='none';el.setAttribute('aria-hidden','true');}});document.querySelectorAll('.clientInvoiceMenu,.client-invoice-menu,.dropdown-menu,.floating-menu,.invoice-menu,[data-invoice-menu]').forEach(function(el){var key=((el.id||'')+' '+(el.className||'')+' '+(el.textContent||'')).toLowerCase();if(force||/invoice|فاتورة|menu|dropdown/.test(key)){el.classList.add('hidden');el.style.display='none';el.setAttribute('aria-hidden','true');}});} 
   window.toggleClientInvoiceMenu=function(ev){if(ev){ev.preventDefault();ev.stopPropagation();}var m=$('clientInvoiceMenu')||document.querySelector('.clientInvoiceMenu,.client-invoice-menu,[data-invoice-menu]');if(!m)return false;var open=m.classList.contains('hidden')||m.style.display==='none'||getComputedStyle(m).display==='none';closeInvoiceMenus(true);if(open){m.classList.remove('hidden');m.style.display='block';m.setAttribute('aria-hidden','false');}return false;};['pointerdown','mousedown','click','touchstart','focusin'].forEach(function(evt){document.addEventListener(evt,function(ev){var t=ev.target;if(t&&t.closest&&t.closest('#clientInvoiceMenu,.clientInvoiceMenu,.client-invoice-menu,[data-invoice-menu],[onclick*="toggleClientInvoiceMenu"]'))return;closeInvoiceMenus(true);},true);});document.addEventListener('keydown',function(ev){if(ev.key==='Escape')closeInvoiceMenus(true);},true);window.addEventListener('scroll',function(){closeInvoiceMenus(true);},true);
   var customers=[];
@@ -727,7 +727,7 @@
 **********************************************************************************************/
 (function(){
   'use strict';
-  window.EASYSTORE_VERSION = 'ES25 V1868 Clean Single Loader';
+  window.EASYSTORE_VERSION = 'ES26 V1869 Cache Killer';
   window.EASYSTORE_ES19_V1862_EDIT_PROFIT_FIX = true;
 
   var qs = new URLSearchParams(location.search || '');
@@ -780,8 +780,8 @@
   document.head.appendChild(style);
 
   function setVersion(){
-    document.title = 'إيزي ستور مطبعجي ES19 V1862';
-    document.querySelectorAll('.version-badge,.version,.app-version').forEach(function(el){ el.textContent = 'ES25 V1868 Clean Single Loader'; });
+    document.title='إيزي ستور مطبعجي ES26 V1869';
+    document.querySelectorAll('.version-badge,.version,.app-version').forEach(function(el){ el.textContent = 'ES26 V1869 Cache Killer'; });
     var candidates = Array.from(document.querySelectorAll('h1,h2,.brand h1,.top h1,.topbar h2'));
     candidates.forEach(function(el){
       if(/إيزي|ستور|برنامج الحسابات|Easy/i.test(text(el.textContent))){
@@ -1029,14 +1029,14 @@
 **********************************************************************************************/
 (function(){
   'use strict';
-  window.EASYSTORE_VERSION = 'ES25 V1868 Clean Single Loader';
+  window.EASYSTORE_VERSION = 'ES26 V1869 Cache Killer';
   window.EASYSTORE_ES20_V1863_TEMPLATE_HELPER_FIX = true;
   function t(v){ return String(v == null ? '' : v); }
   function setVersion(){
-    try { document.title = 'إيزي ستور مطبعجي ES21 V1864'; } catch(e){}
+    try { document.title='إيزي ستور مطبعجي ES26 V1869'; } catch(e){}
     try {
       document.querySelectorAll('.version-badge,.version,.app-version').forEach(function(el){
-        el.textContent = 'ES25 V1868 Clean Single Loader';
+        el.textContent = 'ES26 V1869 Cache Killer';
       });
       Array.from(document.querySelectorAll('h1,h2,.brand h1,.top h1,.topbar h2')).forEach(function(el){
         if(/إيزي|ستور|برنامج الحسابات|Easy|مدير الحسابات/i.test(t(el.textContent))){
@@ -1061,7 +1061,7 @@
 **********************************************************************************************/
 (function(){
   'use strict';
-  window.EASYSTORE_VERSION = 'ES25 V1868 Clean Single Loader';
+  window.EASYSTORE_VERSION = 'ES26 V1869 Cache Killer';
   window.EASYSTORE_ES21_V1864_NUMBER_FORMAT_FIX = true;
 
   function text(v){ return String(v == null ? '' : v).replace(/\s+/g,' ').trim(); }
@@ -1157,10 +1157,10 @@
     });
   }
   function setVersion(){
-    document.title = 'إيزي ستور مطبعجي ES21 V1864';
-    document.querySelectorAll('.version-badge,.version,.app-version').forEach(function(el){ el.textContent = 'ES25 V1868 Clean Single Loader'; });
+    document.title='إيزي ستور مطبعجي ES26 V1869';
+    document.querySelectorAll('.version-badge,.version,.app-version').forEach(function(el){ el.textContent = 'ES26 V1869 Cache Killer'; });
     document.querySelectorAll('h1,h2,.brand h1,.top h1,.topbar h2').forEach(function(el){
-      if(/إيزي|ستور|برنامج الحسابات|Easy/i.test(text(el.textContent))) el.textContent = 'إيزي ستور مطبعجي - برنامج الحسابات ES21';
+      if(/إيزي|ستور|برنامج الحسابات|Easy/i.test(text(el.textContent))) el.textContent = 'إيزي ستور مطبعجي - برنامج الحسابات ES26';
     });
   }
   var css = document.createElement('style');
@@ -1183,22 +1183,22 @@
 **********************************************************************************************/
 (function(){
   'use strict';
-  window.EASYSTORE_VERSION = 'ES25 V1868 Clean Single Loader';
+  window.EASYSTORE_VERSION = 'ES26 V1869 Cache Killer';
   window.EASYSTORE_ES22_V1865_KITCHEN_SPLIT_FIX = true;
 
   function text(v){ return String(v == null ? '' : v).replace(/\s+/g,' ').trim(); }
   function norm(v){ return text(v).toLowerCase().replace(/[إأآا]/g,'ا').replace(/[ى]/g,'ي').replace(/[ةه]/g,'ه').replace(/[ؤ]/g,'و').replace(/[ئ]/g,'ي'); }
   function visible(el){ return !!(el && el.offsetParent !== null && getComputedStyle(el).display !== 'none' && getComputedStyle(el).visibility !== 'hidden'); }
   function setVersion(){
-    try { document.title = 'إيزي ستور مطبعجي ES22 V1865'; } catch(e){}
+    try { document.title='إيزي ستور مطبعجي ES26 V1869'; } catch(e){}
     try {
-      document.querySelectorAll('.version-badge,.version,.app-version').forEach(function(el){ el.textContent = 'ES25 V1868 Clean Single Loader'; });
+      document.querySelectorAll('.version-badge,.version,.app-version').forEach(function(el){ el.textContent = 'ES26 V1869 Cache Killer'; });
       document.querySelectorAll('h1,h2,.brand h1,.top h1,.topbar h2').forEach(function(el){
-        if(/إيزي|ستور|برنامج الحسابات|Easy|مدير الحسابات/i.test(text(el.textContent))) el.textContent = 'إيزي ستور مطبعجي - برنامج الحسابات ES22';
+        if(/إيزي|ستور|برنامج الحسابات|Easy|مدير الحسابات/i.test(text(el.textContent))) el.textContent = 'إيزي ستور مطبعجي - برنامج الحسابات ES26';
       });
       var v = document.getElementById('es22Version');
       if(!v){ v = document.createElement('div'); v.id = 'es22Version'; document.body.appendChild(v); }
-      v.textContent = 'ES22 V1865';
+      v.textContent = 'ES26 V1869';
       v.style.cssText = 'position:fixed;left:10px;bottom:10px;z-index:99999;background:#111827;color:white;border-radius:999px;padding:6px 10px;font-size:11px;font-family:Tahoma,Arial,sans-serif;box-shadow:0 6px 16px rgba(0,0,0,.18)';
     } catch(e){}
   }
@@ -1325,7 +1325,7 @@
 **********************************************************************************************/
 (function(){
   'use strict';
-  window.EASYSTORE_VERSION = 'ES25 V1868 Clean Single Loader';
+  window.EASYSTORE_VERSION = 'ES26 V1869 Cache Killer';
   window.EASYSTORE_ES24_V1866_KITCHEN_CUSTOMER_FIX = true;
 
   var qs = new URLSearchParams(location.search || '');
@@ -1384,8 +1384,8 @@
   document.head.appendChild(css);
 
   function setVersion(){
-    try{ document.title='إيزي ستور مطبعجي ES24 V1867'; }catch(e){}
-    document.querySelectorAll('.version-badge,.version,.app-version').forEach(function(el){ el.textContent='ES25 V1868 Clean Single Loader'; });
+    try{ document.title='إيزي ستور مطبعجي ES26 V1869'; }catch(e){}
+    document.querySelectorAll('.version-badge,.version,.app-version').forEach(function(el){ el.textContent='ES26 V1869 Cache Killer'; });
     document.querySelectorAll('h1,h2,.brand h1,.top h1,.topbar h2').forEach(function(el){
       if(/إيزي|ستور|برنامج الحسابات|Easy|مدير الحسابات/i.test(text(el.textContent))) el.textContent='إيزي ستور مطبعجي - برنامج الحسابات ES24';
     });
@@ -1918,7 +1918,7 @@
 **********************************************************************************************/
 (function(){
   'use strict';
-  var VERSION = 'ES25 V1868 Clean Single Loader';
+  var VERSION = 'ES26 V1869 Cache Killer';
   window.EASYSTORE_VERSION = VERSION;
   window.EASYSTORE_AUTO_REFRESH = false;
   window.EASYSTORE_CLEAN_SINGLE_LOADER = true;
@@ -1931,7 +1931,7 @@
   function $(id){ return document.getElementById(id); }
 
   function setVersion(){
-    try{ document.title = 'إيزي ستور مطبعجي ES25 V1868'; }catch(e){}
+    try{ document.title='إيزي ستور مطبعجي ES26 V1869'; }catch(e){}
     try{
       window.EASYSTORE_VERSION = VERSION;
       document.querySelectorAll('.version-badge,.version,.app-version').forEach(function(el){
@@ -2014,4 +2014,41 @@
   if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded',tick); else tick();
   setTimeout(tick,250);
   setTimeout(tick,1200);
+})();
+
+
+/*********************** EasyStore ES26 / V1869 - Cache Killer & Version Lock ************************/
+(function(){
+  'use strict';
+  var LOCK_VERSION = 'ES26 V1869 Cache Killer';
+  var SHORT_VERSION = 'ES26 V1869';
+  try{
+    Object.defineProperty(window, 'EASYSTORE_VERSION', { configurable:true, get:function(){return LOCK_VERSION;}, set:function(){} });
+  }catch(e){ window.EASYSTORE_VERSION = LOCK_VERSION; }
+  window.EASYSTORE_MATBAGY_VERSION = LOCK_VERSION;
+  window.EASYSTORE_CACHE_TAG = 'es26-v1869-cache-killer-20260629-0315';
+  window.EASYSTORE_AUTO_REFRESH = false;
+  function lockText(){
+    try{ document.title='إيزي ستور مطبعجي '+SHORT_VERSION; }catch(e){}
+    try{ localStorage.setItem('EASYSTORE_ACTIVE_BUILD', LOCK_VERSION); localStorage.setItem('EASYSTORE_CACHE_TAG', 'es26-v1869-cache-killer-20260629-0315'); }catch(e){}
+    document.querySelectorAll('.version-badge,.version,.app-version,#es16Version,#es25Version,#es26Version,[data-version],[data-app-version]').forEach(function(el){el.textContent=LOCK_VERSION;});
+    document.querySelectorAll('h1,h2,b,p,small,span,div').forEach(function(el){
+      if(el.children && el.children.length>0) return;
+      var t=el.textContent||'';
+      if(t.length<180 && (/Batch32|Customer Pick Lock|V13|ES1\d|ES2[0-5]/i.test(t))){
+        el.textContent=t.replace(/V13\s*Batch32\s*UI\s*Close\s*Fix\s*\+\s*Customer\s*Pick\s*Lock\s*\/\s*app\.js/gi, SHORT_VERSION+' / app.js')
+          .replace(/ES1\d|ES2[0-5]/gi,'ES26')
+          .replace(/V18\d{2}/gi,'V1869')
+          .replace(/Batch\s*28\s*Mutual/gi,'Clean Single Loader');
+      }
+    });
+  }
+  lockText();
+  setTimeout(lockText,50); setTimeout(lockText,250); setTimeout(lockText,1000); setTimeout(lockText,2500);
+  var tm=null;
+  try{ new MutationObserver(function(){ clearTimeout(tm); tm=setTimeout(lockText,40); }).observe(document.documentElement,{childList:true,subtree:true,characterData:true}); }catch(e){}
+  try{
+    if('serviceWorker' in navigator) navigator.serviceWorker.getRegistrations().then(function(regs){regs.forEach(function(r){try{r.unregister();}catch(e){}});});
+    if(window.caches && caches.keys) caches.keys().then(function(keys){keys.forEach(function(k){if(/easy|store|matbagy|trend|workbox|cache/i.test(k)) caches.delete(k);});});
+  }catch(e){}
 })();

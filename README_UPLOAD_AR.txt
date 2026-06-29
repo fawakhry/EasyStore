@@ -1,25 +1,32 @@
-EasyStore ES25 V1868 Clean Single Loader
+# EasyStore ES26 V1869 Cache Killer
 
-دي نسخة نظيفة مبنية من EasyStore الحالي بعد دمج ملف التشغيل والباتشات في ملف واحد فقط.
+دي نسخة تنظيف الكاش وتثبيت ملف تشغيل واحد.
 
-طريقة الرفع:
-1) افتح EasyStore repo على GitHub.
-2) احذف ملفات النسخ القديمة التي تبدأ بـ EasyStore_ES...
-3) ارفع/استبدل الملفات الستة فقط:
-   - index.html
-   - app.js
-   - config.js
-   - styles.css
-   - matbagy_theme_v1860.css
-   - matbagy_theme_v1860.js
-4) افتح الصفحة واضغط Ctrl + F5.
+## ارفع الملفات دي فقط من فولدر 01_EasyStore_repo_upload على EasyStore repo
+- index.html
+- app.js
+- config.js
+- styles.css
+- matbagy_theme_v1860.css
+- matbagy_theme_v1860.js
 
-النسخة دي:
-- لا تحمل أي ملف EasyStore_ES14/15/16/18/19/20/21/22/23/24 خارجي.
-- توقف التحديث التلقائي المزعج.
-- تثبت رقم النسخة على ES25.
-- تحافظ على الثيمات.
-- تحتوي على آخر باتشات الواجهة داخل app.js واحد.
+## احذف من الريبو أي ملفات قديمة تبدأ بـ
+- EasyStore_ES14
+- EasyStore_ES15
+- EasyStore_ES16
+- EasyStore_ES18
+- EasyStore_ES19
+- EasyStore_ES20
+- EasyStore_ES21
+- EasyStore_ES22
+- EasyStore_ES23
+- EasyStore_ES24
+- EasyStore_ES25 إن وجد
 
-ملاحظة:
-لم يتم تعديل Apps Script في هذه النسخة؛ دي تنظيف لملفات EasyStore فقط.
+## بعد الرفع
+افتح الرابط بهذا الشكل مرة واحدة:
+https://fawakhry.github.io/EasyStore/?v=es26-v1869-cache-killer-20260629-0315
+
+ثم اضغط Ctrl + Shift + R.
+
+المفروض يظهر رقم ثابت: ES26 V1869 Cache Killer
