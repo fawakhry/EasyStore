@@ -1,9 +1,9 @@
-/* Matbagy / TrendOS ES26 V1869 Cache Killer Theme Controller */
+/* Matbagy / TrendOS ES31 V1879 Stable No Polling Theme Controller */
 (function(){
   'use strict';
   window.EASYSTORE_CACHE_KILLER_THEME_LOCK = true;
-  window.EASYSTORE_VERSION = 'ES26 V1869 Cache Killer';
-  window.EASYSTORE_MATBAGY_VERSION = 'ES26 V1869 Cache Killer';
+  window.EASYSTORE_VERSION = 'ES31 V1879 Stable No Polling';
+  window.EASYSTORE_MATBAGY_VERSION = 'ES31 V1879 Stable No Polling';
   var KEY_THEME='matbagy_ui_theme_v1860';
   var KEY_MODE='matbagy_ui_mode_v1860';
   var THEMES=[['green','مطبعجي'],['blue','أزرق'],['gold','ذهبي'],['purple','بنفسجي'],['slate','رمادي']];
@@ -38,8 +38,8 @@
     apply();
   }
   function polishVersion(){
-    var lock='ES26 V1869 Cache Killer';
-    var short='ES26 V1869';
+    var lock='ES31 V1879 Stable No Polling';
+    var short='ES31 V1879';
     try{ document.title='إيزي ستور مطبعجي '+short; }catch(e){}
     document.querySelectorAll('.version-badge,.version,.app-version,#es16Version,#es25Version,#es26Version,[data-version],[data-app-version]').forEach(function(el){
       el.textContent=lock;
@@ -66,6 +66,6 @@
   document.addEventListener('DOMContentLoaded',function(){mount();polishVersion();groupDangerButtons();});
   setTimeout(function(){mount();polishVersion();groupDangerButtons();},400);
   setTimeout(function(){mount();polishVersion();groupDangerButtons();},1800);
-  setInterval(function(){mount();polishVersion();groupDangerButtons();},5000);
+  /* V1879: no repeated visual interval */
   if(window.matchMedia){try{window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change',apply);}catch(e){}}
 })();
