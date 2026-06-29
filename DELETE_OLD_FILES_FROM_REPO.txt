@@ -1,0 +1,15 @@
+احذف كل ملفات EasyStore القديمة من الريبو قبل رفع النسخة النظيفة.
+
+ارفع هذه الملفات فقط:
+- index.html
+- app.js
+- config.js
+- styles.css
+- matbagy_theme_v1860.css
+- matbagy_theme_v1860.js
+
+ممنوع تترك أي ملف قديم باسم:
+- EasyStore_ES*.js
+- *_HOTFIX*.js
+- *_RESCUE*.js
+- أي app قديم أو نسخة مكررة

@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate, max-age=0" />
+  <meta http-equiv="Pragma" content="no-cache" />
+  <meta http-equiv="Expires" content="0" />
+  <title>إيزي ستور مطبعجي ES32 V1880 Clean Core</title>
+  <script>
+  (function(){
+    var LOCK_VERSION = 'ES32 V1880 Clean Core';
+    var CACHE_TAG = 'es31-v1879-stable-no-polling-20260629';
+    window.EASYSTORE_VERSION_LOCK = LOCK_VERSION;
+    window.EASYSTORE_CACHE_TAG = CACHE_TAG;
+    window.EASYSTORE_AUTO_REFRESH = false;
+    try {
+      // امسح كاش المتصفح/Service Worker لو موجود بدون مساس ببيانات التشغيل.
+      if ('serviceWorker' in navigator) { navigator.serviceWorker.getRegistrations().then(function(regs){ regs.forEach(function(r){ try{r.unregister();}catch(e){} }); }); }
+      if (window.caches && caches.keys) { caches.keys().then(function(keys){ keys.forEach(function(k){ if(/easystore|matbagy|trend|workbox|cache/i.test(k)) caches.delete(k); }); }); }
+      localStorage.setItem('EASYSTORE_ACTIVE_BUILD', LOCK_VERSION);
+      localStorage.setItem('EASYSTORE_CACHE_TAG', CACHE_TAG);
+      ['EASYSTORE_LAST_VERSION','EASYSTORE_OLD_VERSION','EASYSTORE_BUILD_MIX_WARNING'].forEach(function(k){try{localStorage.removeItem(k);}catch(e){}});
+    } catch(e){}
+  })();
+  </script>
+  <link rel="stylesheet" href="styles.css?v=es32-v1880-clean-core-20260629" />
+  <link rel="stylesheet" href="matbagy_theme_v1860.css?v=es32-v1880-clean-core-20260629" />
+</head>
+<body>
+  <div id="app"></div>
+  <script src="config.js?v=es32-v1880-clean-core-20260629"></script>
+  <script src="app.js?v=es32-v1880-clean-core-20260629"></script>
+  <script src="matbagy_theme_v1860.js?v=es32-v1880-clean-core-20260629"></script>
+  <script>
+  (function(){
+    var LOCK_VERSION = 'ES32 V1880 Clean Core';
+    var SHORT_VERSION = 'ES32 V1880';
+    function lockVersionText(){
+      try{ document.title = 'إيزي ستور مطبعجي ' + SHORT_VERSION; }catch(e){}
+      try{ window.EASYSTORE_VERSION = LOCK_VERSION; window.EASYSTORE_MATBAGY_VERSION = LOCK_VERSION; }catch(e){}
+      var selectors = '.version-badge,.version,.app-version,#es16Version,#es25Version,#es26Version,[data-version],[data-app-version]';
+      document.querySelectorAll(selectors).forEach(function(el){ el.textContent = LOCK_VERSION; });
+      document.querySelectorAll('h1,h2,.brand-title,.app-title,.topbar b,.topbar h2').forEach(function(el){
+        var t = (el.textContent || '');
+        if(/إيزي|EasyStore|مدير الحسابات|برنامج الحسابات/i.test(t) && /ES\d+|V18\d+|V13|Batch/i.test(t)){
+          el.textContent = 'إيزي ستور مطبعجي - برنامج الحسابات ' + SHORT_VERSION;
+        }
+      });
+      document.querySelectorAll('p,small,span,div').forEach(function(el){
+        if(el.children && el.children.length > 0) return;
+        var t = el.textContent || '';
+        if(t.length < 180 && (/Batch32|Customer Pick Lock|V13|ES1\d|ES2[0-5]/i.test(t))){
+          el.textContent = t
+            .replace(/V13\s*Batch32\s*UI\s*Close\s*Fix\s*\+\s*Customer\s*Pick\s*Lock\s*\/\s*app\.js/gi, SHORT_VERSION + ' / app.js')
+            .replace(/ES1\d|ES2[0-5]/gi, 'ES26')
+            .replace(/V18\d2/gi, 'V1869')
+            .replace(/Batch\s*28\s*Mutual/gi, 'Clean Single Loader');
+        }
+      });
+    }
+    lockVersionText();
+    setTimeout(lockVersionText, 100);
+    setTimeout(lockVersionText, 700);
+    setTimeout(lockVersionText, 1800);
+    var timer = null;
+    try{ new MutationObserver(function(){ clearTimeout(timer); timer=setTimeout(lockVersionText,40); }).observe(document.body, {childList:true, subtree:true, characterData:true}); }catch(e){}
+  })();
+  </script>
+</body>
+</html>
