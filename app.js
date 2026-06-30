@@ -1,7 +1,7 @@
 (function(){
   'use strict';
 
-  var BUILD = window.EASYSTORE_BUILD || 'EasyStore V1882 Clean Production';
+  var BUILD = window.EASYSTORE_BUILD || 'EasyStore V1882 Server Linked Production';
   var API_URL = String(window.EASYSTORE_API_URL || window.TREND_API_URL || window.API_URL || '').trim();
   var app = document.getElementById('app');
   var state = {
@@ -70,10 +70,10 @@
   }
   function loginFallback(username,password){
     var ukey=key(username), pass=text(password).trim();
-    return DEFAULT_USERS.find(function(u){ return (key(u.username)===ukey || u.name===username) && (!u.password || u.password===pass); });
+    return DEFAULT_USERS.find(function(u){ return (key(u.username)===ukey || u.name===username) && (!u.password || !pass || u.password===pass); /* V1882: accept blank password for default shop users */ });
   }
   function showLogin(error){
-    app.innerHTML = '<div class="loginShell"><div class="loginCard"><div class="brand"><div class="logo">ES</div><div><h1 style="margin:0">EasyStore مطبعجي</h1><div class="muted">'+esc(BUILD)+'</div></div></div>'+(error?'<div class="notice bad">'+esc(error)+'</div>':'')+'<div class="field"><label>اسم المستخدم</label><input id="loginUser" placeholder="ضياء / رحمه / ريفان / وائل / جابر"></div><div class="field"><label>كلمة المرور</label><input id="loginPass" type="password"></div><button id="loginBtn" class="btn" style="width:100%">دخول</button><p class="muted" style="font-size:12px">النسخة تحميل واحد: app.js + index.html + config.js + styles.css.</p></div></div>';
+    app.innerHTML = '<div class="loginShell"><div class="loginCard"><div class="brand"><div class="logo">ES</div><div><h1 style="margin:0">EasyStore مطبعجي</h1><div class="muted">'+esc(BUILD)+'</div></div></div>'+(error?'<div class="notice bad">'+esc(error)+'</div>':'')+'<div class="field"><label>اسم المستخدم</label><input id="loginUser" placeholder="ضياء / رحمه / ريفان / وائل / جابر"></div><div class="field"><label>كلمة المرور</label><input id="loginPass" type="password" placeholder="اتركها فارغة أو اكتب 1234"></div><button id="loginBtn" class="btn" style="width:100%">دخول</button><p class="muted" style="font-size:12px">النسخة تحميل واحد. كلمة المرور الافتراضية: فارغة أو 1234.</p></div></div>';
     $('loginBtn').onclick=login;
     ['loginUser','loginPass'].forEach(function(x){ var el=$(x); if(el) el.addEventListener('keydown',function(ev){ if(ev.key==='Enter') login(); }); });
     var f=$('loginUser'); if(f) f.focus();
