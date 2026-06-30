@@ -1,7 +1,7 @@
 (function(){
   'use strict';
 
-  var BUILD = window.EASYSTORE_BUILD || 'EasyStore V1882 Server Linked Production';
+  var BUILD = window.EASYSTORE_BUILD || 'EasyStore V1884 Data Normalizer Production';
   var API_URL = String(window.EASYSTORE_API_URL || window.TREND_API_URL || window.API_URL || '').trim();
   var app = document.getElementById('app');
   var state = {
@@ -34,7 +34,7 @@
   function money(v){ return num(v).toLocaleString('ar-EG',{minimumFractionDigits:2,maximumFractionDigits:2}); }
   function id(prefix){ return prefix + '_' + Date.now() + '_' + Math.floor(Math.random()*99999); }
   function now(){ return new Date().toLocaleString('ar-EG'); }
-  function key(s){ return text(s).trim().replace(/\s+/g,' ').toLowerCase(); }
+  function key(s){ return text(s).trim().replace(/[ـ\u064B-\u065F\u0670]/g,'').replace(/[إأآا]/g,'ا').replace(/[ةه]$/,'ه').replace(/\s+/g,' ').toLowerCase(); }
   function truth(v){ var s=text(v).toLowerCase(); return !(v===false || s==='false' || s==='0' || s==='no' || s==='موقوف' || s==='محذوف'); }
   function isAdmin(){ return state.user && state.user.role==='admin'; }
   function isSales(){ return state.user && (state.user.role==='admin' || state.user.role==='sales'); }
@@ -45,6 +45,13 @@
   function setMsg(m,bad){ state.message = m ? '<div class="notice '+(bad?'bad':'ok')+'">'+esc(m)+'</div>' : ''; render(); }
   function setInline(id,msg,bad){ var el=$(id); if(el) el.innerHTML = msg ? '<div class="notice '+(bad?'bad':'ok')+'">'+esc(msg)+'</div>' : ''; }
   function q(obj){ var p=new URLSearchParams(); Object.keys(obj||{}).forEach(function(k){ if(obj[k]!==undefined && obj[k]!==null) p.set(k, obj[k]); }); return p.toString(); }
+  function pick(row, keys){ row=row||{}; for(var i=0;i<keys.length;i++){ var v=row[keys[i]]; if(v!==undefined && v!==null && text(v).trim()!=='') return v; } return ''; }
+  function normalizeCustomerRow(r){ var name=pick(r,['name','customerName','اسم الشات / المكتب','اسم العميل']); var phone=pick(r,['phone','mobile','customerPhone','رقم العميل الأساسي','رقم الهاتف','رقم العميل']); return Object.assign({},r,{id:text(pick(r,['id','كود العميل','ID'])||phone||name),name:text(name),customerName:text(name),phone:text(phone),mobile:text(phone),type:text(pick(r,['type','نوع العميل'])),balance:num(pick(r,['balance','رصيد العميل','رصيد العميل.1','مديونية حالية','مديونية','الرصيد الحالي'])),openOrders:num(pick(r,['openOrders','أوردر مفتوح','أوردرات مفتوحة']))}); }
+  function normalizeMaterialRow(r){ var name=pick(r,['name','materialName','اسم الخامة','الخامة']); return Object.assign({},r,{id:text(pick(r,['id','ID'])),name:text(name),materialName:text(name),department:text(pick(r,['department','القسم']))||'مشترك',kind:text(pick(r,['kind','rawKind','نوع الخامة','تصنيف الخامة']))||'raw',itemType:text(pick(r,['itemType']))||'raw',cost:num(pick(r,['cost','unitCost','calculatedUnitCost','تكلفة محسوبة','سعر الوحدة','التكلفة'])),salePrice:num(pick(r,['salePrice','sale','price','سعر بيع رسمي','سعر البيع','سعر بيع مقترح'])),stock:num(pick(r,['stock','balance','رصيد المخزن','الرصيد'])),minStock:num(pick(r,['minStock','حد تنبيه النقص'])),active:pick(r,['active','مفعل','مفعل؟'])||true}); }
+  function normalizeTemplateRow(r){ var name=pick(r,['name','itemName','templateName','اسم البند','اسم الصنف','اسم المنتج']); return Object.assign({},r,{id:text(pick(r,['id','ID','كود المنتج'])),name:text(name),itemName:text(name),department:text(pick(r,['department','القسم']))||'مشترك',itemType:text(pick(r,['itemType','التصنيف']))||'product',size:text(pick(r,['size','المقاس'])),salePrice:num(pick(r,['salePrice','sale','price','سعر بيع مقترح','سعر بيع رسمي','سعر البيع'])),cost:num(pick(r,['cost','calculatedCost','إجمالي التكلفة','تكلفة محسوبة','التكلفة'])),profit:num(pick(r,['profit','الربح'])),components:pick(r,['components','componentsJson','مكونات الخامة','المكونات'])||'[]',active:pick(r,['active','مفعل','مفعل؟'])||true}); }
+  function normalizeDeptLineRow(r){ var oid=pick(r,['orderId','رقم الأوردر','كود الأوردر']); var lid=pick(r,['id','lineId','رقم البند']); var item=pick(r,['itemName','name','اسم البند / نوع الشغل','اسم البند','نوع الشغل الأصلي','اللي اتعمل فعليًا']); var sale=num(pick(r,['sale','price','سعر البيع','سعر ضياء','سعر النظام','الإجمالي','total'])); var qty=num(pick(r,['qty','الكمية'])||1); return Object.assign({},r,{id:text(lid),orderId:text(oid),customerName:text(pick(r,['customerName','اسم الشات / المكتب','اسم العميل'])),customerPhone:text(pick(r,['customerPhone','رقم العميل الأساسي','رقم الهاتف','رقم العميل'])),department:text(pick(r,['department','القسم','قسم الصنف']))||'مشترك',itemName:text(item),qty:qty,sale:sale,systemSale:num(pick(r,['systemSale','سعر النظام','سعر ضياء'])),total:num(pick(r,['total','الإجمالي']))||qty*sale,status:text(pick(r,['status','الحالة','حالة التقفيل','حالة الفوترة']))||'غير مفوتر',shared:text(pick(r,['shared','بند مشترك','مشترك'])),cost:num(pick(r,['cost','إجمالي التكلفة','تكلفة النظام']))}); }
+  function normalizeInvoiceRow(r){ return Object.assign({},r,{id:text(pick(r,['id','ID','رقم الفاتورة'])),invoiceNo:text(pick(r,['invoiceNo','رقم الفاتورة'])),customerName:text(pick(r,['customerName','اسم العميل'])),customerPhone:text(pick(r,['customerPhone','رقم العميل','رقم الهاتف'])),orderId:text(pick(r,['orderId','رقم الأوردر'])),total:num(pick(r,['total','الإجمالي النهائي','الإجمالي'])),paid:num(pick(r,['paid','المدفوع'])),remaining:num(pick(r,['remaining','الباقي','المتبقي'])),status:text(pick(r,['status','الحالة'])),linesJson:pick(r,['linesJson','بنود الأقسام'])}); }
+  function normalizePayloadArray(k, arr){ arr=Array.isArray(arr)?arr:[]; if(k==='customers') return arr.map(normalizeCustomerRow).filter(function(c){return text(c.name)||text(c.phone);}); if(k==='materials') return arr.map(normalizeMaterialRow).filter(function(x){return text(x.name);}); if(k==='templates') return arr.map(normalizeTemplateRow).filter(function(x){return text(x.name);}); if(k==='deptLines') return arr.map(normalizeDeptLineRow).filter(function(x){return text(x.orderId)||text(x.customerName)||text(x.itemName);}); if(k==='finalInvoices') return arr.map(normalizeInvoiceRow); return arr; }
 
   function api(action,data){
     data = data || {};
@@ -70,17 +77,30 @@
   }
   function loginFallback(username,password){
     var ukey=key(username), pass=text(password).trim();
-    return DEFAULT_USERS.find(function(u){ return (key(u.username)===ukey || u.name===username) && (!u.password || !pass || u.password===pass); /* V1882: accept blank password for default shop users */ });
+    return DEFAULT_USERS.find(function(u){ return (key(u.username)===ukey || key(u.name)===ukey) && (!u.password || !pass || u.password===pass); });
   }
   function showLogin(error){
-    app.innerHTML = '<div class="loginShell"><div class="loginCard"><div class="brand"><div class="logo">ES</div><div><h1 style="margin:0">EasyStore مطبعجي</h1><div class="muted">'+esc(BUILD)+'</div></div></div>'+(error?'<div class="notice bad">'+esc(error)+'</div>':'')+'<div class="field"><label>اسم المستخدم</label><input id="loginUser" placeholder="ضياء / رحمه / ريفان / وائل / جابر"></div><div class="field"><label>كلمة المرور</label><input id="loginPass" type="password" placeholder="اتركها فارغة أو اكتب 1234"></div><button id="loginBtn" class="btn" style="width:100%">دخول</button><p class="muted" style="font-size:12px">النسخة تحميل واحد. كلمة المرور الافتراضية: فارغة أو 1234.</p></div></div>';
+    app.innerHTML = '<div class="loginShell"><div class="loginCard"><div class="brand"><div class="logo">ES</div><div><h1 style="margin:0">EasyStore مطبعجي</h1><div class="muted">'+esc(BUILD)+'</div></div></div>'+(error?'<div class="notice bad">'+esc(error)+'</div>':'')+'<div class="field"><label>اسم المستخدم</label><input id="loginUser" placeholder="ضياء / رحمه / ريفان / وائل / جابر"></div><div class="field"><label>كلمة المرور</label><input id="loginPass" type="password" placeholder="اتركها فارغة أو اكتب 1234"></div><button id="loginBtn" class="btn" style="width:100%">دخول</button><div class="actions" style="margin-top:10px;justify-content:center"><button type="button" class="btn small ghost" data-login="ضياء">ضياء</button><button type="button" class="btn small ghost" data-login="رحمه">رحمه</button><button type="button" class="btn small ghost" data-login="ريفان">ريفان</button><button type="button" class="btn small ghost" data-login="وائل">وائل</button><button type="button" class="btn small ghost" data-login="جابر">جابر</button></div><p class="muted" style="font-size:12px">النسخة تحميل واحد. كلمة المرور الافتراضية: فارغة أو 1234. أزرار الأسماء تفتح محليًا حتى لو السيرفر لا يرد.</p></div></div>';
     $('loginBtn').onclick=login;
+    Array.prototype.forEach.call(app.querySelectorAll('[data-login]'), function(b){ b.onclick=function(){ $('loginUser').value=b.getAttribute('data-login'); $('loginPass').value=''; login(); }; });
     ['loginUser','loginPass'].forEach(function(x){ var el=$(x); if(el) el.addEventListener('keydown',function(ev){ if(ev.key==='Enter') login(); }); });
     var f=$('loginUser'); if(f) f.focus();
   }
   function login(){
     var username=text($('loginUser').value).trim(), password=text($('loginPass').value).trim();
-    if(!username){ showLogin('اكتب اسم المستخدم.'); return; }
+    if(!username){ showLogin('اكتب اسم المستخدم أو اضغط على اسم من الأزرار السريعة.'); return; }
+
+    // V1884: افتح مستخدمي التشغيل الداخليين محليًا أولًا، ثم حمّل البيانات من السيرفر إن كان متاحًا.
+    var fb = loginFallback(username,password);
+    if(fb){
+      state.user=normalizeUser(fb);
+      try{ sessionStorage.setItem('EASYSTORE_USER', JSON.stringify(state.user)); }catch(e){}
+      state.active = state.user.role==='print' || state.user.role==='laser' ? 'dept' : 'dashboard';
+      render();
+      load(true);
+      return;
+    }
+
     if(API_URL){
       api('login',{username:username,password:password,app:'EasyStore'}).then(function(res){
         if(!res.success) throw new Error(res.message || 'بيانات الدخول غير صحيحة');
@@ -89,14 +109,10 @@
         state.active = state.user.role==='print' || state.user.role==='laser' ? 'dept' : 'dashboard';
         render(); return load(false);
       }).catch(function(e){
-        var fb = loginFallback(username,password);
-        if(fb){ state.user=normalizeUser(fb); state.active = state.user.role==='print' || state.user.role==='laser' ? 'dept' : 'dashboard'; render(); load(true); }
-        else showLogin(e.message || 'تعذر الدخول.');
+        showLogin((e.message || 'تعذر الدخول') + ' — جرّب الاسم العربي: ضياء / رحمه / ريفان / وائل / جابر أو كلمة المرور 1234.');
       });
     } else {
-      var u=loginFallback(username,password);
-      if(u){ state.user=normalizeUser(u); state.active = state.user.role==='print' || state.user.role==='laser' ? 'dept' : 'dashboard'; render(); load(true); }
-      else showLogin('رابط السيرفر غير مضبوط، أو بيانات الدخول غير صحيحة.');
+      showLogin('رابط السيرفر غير مضبوط، واسم المستخدم غير موجود ضمن مستخدمي التشغيل الداخليين.');
     }
   }
 
@@ -106,7 +122,7 @@
     if(!API_URL){ state.loading=false; if(!silent) setMsg('تم فتح البرنامج بدون سيرفر. اضبط config.js للربط بالشيت.', true); return Promise.resolve(); }
     return api('getAccounting',{username:state.user.username,role:state.user.role,department:state.user.department}).then(function(res){
       if(!res.success) throw new Error(res.message || 'تعذر تحميل الحسابات');
-      ['customers','users','materials','templates','deptLines','finalInvoices','purchases','wasteLines','stockMoves','cashbox','ledger','audit'].forEach(function(k){ state.data[k]=Array.isArray(res[k])?res[k]:[]; });
+      ['customers','users','materials','templates','deptLines','finalInvoices','purchases','wasteLines','stockMoves','cashbox','ledger','audit'].forEach(function(k){ state.data[k]=normalizePayloadArray(k, res[k]); });
       state.loading=false;
       if(!silent) setMsg('تم تحديث البيانات يدويًا: '+now()); else render();
     }).catch(function(e){ state.loading=false; setMsg(e.message || 'خطأ في تحميل البيانات', true); });
