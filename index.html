@@ -6,11 +6,11 @@
   <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate, max-age=0" />
   <meta http-equiv="Pragma" content="no-cache" />
   <meta http-equiv="Expires" content="0" />
-  <title>إيزي ستور مطبعجي ES33 V1892 Debt Catalog Save Fix</title>
+  <title>إيزي ستور مطبعجي ES33 V1893 Version Sync Lock</title>
   <script>
   (function(){
-    var LOCK_VERSION = 'ES33 V1892 Debt Catalog Save Fix';
-    var CACHE_TAG = 'es33-v1892-debt-catalog-save-fix-20260701b';
+    var LOCK_VERSION = 'ES33 V1893 Version Sync Lock';
+    var CACHE_TAG = 'es33-v1893-version-sync-lock-20260701c';
     window.EASYSTORE_SESSION_CATALOG_FIX = LOCK_VERSION;
     window.EASYSTORE_CACHE_TAG = CACHE_TAG;
     window.EASYSTORE_AUTO_REFRESH = false;
@@ -24,18 +24,18 @@
     } catch(e){}
   })();
   </script>
-  <link rel="stylesheet" href="styles.css?v=es33-v1892-debt-catalog-save-fix-20260701b" />
-  <link rel="stylesheet" href="matbagy_theme_v1860.css?v=es33-v1892-debt-catalog-save-fix-20260701b" />
+  <link rel="stylesheet" href="styles.css?v=es33-v1893-version-sync-lock-20260701c" />
+  <link rel="stylesheet" href="matbagy_theme_v1860.css?v=es33-v1893-version-sync-lock-20260701c" />
 </head>
 <body>
   <div id="app"></div>
-  <script src="config.js?v=es33-v1892-debt-catalog-save-fix-20260701b"></script>
-  <script src="app.js?v=es33-v1892-debt-catalog-save-fix-20260701b"></script>
-  <script src="matbagy_theme_v1860.js?v=es33-v1892-debt-catalog-save-fix-20260701b"></script>
+  <script src="config.js?v=es33-v1893-version-sync-lock-20260701c"></script>
+  <script src="app.js?v=es33-v1893-version-sync-lock-20260701c"></script>
+  <script src="matbagy_theme_v1860.js?v=es33-v1893-version-sync-lock-20260701c"></script>
   <script>
   (function(){
-    var LOCK_VERSION = 'ES33 V1892 Debt Catalog Save Fix';
-    var SHORT_VERSION = 'ES33 V1892';
+    var LOCK_VERSION = 'ES33 V1893 Version Sync Lock';
+    var SHORT_VERSION = 'ES33 V1893';
     function lockVersionText(){
       try{ document.title = 'إيزي ستور مطبعجي ' + SHORT_VERSION; }catch(e){}
       try{ window.EASYSTORE_VERSION = LOCK_VERSION; window.EASYSTORE_MATBAGY_VERSION = LOCK_VERSION; }catch(e){}
@@ -54,7 +54,7 @@
           el.textContent = t
             .replace(/V13\s*Batch32\s*UI\s*Close\s*Fix\s*\+\s*Customer\s*Pick\s*Lock\s*\/\s*app\.js/gi, SHORT_VERSION + ' / app.js')
             .replace(/ES1\d|ES2[0-9]|ES31|ES32/gi, 'ES33')
-            .replace(/V18\d{2}/gi, 'V1890')
+            .replace(/V18\d{2}/gi, 'V1893')
             .replace(/Batch\s*28\s*Mutual/gi, 'Clean Single Loader');
         }
       });
@@ -67,5 +67,34 @@
     try{ new MutationObserver(function(){ clearTimeout(timer); timer=setTimeout(lockVersionText,40); }).observe(document.body, {childList:true, subtree:true, characterData:true}); }catch(e){}
   })();
   </script>
+
+<script>
+(function(){
+  var LOCK='ES33 V1893 Version Sync Lock';
+  function applyV1893(){
+    try{
+      window.EASYSTORE_VERSION=LOCK;
+      window.EASYSTORE_MATBAGY_VERSION=LOCK;
+      window.EASYSTORE_SESSION_CATALOG_FIX=LOCK;
+    }catch(e){}
+    try{ document.title='إيزي ستور مطبعجي ES33 V1893 Version Sync Lock'; }catch(e){}
+    try{
+      document.querySelectorAll('.versionLine,.version-badge,[data-version],.app-version,.build-version').forEach(function(el){
+        if(el) el.textContent = LOCK;
+      });
+      document.querySelectorAll('h1').forEach(function(el){
+        var t=el.textContent||'';
+        if(/ES\d+|V18\d{2}/.test(t)) el.textContent=t.replace(/ES\d+ V18\d{2}/g,'ES33 V1893').replace(/ES\d+/g,'ES33').replace(/V18\d{2}/g,'V1893');
+      });
+    }catch(e){}
+  }
+  document.addEventListener('DOMContentLoaded', applyV1893);
+  setTimeout(applyV1893, 0);
+  setTimeout(applyV1893, 300);
+  setTimeout(applyV1893, 1500);
+  setTimeout(applyV1893, 3500);
+})();
+</script>
+
 </body>
 </html>

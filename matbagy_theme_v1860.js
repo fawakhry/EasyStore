@@ -2,8 +2,8 @@
 (function(){
   'use strict';
   window.EASYSTORE_CACHE_KILLER_THEME_LOCK = true;
-  window.EASYSTORE_VERSION = 'ES33 V1891 Session Catalog Fix';
-  window.EASYSTORE_MATBAGY_VERSION = 'ES33 V1891 Session Catalog Fix';
+  window.EASYSTORE_VERSION = 'ES33 V1893 Version Sync Lock';
+  window.EASYSTORE_MATBAGY_VERSION = 'ES33 V1893 Version Sync Lock';
   var KEY_THEME='matbagy_ui_theme_v1860';
   var KEY_MODE='matbagy_ui_mode_v1860';
   var THEMES=[['green','مطبعجي'],['blue','أزرق'],['gold','ذهبي'],['purple','بنفسجي'],['slate','رمادي']];
@@ -37,7 +37,7 @@
     else{document.body.appendChild(makeSwitcher(true));}
     apply();
   }
-  function polishVersion(){ try{window.EASYSTORE_VERSION='ES33 V1891 Session Catalog Fix';window.EASYSTORE_MATBAGY_VERSION='ES33 V1891 Session Catalog Fix';}catch(e){} }
+  function polishVersion(){ try{window.EASYSTORE_VERSION='ES33 V1893 Version Sync Lock';window.EASYSTORE_MATBAGY_VERSION='ES33 V1893 Version Sync Lock';}catch(e){} }
   function groupDangerButtons(){
     document.querySelectorAll('button,.btn,.es16-btn').forEach(function(b){
       var t=(b.textContent||'').trim();
