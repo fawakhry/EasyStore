@@ -1,7 +1,7 @@
 (function(){
   'use strict';
 
-  const VERSION = 'ES33 V1890 Stable Version Lock';
+  const VERSION = 'ES33 V1891 Session Catalog Fix';
   window.EASYSTORE_MATBAGY_VERSION = VERSION;
 
   const app = document.getElementById('app');
@@ -49,7 +49,7 @@
     return 'dashboard';
   }
 
-  const STORE_KEY = 'EASYSTORE_CLEAN_V1880_DATA';
+  const STORE_KEY = 'EASYSTORE_CLEAN_V1880_DATA'; // ثابت حتى تقرأ TrendOS الأصناف المحلية عند انقطاع السيرفر
   const state = {
     active: initialScreen(),
     loading: false,
@@ -72,7 +72,7 @@
     return new Promise((resolve,reject)=>{
       const base = String(window.TREND_API_URL || '').trim();
       if(!base) return reject(new Error('رابط Apps Script غير مضبوط في config.js'));
-      const cb = 'ES33 V1890_' + Date.now() + '_' + Math.random().toString(16).slice(2);
+      const cb = 'ES33_V1891_' + Date.now() + '_' + Math.random().toString(16).slice(2);
       const s = document.createElement('script');
       let done = false;
       function cleanup(){ if(done) return; done = true; try{ delete window[cb]; }catch(e){ window[cb] = undefined; } if(s.parentNode) s.parentNode.removeChild(s); }
