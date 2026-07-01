@@ -1,7 +1,7 @@
 (function(){
   'use strict';
 
-  const VERSION = 'ES33 V1894 Debt + Invoice Rows';
+  const VERSION = 'ES33 V1895 Catalog Bridge + Invoice Rows';
   window.EASYSTORE_MATBAGY_VERSION = VERSION;
 
   const app = document.getElementById('app');
@@ -77,8 +77,28 @@
     recipeComps: [], salePulledLines: [], saleSelectedCustomer: null, saleCustomerContext: null, customerSearchTimer: null, customerSearchSeq: 0, customerDropdownLocked: false
   };
 
-  function saveLocal(){ localStorage.setItem(STORE_KEY, JSON.stringify(state.data)); try{ localStorage.setItem('MATBAGY_SHARED_CATALOG_V1893', JSON.stringify({templates:state.data.templates||[], materials:state.data.materials||[], updatedAt:new Date().toISOString()})); localStorage.setItem('MATBAGY_SHARED_CATALOG_V1894', JSON.stringify({templates:state.data.templates||[], materials:state.data.materials||[], updatedAt:new Date().toISOString()})); }catch(e){} }
+  function saveLocal(){
+    localStorage.setItem(STORE_KEY, JSON.stringify(state.data));
+    try{
+      const payload = JSON.stringify({templates:state.data.templates||[], items:state.data.templates||[], products:state.data.templates||[], recipes:state.data.templates||[], materials:state.data.materials||[], updatedAt:new Date().toISOString(), version:'V1895'});
+      ['MATBAGY_SHARED_CATALOG_V1892','MATBAGY_SHARED_CATALOG_V1893','MATBAGY_SHARED_CATALOG_V1895','MATBAGY_SHARED_CATALOG_V1895'].forEach(k=>localStorage.setItem(k,payload));
+    }catch(e){}
+  }
   function loadLocal(){ try{ return JSON.parse(localStorage.getItem(STORE_KEY) || '{}'); }catch(e){ return {}; } }
+
+  function migrateSharedCatalogV1895(){
+    try{
+      let best=null;
+      ['MATBAGY_SHARED_CATALOG_V1895','MATBAGY_SHARED_CATALOG_V1895','MATBAGY_SHARED_CATALOG_V1893','MATBAGY_SHARED_CATALOG_V1892'].forEach(k=>{
+        try{ const o=JSON.parse(localStorage.getItem(k)||'{}'); if(o && ((o.templates||[]).length || (o.items||[]).length || (o.products||[]).length || (o.recipes||[]).length)){ best=o; } }catch(e){}
+      });
+      if(best){
+        const payload=JSON.stringify(Object.assign({}, best, {version:'V1895', updatedAt:new Date().toISOString()}));
+        ['MATBAGY_SHARED_CATALOG_V1892','MATBAGY_SHARED_CATALOG_V1893','MATBAGY_SHARED_CATALOG_V1895','MATBAGY_SHARED_CATALOG_V1895'].forEach(k=>localStorage.setItem(k,payload));
+      }
+    }catch(e){}
+  }
+  migrateSharedCatalogV1895();
   function mergeData(d){
     const local = loadLocal();
     state.data = Object.assign({materials:[],templates:[],suppliers:[],purchases:[],sales:[],customers:[],stockMoves:[],wasteLines:[],deptLines:[],finalInvoices:[],summary:{}}, local, d || {});
@@ -89,7 +109,7 @@
     return new Promise((resolve,reject)=>{
       const base = String(window.TREND_API_URL || '').trim();
       if(!base) return reject(new Error('رابط Apps Script غير مضبوط في config.js'));
-      const cb = 'ES33_V1894_' + Date.now() + '_' + Math.random().toString(16).slice(2);
+      const cb = 'ES33_V1895_' + Date.now() + '_' + Math.random().toString(16).slice(2);
       const s = document.createElement('script');
       let done = false;
       function cleanup(){ if(done) return; done = true; try{ delete window[cb]; }catch(e){ window[cb] = undefined; } if(s.parentNode) s.parentNode.removeChild(s); }
@@ -237,7 +257,7 @@
   function shell(){
     app.innerHTML = `<div class="wrap">
       <div class="top">
-        <div><h1>💰 إيزي ستور مطبعجي - برنامج الحسابات ES33 V1894</h1><p>أصناف، موردين، فواتير شراء ومبيعات، مخزون، تقارير، ومطبخ الحسابات.</p><div class="versionLine">${VERSION} / app.js محمل: ${new Date().toLocaleTimeString('ar-EG')}</div></div>
+        <div><h1>💰 إيزي ستور مطبعجي - برنامج الحسابات ES33 V1895</h1><p>أصناف، موردين، فواتير شراء ومبيعات، مخزون، تقارير، ومطبخ الحسابات.</p><div class="versionLine">${VERSION} / app.js محمل: ${new Date().toLocaleTimeString('ar-EG')}</div></div>
         <div class="actions"><span class="badge">${esc(user.name)} - ${esc(roleText())}</span><button class="btn secondary" onclick="ES27.load(true)">تحديث البيانات</button><button class="btn secondary" onclick="ES27.hardReload()">تحديث البرنامج</button><button class="btn secondary" onclick="history.back()">إغلاق</button></div>
       </div>
       <div id="mainMsg" class="msg"></div>
@@ -700,11 +720,11 @@ window.EASYSTORE_V1886_PRODUCT_CATALOG_ONLY = true;
 window.EASYSTORE_V1887_DEPT_APPROVAL_FLOW = true;
 
 
-/*********************** V1894 - Visible Customer Debt Badge ***********************/
+/*********************** V1895 - Visible Customer Debt Badge ***********************/
 (function(){
   'use strict';
-  window.EASYSTORE_VERSION = 'ES33 V1894 Debt + Invoice Rows';
-  window.EASYSTORE_MATBAGY_VERSION = 'ES33 V1894 Debt + Invoice Rows';
+  window.EASYSTORE_VERSION = 'ES33 V1895 Catalog Bridge + Invoice Rows';
+  window.EASYSTORE_MATBAGY_VERSION = 'ES33 V1895 Catalog Bridge + Invoice Rows';
   function $(id){return document.getElementById(id);}
   function txt(v){return String(v==null?'':v).replace(/\s+/g,' ').trim();}
   function nkey(v){return txt(v).toLowerCase().replace(/[إأآا]/g,'ا').replace(/[ى]/g,'ي').replace(/[ةه]/g,'ه').replace(/[ؤ]/g,'و').replace(/[ئ]/g,'ي');}

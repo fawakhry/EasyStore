@@ -38,7 +38,7 @@
 .saleContextHead .debtBadge{margin-inline-start:8px}
 
 
-/* V1894 visible customer debt */
+/* V1895 visible customer debt */
 .debtBadge.strongDebt{font-size:12px;padding:5px 9px;border-radius:999px;background:#ffe4e6;color:#9f1239;font-weight:900;}
 .saleCustomerDebtBox{margin:10px 0 12px;padding:12px 14px;border-radius:16px;font-weight:800;border:1px solid #a7f3d0;background:#ecfdf5;color:#065f46;}
 .saleCustomerDebtBox.hasDebt{background:#fff1f2;border-color:#fecdd3;color:#9f1239;}
