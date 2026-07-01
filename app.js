@@ -1,7 +1,7 @@
 (function(){
   'use strict';
 
-  const VERSION = 'ES33 V1893 Version Sync Lock';
+  const VERSION = 'ES33 V1894 Debt + Invoice Rows';
   window.EASYSTORE_MATBAGY_VERSION = VERSION;
 
   const app = document.getElementById('app');
@@ -77,7 +77,7 @@
     recipeComps: [], salePulledLines: [], saleSelectedCustomer: null, saleCustomerContext: null, customerSearchTimer: null, customerSearchSeq: 0, customerDropdownLocked: false
   };
 
-  function saveLocal(){ localStorage.setItem(STORE_KEY, JSON.stringify(state.data)); try{ localStorage.setItem('MATBAGY_SHARED_CATALOG_V1892', JSON.stringify({templates:state.data.templates||[], materials:state.data.materials||[], updatedAt:new Date().toISOString()})); }catch(e){} }
+  function saveLocal(){ localStorage.setItem(STORE_KEY, JSON.stringify(state.data)); try{ localStorage.setItem('MATBAGY_SHARED_CATALOG_V1893', JSON.stringify({templates:state.data.templates||[], materials:state.data.materials||[], updatedAt:new Date().toISOString()})); localStorage.setItem('MATBAGY_SHARED_CATALOG_V1894', JSON.stringify({templates:state.data.templates||[], materials:state.data.materials||[], updatedAt:new Date().toISOString()})); }catch(e){} }
   function loadLocal(){ try{ return JSON.parse(localStorage.getItem(STORE_KEY) || '{}'); }catch(e){ return {}; } }
   function mergeData(d){
     const local = loadLocal();
@@ -89,7 +89,7 @@
     return new Promise((resolve,reject)=>{
       const base = String(window.TREND_API_URL || '').trim();
       if(!base) return reject(new Error('رابط Apps Script غير مضبوط في config.js'));
-      const cb = 'ES33_V1893_' + Date.now() + '_' + Math.random().toString(16).slice(2);
+      const cb = 'ES33_V1894_' + Date.now() + '_' + Math.random().toString(16).slice(2);
       const s = document.createElement('script');
       let done = false;
       function cleanup(){ if(done) return; done = true; try{ delete window[cb]; }catch(e){ window[cb] = undefined; } if(s.parentNode) s.parentNode.removeChild(s); }
@@ -237,7 +237,7 @@
   function shell(){
     app.innerHTML = `<div class="wrap">
       <div class="top">
-        <div><h1>💰 إيزي ستور مطبعجي - برنامج الحسابات ES33 V1893</h1><p>أصناف، موردين، فواتير شراء ومبيعات، مخزون، تقارير، ومطبخ الحسابات.</p><div class="versionLine">${VERSION} / app.js محمل: ${new Date().toLocaleTimeString('ar-EG')}</div></div>
+        <div><h1>💰 إيزي ستور مطبعجي - برنامج الحسابات ES33 V1894</h1><p>أصناف، موردين، فواتير شراء ومبيعات، مخزون، تقارير، ومطبخ الحسابات.</p><div class="versionLine">${VERSION} / app.js محمل: ${new Date().toLocaleTimeString('ar-EG')}</div></div>
         <div class="actions"><span class="badge">${esc(user.name)} - ${esc(roleText())}</span><button class="btn secondary" onclick="ES27.load(true)">تحديث البيانات</button><button class="btn secondary" onclick="ES27.hardReload()">تحديث البرنامج</button><button class="btn secondary" onclick="history.back()">إغلاق</button></div>
       </div>
       <div id="mainMsg" class="msg"></div>
@@ -289,7 +289,7 @@
   function rowQty(r){ return num(r.qty || r['الكمية'] || 1) || 1; }
   function rowQty(r){ return num(r.qty || r.quantity || r['الكمية'] || 1) || 1; }
   function rowSale(r){ const q=rowQty(r); const unit=num(r.unitSalePrice || r['سعر الوحدة'] || 0); const total=num(r.lineTotal || r['lineTotal'] || r['سعر البيع'] || 0); if(unit) return unit; if(total && q) return total/q; return num(r.sale || r.salePrice || r.finalTotal || r.total || 0); }
-  function rowLineTotal(r){ return num(r.lineTotal || r['lineTotal'] || 0) || rowLineTotal(r); }
+  function rowLineTotal(r){ const q=rowQty(r); const explicit=num(r.lineTotal || r['lineTotal'] || r.total || r['سعر البيع'] || 0); if(explicit) return explicit; return rowSale(r) * q; }
   function rowCloseStatus(r){ return String(r.closeStatus || r['حالة التقفيل'] || '').trim(); }
   function rowFinalInvoice(r){ return String(r.invoiceNo || r['رقم الفاتورة النهائية'] || r['رقم الفاتورة'] || '').trim(); }
   function isUnbilledDeptLine(r){ const st=nkey(rowCloseStatus(r)); return !rowFinalInvoice(r) && !/تم|مقفل|مقفول|closed|billed/.test(st); }
@@ -698,3 +698,62 @@ window.EASYSTORE_V1886_PRODUCT_CATALOG_ONLY = true;
 
 /* V1887 - Dept approval flow */
 window.EASYSTORE_V1887_DEPT_APPROVAL_FLOW = true;
+
+
+/*********************** V1894 - Visible Customer Debt Badge ***********************/
+(function(){
+  'use strict';
+  window.EASYSTORE_VERSION = 'ES33 V1894 Debt + Invoice Rows';
+  window.EASYSTORE_MATBAGY_VERSION = 'ES33 V1894 Debt + Invoice Rows';
+  function $(id){return document.getElementById(id);}
+  function txt(v){return String(v==null?'':v).replace(/\s+/g,' ').trim();}
+  function nkey(v){return txt(v).toLowerCase().replace(/[إأآا]/g,'ا').replace(/[ى]/g,'ي').replace(/[ةه]/g,'ه').replace(/[ؤ]/g,'و').replace(/[ئ]/g,'ي');}
+  function num(v){var n=parseFloat(String(v||'').replace(/[٬,]/g,'.').replace(/[^0-9.\-]/g,''));return isFinite(n)?n:0;}
+  function money(n){return num(n).toLocaleString('ar-EG',{maximumFractionDigits:2})+' ج';}
+  function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(m){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m];});}
+  function readData(){try{return JSON.parse(localStorage.getItem('EASYSTORE_CLEAN_V1880_DATA')||'{}');}catch(e){return {};}}
+  function debtOf(c){return num(c && (c.debtAmount||c.debt||c.currentBalance||c.remainingBalance||c.balance||c['مديونية']||c['مديونية حالية']||c['رصيد العميل']||0));}
+  function nameOf(c){return txt(c && (c.name||c.customerName||c.customer||c['اسم العميل']||''));}
+  function phoneOf(c){return txt(c && (c.phone||c.mobile||c.customerPhone||c['رقم العميل']||c['الهاتف']||''));}
+  function findCustomer(){
+    var q=nkey(($('saCustomer')||{}).value||'');
+    var data=readData(), rows=data.customers||[];
+    if(!q || !rows.length) return null;
+    return rows.find(function(c){var blob=nkey([nameOf(c),phoneOf(c),c.type,c.manager,debtOf(c)].join(' ')); return blob.indexOf(q)!==-1 || q.indexOf(nkey(nameOf(c)))!==-1;})||null;
+  }
+  function updateDebtInline(){
+    var c=findCustomer();
+    var d=debtOf(c);
+    var label=$('saCustomerDebtInline');
+    if(label){ label.innerHTML = d>0 ? '<span class="debtBadge strongDebt">مديونية العميل: '+esc(money(d))+'</span>' : '<span class="okBadge">لا مديونية</span>'; }
+    var box=$('saleCustomerDebtBox');
+    if(!box){
+      var ctx=$('saleCustomerContext');
+      if(ctx){ box=document.createElement('div'); box.id='saleCustomerDebtBox'; box.className='saleCustomerDebtBox'; ctx.parentNode.insertBefore(box, ctx); }
+    }
+    if(box){
+      var nm=c?nameOf(c):txt(($('saCustomer')||{}).value||'');
+      box.className='saleCustomerDebtBox '+(d>0?'hasDebt':'noDebt');
+      box.innerHTML=d>0 ? '<b>مديونية العميل '+esc(nm||'')+':</b> '+esc(money(d))+' <span>راجع التحصيل قبل التسليم النهائي.</span>' : '<b>مديونية العميل:</b> لا توجد مديونية مسجلة.';
+    }
+  }
+  var oldRender = window.ES27 && window.ES27.refreshSaleCustomerContext;
+  function wire(){
+    var input=$('saCustomer');
+    if(input && input.dataset.v1894Debt!=='1'){
+      input.dataset.v1894Debt='1';
+      input.addEventListener('input',function(){setTimeout(updateDebtInline,100);});
+      input.addEventListener('change',function(){setTimeout(updateDebtInline,100);});
+      input.addEventListener('focus',function(){setTimeout(updateDebtInline,100);});
+    }
+    if(window.ES27 && window.ES27.refreshSaleCustomerContext && !window.ES27.refreshSaleCustomerContext.__v1894){
+      var orig=window.ES27.refreshSaleCustomerContext;
+      window.ES27.refreshSaleCustomerContext=function(){var r=orig.apply(this,arguments); setTimeout(updateDebtInline,80); return r;};
+      window.ES27.refreshSaleCustomerContext.__v1894=true;
+    }
+    setTimeout(updateDebtInline,80);
+  }
+  document.addEventListener('DOMContentLoaded',wire);
+  document.addEventListener('click',function(ev){var t=ev.target;if(t&&t.closest&&t.closest('#saCustomerDrop,.customerDrop,.btn,[onclick*="pickSaleCustomer"],[onclick*="loadSaleCustomer"]')) setTimeout(function(){wire();updateDebtInline();},200);},true);
+  setTimeout(wire,300); setTimeout(wire,1300);
+})();
