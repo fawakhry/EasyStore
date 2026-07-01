@@ -30,3 +30,9 @@
 /* V1887 Dept Approval Flow */
 #deptApprovalBox .softBox{margin-top:10px;background:#ecfffb;border-color:#99f6e4}
 #deptApprovalBox table th{background:#f1f5f9}
+
+/* V1892 debt visibility */
+.debtBadge,.debt-pill,.debtInline{display:inline-flex;align-items:center;gap:4px;border-radius:999px;padding:3px 8px;background:#fee2e2;color:#991b1b;font-weight:800;border:1px solid #fecaca;font-size:12px;white-space:nowrap}
+.okBadge{display:inline-flex;border-radius:999px;padding:3px 8px;background:#dcfce7;color:#166534;font-weight:800;border:1px solid #bbf7d0;font-size:12px;white-space:nowrap}
+.customerDrop button{display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%}
+.saleContextHead .debtBadge{margin-inline-start:8px}

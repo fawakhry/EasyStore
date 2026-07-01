@@ -1,7 +1,7 @@
 (function(){
   'use strict';
 
-  const VERSION = 'ES33 V1891 Session Catalog Fix';
+  const VERSION = 'ES33 V1892 Debt Catalog Save Fix';
   window.EASYSTORE_MATBAGY_VERSION = VERSION;
 
   const app = document.getElementById('app');
@@ -30,6 +30,23 @@
   }
 
   const user = readSso();
+  function enrichSsoFromLocal(u){
+    u = u || {};
+    try{
+      const ts = JSON.parse(localStorage.getItem('trendos_session') || '{}');
+      const tu = ts.user || ts || {};
+      u.name = u.name || tu.name || tu.username || '';
+      u.username = u.username || tu.username || tu.name || '';
+      u.token = u.token || tu.token || ts.token || '';
+      u.department = u.department || tu.department || '';
+      u.mode = u.mode || tu.mode || tu.role || '';
+    }catch(e){}
+    u.name = u.name || localStorage.getItem('matbagy_user_name') || localStorage.getItem('matbagy_username') || 'ضياء';
+    u.username = u.username || localStorage.getItem('matbagy_username') || localStorage.getItem('matbagy_user_name') || u.name || 'ضياء';
+    u.token = u.token || localStorage.getItem('matbagy_session_token') || localStorage.getItem('trendos_session_token') || '';
+    return u;
+  }
+  Object.assign(user, enrichSsoFromLocal(user));
   const roleKey = () => nkey([user.name,user.username,user.mode,user.department].join(' '));
   const isAdmin = () => /ضياء|diaa|admin|full|kitchen|اداره|إدارة/.test(roleKey());
   const isLaser = () => /جابر|gaber|jaber|laser|ليزر/.test(roleKey()) || qs.get('laserAi') === '1' || qs.get('mode') === 'laser' || qs.get('department') === 'ليزر';
@@ -60,7 +77,7 @@
     recipeComps: [], salePulledLines: [], saleSelectedCustomer: null, saleCustomerContext: null, customerSearchTimer: null, customerSearchSeq: 0, customerDropdownLocked: false
   };
 
-  function saveLocal(){ localStorage.setItem(STORE_KEY, JSON.stringify(state.data)); }
+  function saveLocal(){ localStorage.setItem(STORE_KEY, JSON.stringify(state.data)); try{ localStorage.setItem('MATBAGY_SHARED_CATALOG_V1892', JSON.stringify({templates:state.data.templates||[], materials:state.data.materials||[], updatedAt:new Date().toISOString()})); }catch(e){} }
   function loadLocal(){ try{ return JSON.parse(localStorage.getItem(STORE_KEY) || '{}'); }catch(e){ return {}; } }
   function mergeData(d){
     const local = loadLocal();
@@ -252,7 +269,7 @@
   function screenCustomers(){
     return `<div class="card"><h2>العملاء</h2><div class="hint">العملاء يتم سحبهم من TrendOS قدر الإمكان. ابحث بالاسم أو الرقم.</div><input id="custSearch" class="searchInput" placeholder="بحث عن عميل" oninput="ES27.filterCustomers()"><div id="custTable">${customersTable(state.data.customers)}</div></div>`;
   }
-  function customersTable(rows){ return table(rows||[],['العميل','الهاتف','النوع/المسؤول'],c=>[esc(c.name||c.customerName||''),esc(c.phone||c.mobile||''),esc(c.type||c.manager||'')]); }
+  function customersTable(rows){ return table(rows||[],['العميل','الهاتف','مديونية','النوع/المسؤول'],c=>[customerNameWithDebt(c),esc(customerMainPhone(c)),customerDebtBadge(c),esc(customerMainType(c))]); }
 
   function screenItems(){
     return `<div class="card"><h2>الأصناف</h2><div class="grid six"><div class="field"><label>القسم</label><select id="itDept"><option>طباعة</option><option>ليزر</option><option>مشترك</option><option>عام</option></select></div><div class="field"><label>اسم الصنف</label><input id="itName"></div><div class="field"><label>نوع</label><select id="itType"><option>صنف بيع</option><option>خامة</option><option>صنف مركب</option></select></div><div class="field"><label>مقاس</label><input id="itSize"></div><div class="field"><label>سعر البيع</label><input id="itSale" type="number"></div><div class="field"><label>تكلفة ثابتة</label><input id="itCost" type="number"></div></div><div class="actions"><button class="btn" onclick="ES27.saveItem()">حفظ / تحديث الصنف</button><button class="btn secondary" onclick="ES27.clearItemForm()">جديد</button></div></div>${itemsTable()}`;
@@ -280,7 +297,10 @@
   function customerMainName(c){ return (c && (c.name || c.customerName || c['اسم العميل'] || c.customer || '')) || ''; }
   function customerMainPhone(c){ return (c && (c.phone || c.mobile || c.customerPhone || c['رقم العميل'] || c['الهاتف'] || '')) || ''; }
   function customerMainType(c){ return (c && (c.type || c.customerType || c.manager || c['نوع العميل'] || c['المسؤول'] || '')) || ''; }
-  function customerNeedleText(c){ return nkey([customerMainName(c), customerMainPhone(c), customerMainType(c)].join(' ')); }
+  function customerDebt(c){ return num(c && (c.debtAmount || c.debt || c.currentBalance || c.remainingBalance || c.balance || c['مديونية'] || c['مديونية حالية'] || c['رصيد العميل'] || 0)); }
+  function customerDebtBadge(c){ const d=customerDebt(c); return d>0 ? '<span class="debtBadge">مديونية '+money(d)+'</span>' : '<span class="okBadge">لا مديونية</span>'; }
+  function customerNameWithDebt(c){ return esc(customerMainName(c)||'') + ' ' + customerDebtBadge(c); }
+  function customerNeedleText(c){ return nkey([customerMainName(c), customerMainPhone(c), customerMainType(c), customerDebt(c)].join(' ')); }
   function rowCustomerNeedle(r){ return nkey([rowCustomer(r), rowCustomerPhone(r), r.customerType, r.type, r.manager].join(' ')); }
   function customerMatchesRow(r, c, fallbackName){
     const rowText = rowCustomerNeedle(r);
@@ -388,7 +408,7 @@
     const ordersHtml = orders.length ? orders.map(o=>'<button type="button" class="btn small secondary" onclick="ES27.pickSaleOrder(\''+esc(String(o)).replace(/'/g,'&#39;')+'\')">'+esc(o)+'</button>').join(' ') : '<span class="muted">لا توجد أوردرات محفوظة لهذا العميل.</span>';
     const finalsHtml = finalSales.length ? finalSales.slice(0,5).map(r=>'<div>فاتورة مقفولة: <b>'+esc(saleFinalNo(r))+'</b> / أوردر: '+esc(saleOrderId(r)||'-')+' / إجمالي: '+money(r.total||r.finalTotal||0)+'</div>').join('') : '<div>لا توجد فاتورة نهائية محفوظة لهذا الاختيار.</div>';
     const draft = saleDraftNo(val('saOrder'), c);
-    return '<div class="saleContextHead"><b>العميل:</b> '+esc(customerMainName(c)||val('saCustomer'))+' '+(customerMainPhone(c)?'<span class="pill">'+esc(customerMainPhone(c))+'</span>':'')+'</div>'+
+    return '<div class="saleContextHead"><b>العميل:</b> '+esc(customerMainName(c)||val('saCustomer'))+' '+(customerMainPhone(c)?'<span class="pill">'+esc(customerMainPhone(c))+'</span>':'')+' '+customerDebtBadge(c)+'</div>'+
       '<div><b>الفاتورة الحالية:</b> <span class="pill">'+esc(val('saNo')||draft)+'</span> '+(/^DRAFT/i.test(val('saNo'))?'<span class="muted">تحت التجميع، وتتحول لرقم ES عند الحفظ النهائي</span>':'<span class="muted">رقم فاتورة محفوظ</span>')+'</div>'+
       '<div><b>أوردرات العميل:</b> '+ordersHtml+'</div>'+
       '<div><b>بنود الأقسام غير المفوترة:</b> '+esc(deptText)+' / مضموم الآن: '+pulled.length+'</div>'+
@@ -411,14 +431,14 @@
     renderSaleCustomerContext(c);
     if(!opts.silent) flash('تم تحميل ملف العميل والفاتورة تحت التجميع وبنود وائل/جابر.');
   }
-  function customerLabel(c){ return (c.name||c.customerName||'') + (c.phone||c.mobile? ' - '+(c.phone||c.mobile):'') + (c.type?' - '+c.type:''); }
+  function customerLabel(c){ const d=customerDebt(c); return (c.name||c.customerName||'') + (c.phone||c.mobile? ' - '+(c.phone||c.mobile):'') + (c.type?' - '+c.type:'') + (d>0 ? ' - مديونية '+d+' ج' : ''); }
   function localCustomerMatches(q){ q=nkey(q); return (state.data.customers||[]).filter(c=>!q || nkey([c.name,c.customerName,c.phone,c.mobile,c.manager,c.type].join(' ')).includes(q)).slice(0,40); }
   function renderCustomerDropdown(rows){
     if(!customerDropdownCanOpen()) return;
     const box=$('saCustomerDrop'); if(!box) return;
     rows = rows || [];
     if(!rows.length){ box.innerHTML='<div class="custDropHint">اكتب جزء من الاسم أو الرقم للبحث في عملاء المنصة.</div>'; box.classList.remove('hidden'); return; }
-    box.innerHTML=rows.map((c,i)=>`<button type="button" onclick="ES27.pickSaleCustomer(${i})" data-cust-index="${i}">${esc(customerLabel(c))}</button>`).join('');
+    box.innerHTML=rows.map((c,i)=>`<button type="button" onclick="ES27.pickSaleCustomer(${i})" data-cust-index="${i}"><span>${esc(customerLabel(c))}</span> ${customerDebt(c)>0?customerDebtBadge(c):''}</button>`).join('');
     box.__rows=rows; box.classList.remove('hidden');
   }
   function operatingExpenseRows(){ return materials().filter(r=>/تشغيل|مصروف|operation/i.test(String(r.materialClass||r.operationExpense||r['تصنيف الخامة']||r['ضم إلى مصروفات التشغيل']||matType(r)||''))); }
@@ -429,7 +449,7 @@
       <div class="hint">اكتب جزء من اسم العميل أو اضغط على الخانة لتحميل عملاء المنصة. تقدر تسحب بنود وائل وجابر غير المفوترة وتطلع فاتورة واحدة للعميل.</div>
       <div class="grid four">
         <div class="field"><label>رقم الفاتورة</label><input id="saNo" value="SAL-${Date.now().toString().slice(-6)}"></div>
-        <div class="field customerField"><label>العميل</label><input id="saCustomer" value="${qCustomer}" autocomplete="off" onfocus="ES27.focusSaleCustomer()" oninput="ES27.searchSaleCustomers(this.value)" onkeydown="ES27.unlockCustomerDropdown()"><div id="saCustomerDrop" class="customerDrop hidden"></div></div>
+        <div class="field customerField"><label>العميل <span id="saCustomerDebtInline" class="debtInline"></span></label><input id="saCustomer" value="${qCustomer}" autocomplete="off" onfocus="ES27.focusSaleCustomer()" oninput="ES27.searchSaleCustomers(this.value)" onkeydown="ES27.unlockCustomerDropdown()"><div id="saCustomerDrop" class="customerDrop hidden"></div></div>
         <div class="field"><label>رقم الأوردر</label><input id="saOrder" value="${qOrder}" oninput="ES27.refreshSaleCustomerContext()"></div>
         <div class="field"><label>نوع الدفع</label><select id="saPay"><option>نقدي</option><option>آجل</option><option>جزئي</option></select></div>
       </div>
@@ -586,7 +606,7 @@
     async copySaleText(){ closeFloatingPanels(); const t=this.invoicePlainText(); try{ await navigator.clipboard.writeText(t); flash('تم نسخ نص الفاتورة'); }catch(e){ prompt('انسخ نص الفاتورة',t); } },
     openSaleWhatsApp(){ closeFloatingPanels(); const t=this.invoicePlainText(); window.open('https://wa.me/?text='+encodeURIComponent(t),'_blank'); },
     downloadSaleImage(){ closeFloatingPanels(); const canvas=document.createElement('canvas'); canvas.width=1200; canvas.height=900; const ctx=canvas.getContext('2d'); ctx.fillStyle='#fff'; ctx.fillRect(0,0,1200,900); ctx.fillStyle='#0f766e'; ctx.fillRect(0,0,1200,120); ctx.fillStyle='#fff'; ctx.font='bold 44px Arial'; ctx.textAlign='right'; ctx.fillText('فاتورة مطبعجي',1120,75); ctx.fillStyle='#111827'; ctx.font='28px Arial'; const lines=this.invoicePlainText().split('\n'); let y=170; lines.forEach(l=>{ ctx.fillText(l,1120,y); y+=42; }); const a=document.createElement('a'); a.download='matbagy-sale-'+(val('saNo')||Date.now())+'.png'; a.href=canvas.toDataURL('image/png'); a.click(); },
-    saveItem(){ const p={department:val('itDept'),itemName:val('itName'),category:val('itType')||'صنف بيع',size:val('itSize'),salePrice:num(val('itSale')),fixedCost:num(val('itCost')),computedUnitCost:num(val('itCost')),active:'نعم',recordType:'template'}; if(!p.itemName) return flash('اكتب اسم الصنف',true); const res=upsertByNameDept(state.data.templates,p,templateName,matDept); saveLocal(); api('saveAccountingTemplate',Object.assign({upsert:'1'},p)).catch(()=>{}); shell(); flash(res.updated?'الصنف موجود وتم تحديثه':'تم حفظ الصنف'); },
+    async saveItem(){ const p={department:val('itDept'),itemName:val('itName'),category:val('itType')||'صنف بيع',size:val('itSize'),salePrice:num(val('itSale')),fixedCost:num(val('itCost')),computedUnitCost:num(val('itCost')),active:'نعم',recordType:'template'}; if(!p.itemName) return flash('اكتب اسم الصنف',true); const res=upsertByNameDept(state.data.templates,p,templateName,matDept); saveLocal(); try{ const r=await api('saveAccountingTemplate',Object.assign({upsert:'1'},p)); if(r&&r.success===false) throw new Error(r.message||'السيرفر رفض حفظ الصنف'); delete p.serverPending; delete p.pendingReason; saveLocal(); shell(); flash(res.updated?'تم تحديث الصنف على السيرفر':'تم حفظ الصنف على السيرفر'); }catch(e){ p.serverPending='نعم'; p.pendingReason=e.message||'فشل الاتصال بالسيرفر'; saveLocal(); shell(); flash('اتحفظ محليًا فقط: '+p.pendingReason+' — اضغط تحديث/حفظ مرة أخرى بعد إصلاح السيرفر عشان يظهر لكل الأجهزة.', true); } },
     editItem(i){ const r=productTemplates()[i]; if(!r) return; set('itDept',matDept(r)); set('itName',templateName(r)); set('itType',r.category||matType(r)); set('itSize',r.size); set('itSale',matSale(r)); set('itCost',matCost(r)); },
     clearItemForm(){ ['itName','itSize','itSale','itCost'].forEach(id=>set(id,'')); },
     archiveItem(i){ const r=productTemplates()[i]; if(!r || !confirm('إيقاف الصنف ' + templateName(r) + '؟')) return; r.active='لا'; r['مفعل']='لا'; saveLocal(); api('archiveAccountingTemplate',{itemName:templateName(r),department:matDept(r)}).catch(()=>{}); shell(); },
