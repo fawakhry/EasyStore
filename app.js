@@ -1,7 +1,7 @@
 (function(){
   'use strict';
 
-  const VERSION = 'ES33 V1895 Catalog Bridge + Invoice Rows';
+  const VERSION = 'ES33 V1896 Debt + Catalog Hard Lock';
   window.EASYSTORE_MATBAGY_VERSION = VERSION;
 
   const app = document.getElementById('app');
@@ -80,25 +80,25 @@
   function saveLocal(){
     localStorage.setItem(STORE_KEY, JSON.stringify(state.data));
     try{
-      const payload = JSON.stringify({templates:state.data.templates||[], items:state.data.templates||[], products:state.data.templates||[], recipes:state.data.templates||[], materials:state.data.materials||[], updatedAt:new Date().toISOString(), version:'V1895'});
-      ['MATBAGY_SHARED_CATALOG_V1892','MATBAGY_SHARED_CATALOG_V1893','MATBAGY_SHARED_CATALOG_V1895','MATBAGY_SHARED_CATALOG_V1895'].forEach(k=>localStorage.setItem(k,payload));
+      const payload = JSON.stringify({templates:state.data.templates||[], items:state.data.templates||[], products:state.data.templates||[], recipes:state.data.templates||[], materials:state.data.materials||[], updatedAt:new Date().toISOString(), version:'V1896'});
+      ['MATBAGY_SHARED_CATALOG_V1892','MATBAGY_SHARED_CATALOG_V1893','MATBAGY_SHARED_CATALOG_V1896','MATBAGY_SHARED_CATALOG_V1896'].forEach(k=>localStorage.setItem(k,payload));
     }catch(e){}
   }
   function loadLocal(){ try{ return JSON.parse(localStorage.getItem(STORE_KEY) || '{}'); }catch(e){ return {}; } }
 
-  function migrateSharedCatalogV1895(){
+  function migrateSharedCatalogV1896(){
     try{
       let best=null;
-      ['MATBAGY_SHARED_CATALOG_V1895','MATBAGY_SHARED_CATALOG_V1895','MATBAGY_SHARED_CATALOG_V1893','MATBAGY_SHARED_CATALOG_V1892'].forEach(k=>{
+      ['MATBAGY_SHARED_CATALOG_V1896','MATBAGY_SHARED_CATALOG_V1896','MATBAGY_SHARED_CATALOG_V1893','MATBAGY_SHARED_CATALOG_V1892'].forEach(k=>{
         try{ const o=JSON.parse(localStorage.getItem(k)||'{}'); if(o && ((o.templates||[]).length || (o.items||[]).length || (o.products||[]).length || (o.recipes||[]).length)){ best=o; } }catch(e){}
       });
       if(best){
-        const payload=JSON.stringify(Object.assign({}, best, {version:'V1895', updatedAt:new Date().toISOString()}));
-        ['MATBAGY_SHARED_CATALOG_V1892','MATBAGY_SHARED_CATALOG_V1893','MATBAGY_SHARED_CATALOG_V1895','MATBAGY_SHARED_CATALOG_V1895'].forEach(k=>localStorage.setItem(k,payload));
+        const payload=JSON.stringify(Object.assign({}, best, {version:'V1896', updatedAt:new Date().toISOString()}));
+        ['MATBAGY_SHARED_CATALOG_V1892','MATBAGY_SHARED_CATALOG_V1893','MATBAGY_SHARED_CATALOG_V1896','MATBAGY_SHARED_CATALOG_V1896'].forEach(k=>localStorage.setItem(k,payload));
       }
     }catch(e){}
   }
-  migrateSharedCatalogV1895();
+  migrateSharedCatalogV1896();
   function mergeData(d){
     const local = loadLocal();
     state.data = Object.assign({materials:[],templates:[],suppliers:[],purchases:[],sales:[],customers:[],stockMoves:[],wasteLines:[],deptLines:[],finalInvoices:[],summary:{}}, local, d || {});
@@ -109,7 +109,7 @@
     return new Promise((resolve,reject)=>{
       const base = String(window.TREND_API_URL || '').trim();
       if(!base) return reject(new Error('رابط Apps Script غير مضبوط في config.js'));
-      const cb = 'ES33_V1895_' + Date.now() + '_' + Math.random().toString(16).slice(2);
+      const cb = 'ES33_V1896_' + Date.now() + '_' + Math.random().toString(16).slice(2);
       const s = document.createElement('script');
       let done = false;
       function cleanup(){ if(done) return; done = true; try{ delete window[cb]; }catch(e){ window[cb] = undefined; } if(s.parentNode) s.parentNode.removeChild(s); }
@@ -257,7 +257,7 @@
   function shell(){
     app.innerHTML = `<div class="wrap">
       <div class="top">
-        <div><h1>💰 إيزي ستور مطبعجي - برنامج الحسابات ES33 V1895</h1><p>أصناف، موردين، فواتير شراء ومبيعات، مخزون، تقارير، ومطبخ الحسابات.</p><div class="versionLine">${VERSION} / app.js محمل: ${new Date().toLocaleTimeString('ar-EG')}</div></div>
+        <div><h1>💰 إيزي ستور مطبعجي - برنامج الحسابات ES33 V1896</h1><p>أصناف، موردين، فواتير شراء ومبيعات، مخزون، تقارير، ومطبخ الحسابات.</p><div class="versionLine">${VERSION} / app.js محمل: ${new Date().toLocaleTimeString('ar-EG')}</div></div>
         <div class="actions"><span class="badge">${esc(user.name)} - ${esc(roleText())}</span><button class="btn secondary" onclick="ES27.load(true)">تحديث البيانات</button><button class="btn secondary" onclick="ES27.hardReload()">تحديث البرنامج</button><button class="btn secondary" onclick="history.back()">إغلاق</button></div>
       </div>
       <div id="mainMsg" class="msg"></div>
@@ -720,11 +720,11 @@ window.EASYSTORE_V1886_PRODUCT_CATALOG_ONLY = true;
 window.EASYSTORE_V1887_DEPT_APPROVAL_FLOW = true;
 
 
-/*********************** V1895 - Visible Customer Debt Badge ***********************/
+/*********************** V1896 - Visible Customer Debt Badge ***********************/
 (function(){
   'use strict';
-  window.EASYSTORE_VERSION = 'ES33 V1895 Catalog Bridge + Invoice Rows';
-  window.EASYSTORE_MATBAGY_VERSION = 'ES33 V1895 Catalog Bridge + Invoice Rows';
+  window.EASYSTORE_VERSION = 'ES33 V1896 Debt + Catalog Hard Lock';
+  window.EASYSTORE_MATBAGY_VERSION = 'ES33 V1896 Debt + Catalog Hard Lock';
   function $(id){return document.getElementById(id);}
   function txt(v){return String(v==null?'':v).replace(/\s+/g,' ').trim();}
   function nkey(v){return txt(v).toLowerCase().replace(/[إأآا]/g,'ا').replace(/[ى]/g,'ي').replace(/[ةه]/g,'ه').replace(/[ؤ]/g,'و').replace(/[ئ]/g,'ي');}
@@ -776,4 +776,42 @@ window.EASYSTORE_V1887_DEPT_APPROVAL_FLOW = true;
   document.addEventListener('DOMContentLoaded',wire);
   document.addEventListener('click',function(ev){var t=ev.target;if(t&&t.closest&&t.closest('#saCustomerDrop,.customerDrop,.btn,[onclick*="pickSaleCustomer"],[onclick*="loadSaleCustomer"]')) setTimeout(function(){wire();updateDebtInline();},200);},true);
   setTimeout(wire,300); setTimeout(wire,1300);
+})();
+
+
+/*********************** V1896 - Shared Catalog Mirror Lock ***********************/
+(function(){
+  'use strict';
+  var VERSION='ES33 V1896 Debt + Catalog Hard Lock';
+  window.EASYSTORE_VERSION=VERSION;
+  window.EASYSTORE_MATBAGY_VERSION=VERSION;
+  window.EASYSTORE_V1896_DEBT_ADDORDER_CATALOG_HARD_LOCK=true;
+  function read(){ try{return JSON.parse(localStorage.getItem('EASYSTORE_CLEAN_V1880_DATA')||'{}');}catch(e){return{};} }
+  function mirror(){
+    try{
+      var d=read();
+      var templates=[].concat(d.templates||[], d.items||[], d.products||[], d.recipes||[]).filter(function(r){
+        var name=(r && (r.itemName||r.templateName||r.productName||r.name||r['اسم البند']||r['اسم الصنف']||''));
+        return String(name||'').trim();
+      });
+      var payload=JSON.stringify({templates:templates,items:templates,products:templates,recipes:templates,materials:d.materials||[],customers:d.customers||[],updatedAt:new Date().toISOString(),version:'V1896'});
+      ['MATBAGY_SHARED_CATALOG_LATEST','MATBAGY_SHARED_CATALOG_V1896','MATBAGY_SHARED_CATALOG_V1895','MATBAGY_SHARED_CATALOG_V1894','MATBAGY_SHARED_CATALOG_V1893','MATBAGY_SHARED_CATALOG_V1892'].forEach(function(k){localStorage.setItem(k,payload);});
+      return templates.length;
+    }catch(e){return 0;}
+  }
+  function wrap(){
+    if(window.ES27 && !window.ES27.__v1896Mirror){
+      ['load','saveItem','saveRecipe','saveDeptLine'].forEach(function(fn){
+        if(typeof window.ES27[fn]==='function'){
+          var old=window.ES27[fn];
+          window.ES27[fn]=function(){ var r=old.apply(this,arguments); setTimeout(mirror,150); setTimeout(mirror,900); return r; };
+        }
+      });
+      window.ES27.__v1896Mirror=true;
+    }
+    mirror();
+  }
+  document.addEventListener('DOMContentLoaded',function(){setTimeout(wrap,300);setTimeout(wrap,1400);});
+  document.addEventListener('click',function(ev){var t=ev.target;if(t&&/حفظ|تحديث|الصنف|مكونات/.test((t.textContent||'')+' '+(t.id||''))){setTimeout(mirror,350);setTimeout(mirror,1200);}},true);
+  setTimeout(wrap,500);setTimeout(wrap,2000);
 })();
