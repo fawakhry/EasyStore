@@ -1,7 +1,7 @@
 (function(){
   'use strict';
 
-  const VERSION = 'ES33 V1896 Debt + Catalog Hard Lock';
+  const VERSION = 'ES32 V1880 Clean Core';
   window.EASYSTORE_MATBAGY_VERSION = VERSION;
 
   const app = document.getElementById('app');
@@ -30,23 +30,6 @@
   }
 
   const user = readSso();
-  function enrichSsoFromLocal(u){
-    u = u || {};
-    try{
-      const ts = JSON.parse(localStorage.getItem('trendos_session') || '{}');
-      const tu = ts.user || ts || {};
-      u.name = u.name || tu.name || tu.username || '';
-      u.username = u.username || tu.username || tu.name || '';
-      u.token = u.token || tu.token || ts.token || '';
-      u.department = u.department || tu.department || '';
-      u.mode = u.mode || tu.mode || tu.role || '';
-    }catch(e){}
-    u.name = u.name || localStorage.getItem('matbagy_user_name') || localStorage.getItem('matbagy_username') || 'ضياء';
-    u.username = u.username || localStorage.getItem('matbagy_username') || localStorage.getItem('matbagy_user_name') || u.name || 'ضياء';
-    u.token = u.token || localStorage.getItem('matbagy_session_token') || localStorage.getItem('trendos_session_token') || '';
-    return u;
-  }
-  Object.assign(user, enrichSsoFromLocal(user));
   const roleKey = () => nkey([user.name,user.username,user.mode,user.department].join(' '));
   const isAdmin = () => /ضياء|diaa|admin|full|kitchen|اداره|إدارة/.test(roleKey());
   const isLaser = () => /جابر|gaber|jaber|laser|ليزر/.test(roleKey()) || qs.get('laserAi') === '1' || qs.get('mode') === 'laser' || qs.get('department') === 'ليزر';
@@ -66,7 +49,7 @@
     return 'dashboard';
   }
 
-  const STORE_KEY = 'EASYSTORE_CLEAN_V1880_DATA'; // ثابت حتى تقرأ TrendOS الأصناف المحلية عند انقطاع السيرفر
+  const STORE_KEY = 'EASYSTORE_CLEAN_V1880_DATA';
   const state = {
     active: initialScreen(),
     loading: false,
@@ -77,28 +60,8 @@
     recipeComps: [], salePulledLines: [], saleSelectedCustomer: null, saleCustomerContext: null, customerSearchTimer: null, customerSearchSeq: 0, customerDropdownLocked: false
   };
 
-  function saveLocal(){
-    localStorage.setItem(STORE_KEY, JSON.stringify(state.data));
-    try{
-      const payload = JSON.stringify({templates:state.data.templates||[], items:state.data.templates||[], products:state.data.templates||[], recipes:state.data.templates||[], materials:state.data.materials||[], updatedAt:new Date().toISOString(), version:'V1896'});
-      ['MATBAGY_SHARED_CATALOG_V1892','MATBAGY_SHARED_CATALOG_V1893','MATBAGY_SHARED_CATALOG_V1896','MATBAGY_SHARED_CATALOG_V1896'].forEach(k=>localStorage.setItem(k,payload));
-    }catch(e){}
-  }
+  function saveLocal(){ localStorage.setItem(STORE_KEY, JSON.stringify(state.data)); }
   function loadLocal(){ try{ return JSON.parse(localStorage.getItem(STORE_KEY) || '{}'); }catch(e){ return {}; } }
-
-  function migrateSharedCatalogV1896(){
-    try{
-      let best=null;
-      ['MATBAGY_SHARED_CATALOG_V1896','MATBAGY_SHARED_CATALOG_V1896','MATBAGY_SHARED_CATALOG_V1893','MATBAGY_SHARED_CATALOG_V1892'].forEach(k=>{
-        try{ const o=JSON.parse(localStorage.getItem(k)||'{}'); if(o && ((o.templates||[]).length || (o.items||[]).length || (o.products||[]).length || (o.recipes||[]).length)){ best=o; } }catch(e){}
-      });
-      if(best){
-        const payload=JSON.stringify(Object.assign({}, best, {version:'V1896', updatedAt:new Date().toISOString()}));
-        ['MATBAGY_SHARED_CATALOG_V1892','MATBAGY_SHARED_CATALOG_V1893','MATBAGY_SHARED_CATALOG_V1896','MATBAGY_SHARED_CATALOG_V1896'].forEach(k=>localStorage.setItem(k,payload));
-      }
-    }catch(e){}
-  }
-  migrateSharedCatalogV1896();
   function mergeData(d){
     const local = loadLocal();
     state.data = Object.assign({materials:[],templates:[],suppliers:[],purchases:[],sales:[],customers:[],stockMoves:[],wasteLines:[],deptLines:[],finalInvoices:[],summary:{}}, local, d || {});
@@ -109,7 +72,7 @@
     return new Promise((resolve,reject)=>{
       const base = String(window.TREND_API_URL || '').trim();
       if(!base) return reject(new Error('رابط Apps Script غير مضبوط في config.js'));
-      const cb = 'ES33_V1896_' + Date.now() + '_' + Math.random().toString(16).slice(2);
+      const cb = 'ES32_' + Date.now() + '_' + Math.random().toString(16).slice(2);
       const s = document.createElement('script');
       let done = false;
       function cleanup(){ if(done) return; done = true; try{ delete window[cb]; }catch(e){ window[cb] = undefined; } if(s.parentNode) s.parentNode.removeChild(s); }
@@ -118,7 +81,7 @@
       s.onerror = () => { cleanup(); reject(new Error('فشل الاتصال بالسيرفر')); };
       s.src = base + '?' + params.toString();
       document.body.appendChild(s);
-      setTimeout(()=>{ if(!done){ cleanup(); reject(new Error('انتهت مهلة الاتصال بالسيرفر. انتظر دقيقة واضغط تحديث قبل إعادة الحفظ.')); } }, 90000);
+      setTimeout(()=>{ if(!done){ cleanup(); reject(new Error('انتهت مهلة الاتصال بالسيرفر')); } }, 18000);
     });
   }
 
@@ -220,7 +183,10 @@
     return rows.map((r,i)=>`<option value="${i}">${esc(templateName(r))} - ${esc(matDept(r))}</option>`).join('');
   }
   function supplierOptions(){ return (state.data.suppliers||[]).map(s=>`<option value="${esc(s.name||s.supplier||'')}"></option>`).join(''); }
-  function customerOptions(){ return (state.data.customers||[]).map(c=>`<option value="${esc(c.name||c.customerName||c.phone||'')}">${esc(c.phone||c.mobile||'')}</option>`).join(''); }
+  function customerDebt(c){ return num(c && (c.debtAmount ?? c.debt ?? c.currentBalance ?? c.remainingBalance ?? c.customerDebt ?? 0)); }
+  function customerDebtText(c){ const d=customerDebt(c); return d>0 ? 'مديونية: '+money(d) : (d<0 ? 'رصيد دائن: '+money(Math.abs(d)) : 'مديونية: 0 ج'); }
+  function customerDebtClass(c){ return customerDebt(c)>0 ? 'debtDue' : (customerDebt(c)<0 ? 'debtCredit' : 'debtClear'); }
+  function customerOptions(){ return (state.data.customers||[]).map(c=>`<option value="${esc(c.name||c.customerName||c.phone||'')}">${esc((c.phone||c.mobile||'')+' - '+customerDebtText(c))}</option>`).join(''); }
   function matByName(name){ const k=nkey(name); return materials().find(r => nkey(materialName(r)) === k); }
   function itemByName(name){ const k=nkey(name); return productTemplates().find(r => nkey(templateName(r)) === k); }
 
@@ -257,7 +223,7 @@
   function shell(){
     app.innerHTML = `<div class="wrap">
       <div class="top">
-        <div><h1>💰 إيزي ستور مطبعجي - برنامج الحسابات ES33 V1896</h1><p>أصناف، موردين، فواتير شراء ومبيعات، مخزون، تقارير، ومطبخ الحسابات.</p><div class="versionLine">${VERSION} / app.js محمل: ${new Date().toLocaleTimeString('ar-EG')}</div></div>
+        <div><h1>💰 إيزي ستور مطبعجي - برنامج الحسابات ES32</h1><p>أصناف، موردين، فواتير شراء ومبيعات، مخزون، تقارير، ومطبخ الحسابات.</p><div class="versionLine">${VERSION} / app.js محمل: ${new Date().toLocaleTimeString('ar-EG')}</div></div>
         <div class="actions"><span class="badge">${esc(user.name)} - ${esc(roleText())}</span><button class="btn secondary" onclick="ES27.load(true)">تحديث البيانات</button><button class="btn secondary" onclick="ES27.hardReload()">تحديث البرنامج</button><button class="btn secondary" onclick="history.back()">إغلاق</button></div>
       </div>
       <div id="mainMsg" class="msg"></div>
@@ -289,7 +255,7 @@
   function screenCustomers(){
     return `<div class="card"><h2>العملاء</h2><div class="hint">العملاء يتم سحبهم من TrendOS قدر الإمكان. ابحث بالاسم أو الرقم.</div><input id="custSearch" class="searchInput" placeholder="بحث عن عميل" oninput="ES27.filterCustomers()"><div id="custTable">${customersTable(state.data.customers)}</div></div>`;
   }
-  function customersTable(rows){ return table(rows||[],['العميل','الهاتف','مديونية','النوع/المسؤول'],c=>[customerNameWithDebt(c),esc(customerMainPhone(c)),customerDebtBadge(c),esc(customerMainType(c))]); }
+  function customersTable(rows){ return table(rows||[],['العميل','الهاتف','النوع/المسؤول','المديونية'],c=>[esc(c.name||c.customerName||''),esc(c.phone||c.mobile||''),esc(c.type||c.manager||''),`<span class="customerDebtBadge ${customerDebtClass(c)}">${esc(customerDebtText(c))}</span>`]); }
 
   function screenItems(){
     return `<div class="card"><h2>الأصناف</h2><div class="grid six"><div class="field"><label>القسم</label><select id="itDept"><option>طباعة</option><option>ليزر</option><option>مشترك</option><option>عام</option></select></div><div class="field"><label>اسم الصنف</label><input id="itName"></div><div class="field"><label>نوع</label><select id="itType"><option>صنف بيع</option><option>خامة</option><option>صنف مركب</option></select></div><div class="field"><label>مقاس</label><input id="itSize"></div><div class="field"><label>سعر البيع</label><input id="itSale" type="number"></div><div class="field"><label>تكلفة ثابتة</label><input id="itCost" type="number"></div></div><div class="actions"><button class="btn" onclick="ES27.saveItem()">حفظ / تحديث الصنف</button><button class="btn secondary" onclick="ES27.clearItemForm()">جديد</button></div></div>${itemsTable()}`;
@@ -307,9 +273,18 @@
   function rowDept(r){ return r.department || r['القسم'] || ''; }
   function rowItem(r){ return r.itemName || r.item || r['اسم البند'] || ''; }
   function rowQty(r){ return num(r.qty || r['الكمية'] || 1) || 1; }
-  function rowQty(r){ return num(r.qty || r.quantity || r['الكمية'] || 1) || 1; }
-  function rowSale(r){ const q=rowQty(r); const unit=num(r.unitSalePrice || r['سعر الوحدة'] || 0); const total=num(r.lineTotal || r['lineTotal'] || r['سعر البيع'] || 0); if(unit) return unit; if(total && q) return total/q; return num(r.sale || r.salePrice || r.finalTotal || r.total || 0); }
-  function rowLineTotal(r){ const q=rowQty(r); const explicit=num(r.lineTotal || r['lineTotal'] || r.total || r['سعر البيع'] || 0); if(explicit) return explicit; return rowSale(r) * q; }
+  function rowSale(r){
+    const qty=rowQty(r);
+    const explicit=num(r.unitSalePrice ?? r['سعر الوحدة'] ?? 0);
+    if(explicit || Object.prototype.hasOwnProperty.call(r||{},'unitSalePrice') || Object.prototype.hasOwnProperty.call(r||{},'سعر الوحدة')) return explicit;
+    if(Object.prototype.hasOwnProperty.call(r||{},'sale')) return num(r.sale);
+    if(Object.prototype.hasOwnProperty.call(r||{},'lineTotal')) return num(r.lineTotal)/qty;
+    return num(r.salePrice || r['سعر البيع'] || r.finalTotal || r.total || 0)/qty;
+  }
+  function rowLineTotal(r){
+    if(Object.prototype.hasOwnProperty.call(r||{},'lineTotal')) return num(r.lineTotal);
+    return rowSale(r)*rowQty(r);
+  }
   function rowCloseStatus(r){ return String(r.closeStatus || r['حالة التقفيل'] || '').trim(); }
   function rowFinalInvoice(r){ return String(r.invoiceNo || r['رقم الفاتورة النهائية'] || r['رقم الفاتورة'] || '').trim(); }
   function isUnbilledDeptLine(r){ const st=nkey(rowCloseStatus(r)); return !rowFinalInvoice(r) && !/تم|مقفل|مقفول|closed|billed/.test(st); }
@@ -317,10 +292,7 @@
   function customerMainName(c){ return (c && (c.name || c.customerName || c['اسم العميل'] || c.customer || '')) || ''; }
   function customerMainPhone(c){ return (c && (c.phone || c.mobile || c.customerPhone || c['رقم العميل'] || c['الهاتف'] || '')) || ''; }
   function customerMainType(c){ return (c && (c.type || c.customerType || c.manager || c['نوع العميل'] || c['المسؤول'] || '')) || ''; }
-  function customerDebt(c){ return num(c && (c.debtAmount || c.debt || c.currentBalance || c.remainingBalance || c.balance || c['مديونية'] || c['مديونية حالية'] || c['رصيد العميل'] || 0)); }
-  function customerDebtBadge(c){ const d=customerDebt(c); return d>0 ? '<span class="debtBadge">مديونية '+money(d)+'</span>' : '<span class="okBadge">لا مديونية</span>'; }
-  function customerNameWithDebt(c){ return esc(customerMainName(c)||'') + ' ' + customerDebtBadge(c); }
-  function customerNeedleText(c){ return nkey([customerMainName(c), customerMainPhone(c), customerMainType(c), customerDebt(c)].join(' ')); }
+  function customerNeedleText(c){ return nkey([customerMainName(c), customerMainPhone(c), customerMainType(c)].join(' ')); }
   function rowCustomerNeedle(r){ return nkey([rowCustomer(r), rowCustomerPhone(r), r.customerType, r.type, r.manager].join(' ')); }
   function customerMatchesRow(r, c, fallbackName){
     const rowText = rowCustomerNeedle(r);
@@ -428,7 +400,7 @@
     const ordersHtml = orders.length ? orders.map(o=>'<button type="button" class="btn small secondary" onclick="ES27.pickSaleOrder(\''+esc(String(o)).replace(/'/g,'&#39;')+'\')">'+esc(o)+'</button>').join(' ') : '<span class="muted">لا توجد أوردرات محفوظة لهذا العميل.</span>';
     const finalsHtml = finalSales.length ? finalSales.slice(0,5).map(r=>'<div>فاتورة مقفولة: <b>'+esc(saleFinalNo(r))+'</b> / أوردر: '+esc(saleOrderId(r)||'-')+' / إجمالي: '+money(r.total||r.finalTotal||0)+'</div>').join('') : '<div>لا توجد فاتورة نهائية محفوظة لهذا الاختيار.</div>';
     const draft = saleDraftNo(val('saOrder'), c);
-    return '<div class="saleContextHead"><b>العميل:</b> '+esc(customerMainName(c)||val('saCustomer'))+' '+(customerMainPhone(c)?'<span class="pill">'+esc(customerMainPhone(c))+'</span>':'')+' '+customerDebtBadge(c)+'</div>'+
+    return '<div class="saleContextHead"><b>العميل:</b> '+esc(customerMainName(c)||val('saCustomer'))+' '+(customerMainPhone(c)?'<span class="pill">'+esc(customerMainPhone(c))+'</span>':'')+' <span class="customerDebtBadge '+customerDebtClass(c)+'">'+esc(customerDebtText(c))+'</span></div>'+ 
       '<div><b>الفاتورة الحالية:</b> <span class="pill">'+esc(val('saNo')||draft)+'</span> '+(/^DRAFT/i.test(val('saNo'))?'<span class="muted">تحت التجميع، وتتحول لرقم ES عند الحفظ النهائي</span>':'<span class="muted">رقم فاتورة محفوظ</span>')+'</div>'+
       '<div><b>أوردرات العميل:</b> '+ordersHtml+'</div>'+
       '<div><b>بنود الأقسام غير المفوترة:</b> '+esc(deptText)+' / مضموم الآن: '+pulled.length+'</div>'+
@@ -451,14 +423,14 @@
     renderSaleCustomerContext(c);
     if(!opts.silent) flash('تم تحميل ملف العميل والفاتورة تحت التجميع وبنود وائل/جابر.');
   }
-  function customerLabel(c){ const d=customerDebt(c); return (c.name||c.customerName||'') + (c.phone||c.mobile? ' - '+(c.phone||c.mobile):'') + (c.type?' - '+c.type:'') + (d>0 ? ' - مديونية '+d+' ج' : ''); }
-  function localCustomerMatches(q){ q=nkey(q); return (state.data.customers||[]).filter(c=>!q || nkey([c.name,c.customerName,c.phone,c.mobile,c.manager,c.type].join(' ')).includes(q)).slice(0,40); }
+  function customerLabel(c){ return (c.name||c.customerName||'') + (c.phone||c.mobile? ' - '+(c.phone||c.mobile):'') + (c.type?' - '+c.type:'') + ' - ' + customerDebtText(c); }
+  function localCustomerMatches(q){ q=nkey(q); return (state.data.customers||[]).filter(c=>!q || nkey([c.name,c.customerName,c.phone,c.mobile,c.manager,c.type,customerDebtText(c)].join(' ')).includes(q)).slice(0,40); }
   function renderCustomerDropdown(rows){
     if(!customerDropdownCanOpen()) return;
     const box=$('saCustomerDrop'); if(!box) return;
     rows = rows || [];
     if(!rows.length){ box.innerHTML='<div class="custDropHint">اكتب جزء من الاسم أو الرقم للبحث في عملاء المنصة.</div>'; box.classList.remove('hidden'); return; }
-    box.innerHTML=rows.map((c,i)=>`<button type="button" onclick="ES27.pickSaleCustomer(${i})" data-cust-index="${i}"><span>${esc(customerLabel(c))}</span> ${customerDebt(c)>0?customerDebtBadge(c):''}</button>`).join('');
+    box.innerHTML=rows.map((c,i)=>`<button type="button" onclick="ES27.pickSaleCustomer(${i})" data-cust-index="${i}">${esc(customerLabel(c))}</button>`).join('');
     box.__rows=rows; box.classList.remove('hidden');
   }
   function operatingExpenseRows(){ return materials().filter(r=>/تشغيل|مصروف|operation/i.test(String(r.materialClass||r.operationExpense||r['تصنيف الخامة']||r['ضم إلى مصروفات التشغيل']||matType(r)||''))); }
@@ -469,7 +441,7 @@
       <div class="hint">اكتب جزء من اسم العميل أو اضغط على الخانة لتحميل عملاء المنصة. تقدر تسحب بنود وائل وجابر غير المفوترة وتطلع فاتورة واحدة للعميل.</div>
       <div class="grid four">
         <div class="field"><label>رقم الفاتورة</label><input id="saNo" value="SAL-${Date.now().toString().slice(-6)}"></div>
-        <div class="field customerField"><label>العميل <span id="saCustomerDebtInline" class="debtInline"></span></label><input id="saCustomer" value="${qCustomer}" autocomplete="off" onfocus="ES27.focusSaleCustomer()" oninput="ES27.searchSaleCustomers(this.value)" onkeydown="ES27.unlockCustomerDropdown()"><div id="saCustomerDrop" class="customerDrop hidden"></div></div>
+        <div class="field customerField"><label>العميل</label><input id="saCustomer" value="${qCustomer}" autocomplete="off" onfocus="ES27.focusSaleCustomer()" oninput="ES27.searchSaleCustomers(this.value)" onkeydown="ES27.unlockCustomerDropdown()"><div id="saCustomerDrop" class="customerDrop hidden"></div></div>
         <div class="field"><label>رقم الأوردر</label><input id="saOrder" value="${qOrder}" oninput="ES27.refreshSaleCustomerContext()"></div>
         <div class="field"><label>نوع الدفع</label><select id="saPay"><option>نقدي</option><option>آجل</option><option>جزئي</option></select></div>
       </div>
@@ -542,20 +514,55 @@
   function rowBillingStatus(r){ return String(r.approvalStatus || r['حالة اعتماد القسم'] || r.billingStatus || r['حالة الفوترة'] || '').trim(); }
   function isDeptApprovedForFinal(r){ const st=nkey(rowBillingStatus(r)); return /معتمد|approved/.test(st) || (!st && !r.approvalStatus && !r['حالة اعتماد القسم'] && !r.billingStatus && !r['حالة الفوترة']); }
   function deptReviewRows(){ const order=val('dlOrder') || qs.get('orderId') || qs.get('order') || ''; const d=userDept(); return (state.data.deptLines||[]).filter(isUnbilledDeptLine).filter(r=>(!order || String(rowOrderId(r))===String(order)) && (!d || rowDept(r)===d)); }
-  function deptApprovalTable(){ const rows=deptReviewRows(); if(!rows.length) return '<div class="empty">لا توجد بنود مسجلة لهذا الأوردر في القسم حتى الآن.</div>'; const total=rows.reduce((s,r)=>s+rowLineTotal(r),0); return table(rows,['الحالة','الأوردر','البند','كمية','سعر','إجمالي'],r=>[esc(rowBillingStatus(r)||rowCloseStatus(r)||'قيد مراجعة القسم'),esc(rowOrderId(r)),esc(rowItem(r)),esc(rowQty(r)),money(rowSale(r)),money(rowLineTotal(r))])+'<div class="softBox"><b>إجمالي مسودة القسم: '+money(total)+'</b></div>'; }
+  function customerByName(value){ const key=nkey(value||''); return (state.data.customers||[]).find(c=>nkey(customerMainName(c))===key) || (state.data.customers||[]).find(c=>key && nkey(customerMainName(c)).includes(key)) || null; }
+  function deptCustomerDebtHtml(value){ const c=customerByName(value); return `<span class="customerDebtBadge ${customerDebtClass(c)}">${esc(customerDebtText(c))}</span>`; }
+  function deptInvoiceStatsHtml(){ const rows=deptReviewRows(); const total=rows.reduce((s,r)=>s+rowLineTotal(r),0); const approved=rows.filter(isDeptApprovedForFinal).length; return `<div class="deptStat"><span>بنود المسودة</span><b>${rows.length}</b></div><div class="deptStat"><span>إجمالي القسم</span><b>${money(total)}</b></div><div class="deptStat"><span>المعتمد</span><b>${approved}</b></div><div class="deptStat"><span>كتالوج القسم</span><b>${visibleTemplates().length}</b></div>`; }
+  function refreshDeptContextUi(){ const shared=$('deptSharedBox'); if(shared) shared.innerHTML=deptSharedTable(); const approval=$('deptApprovalBox'); if(approval) approval.innerHTML=deptApprovalTable(); const debt=$('deptCustomerDebt'); if(debt) debt.innerHTML=deptCustomerDebtHtml(val('dlCustomer')); const stats=$('deptInvoiceStats'); if(stats) stats.innerHTML=deptInvoiceStatsHtml(); const no=$('deptInvoiceNo'); if(no) no.textContent='فاتورة قسم '+(userDept()||'-')+' / '+(val('dlOrder')||'مسودة جديدة'); }
+  function deptApprovalTable(){ const rows=deptReviewRows(); if(!rows.length) return '<div class="empty">لا توجد بنود مسجلة لهذا الأوردر في القسم حتى الآن.</div>'; const total=rows.reduce((s,r)=>s+rowLineTotal(r),0); return table(rows,['الحالة','الأوردر','البند','كمية','سعر الوحدة','الإجمالي'],r=>[esc(rowBillingStatus(r)||rowCloseStatus(r)||'قيد مراجعة القسم'),esc(rowOrderId(r)),esc(rowItem(r)),esc(rowQty(r)),money(rowSale(r)),money(rowLineTotal(r))])+'<div class="deptInvoiceTotal"><span>إجمالي مسودة القسم</span><b>'+money(total)+'</b></div>'; }
   function screenDept(){
     const d = userDept() || 'طباعة';
     const qOrder = esc(qs.get('orderId') || qs.get('order') || '');
     const qCustomer = esc(qs.get('customer') || qs.get('customerName') || '');
-    return `<div class="card"><h2>فاتورة القسم - ${esc(d)}</h2><div class="hint">افتح على اسم العميل، اختار الصنف من مطبخ الحسابات، اكتب الكمية والسعر، ثم سجل البند. البنود المشتركة المسجلة من القسم الآخر تظهر هنا إجباريًا.</div>
-      <div class="grid four"><div class="field"><label>اسم العميل</label><input id="dlCustomer" value="${qCustomer}" oninput="ES27.renderDeptSharedLines();ES27.renderDeptApproval()" placeholder="اسم العميل"></div><div class="field"><label>رقم الأوردر</label><input id="dlOrder" value="${qOrder}" oninput="ES27.renderDeptSharedLines();ES27.renderDeptApproval()"></div><div class="field"><label>الصنف</label><select id="dlItemSel" onchange="ES27.applyDeptItem()"><option></option>${itemOptions()}</select><input id="dlItem" placeholder="اسم الصنف المختار"></div><div class="field"><label>قسم الصنف</label><input id="dlItemDept" readonly></div></div>
-      <div class="grid six"><div class="field"><label>الكمية</label><input id="dlQty" type="number" value="1" oninput="ES27.calcDept()"></div><div class="field"><label>سعر السيستم</label><input id="dlSystemSale" readonly></div><div class="field"><label>سعر الفاتورة</label><input id="dlSale" type="number" oninput="ES27.calcDept()"></div><div class="field"><label>فرق للهوالك</label><input id="dlDiff" readonly></div><div class="field checkboxField"><label>بند مشترك</label><label class="checkLine"><input id="dlSharedLine" type="checkbox"> يظهر عند القسم الآخر</label></div><div class="field"><label>ملاحظات</label><input id="dlNotes"></div></div>
-      ${isLaser()?'<div class="actions"><button class="btn secondary" onclick="ES27.toggleLaserCalc()">حاسبة الليزر / حساب شغلانة</button></div><div id="laserCalcBox" class="card softBox">'+laserBox()+'</div>':''}
-      <div class="actions"><button class="btn" onclick="ES27.saveDeptLine()">تسجيل البند</button><button class="btn secondary" onclick="ES27.renderDeptApproval()">عرض البنود المسجلة</button><button class="btn" onclick="ES27.approveDeptInvoice()">اعتماد فاتورة القسم</button></div><div id="deptMsg"></div></div>
-      <div class="card"><h3>مراجعة فاتورة القسم قبل الاعتماد</h3><div class="hint">سجل كل باند يخلص فورًا. تفضل البنود محفوظة مهما الأوردر قعد يومين أو 3 أيام. بعد المراجعة اضغط اعتماد، وبعدها تظهر لضياء/رحمه/ريفان في الفاتورة النهائية.</div><div id="deptApprovalBox">${deptApprovalTable()}</div></div><div class="card"><h3>البنود المشتركة من القسم الآخر</h3><div id="deptSharedBox">${deptSharedTable()}</div></div>`;
+    return `<div class="deptInvoicePage">
+      <section class="deptInvoiceHero">
+        <div><span class="deptEyebrow">فاتورة تشغيل مترابطة مع كتالوج EasyStore</span><h2 id="deptInvoiceNo">فاتورة قسم ${esc(d)} / ${qOrder||'مسودة جديدة'}</h2><p>كل صنف محفوظ في البرنامج يظهر هنا بسعره وقسمه، وكل بند تسجله يرجع فورًا إلى حسابات وفواتير الأقسام.</p></div>
+        <div class="deptHeroBadges"><span>القسم: ${esc(d)}</span><span>المزامنة: Google Sheets</span></div>
+      </section>
+      <section id="deptInvoiceStats" class="deptInvoiceStats">${deptInvoiceStatsHtml()}</section>
+      <section class="card deptInvoiceEditor">
+        <div class="deptSectionTitle"><div><span>1</span><h3>بيانات العميل والأوردر</h3></div><small>المديونية ظاهرة دائمًا بجوار العميل</small></div>
+        <div class="grid four">
+          <div class="field deptCustomerField"><label>اسم العميل</label><input id="dlCustomer" list="deptCustomerList" value="${qCustomer}" oninput="ES27.refreshDeptContext()" placeholder="اختار عميل TrendOS"><datalist id="deptCustomerList">${customerOptions()}</datalist><div id="deptCustomerDebt" class="deptDebtSlot">${deptCustomerDebtHtml(qCustomer)}</div></div>
+          <div class="field"><label>رقم الأوردر</label><input id="dlOrder" value="${qOrder}" oninput="ES27.refreshDeptContext()" placeholder="مثال 1052"></div>
+          <div class="field deptCatalogField"><label>الصنف من كتالوج البرنامج</label><select id="dlItemSel" onchange="ES27.applyDeptItem()"><option value="">اختار صنفًا محفوظًا</option>${itemOptions()}</select><input id="dlItem" readonly placeholder="يظهر اسم الصنف هنا"></div>
+          <div class="field"><label>قسم الصنف</label><input id="dlItemDept" readonly placeholder="يتحدد من الكتالوج"></div>
+        </div>
+        <div class="catalogSyncBar"><span>↔ الأصناف متبادلة مع شاشة الأصناف ومطبخ الحسابات</span><button type="button" class="btn small secondary" onclick="ES27.load(true)">تحديث الأصناف الآن</button></div>
+        <div class="deptSectionTitle"><div><span>2</span><h3>التسعير والتسجيل</h3></div><small>سعر الوحدة × الكمية = إجمالي البند</small></div>
+        <div class="grid six deptPriceGrid"><div class="field"><label>الكمية</label><input id="dlQty" type="number" min="1" value="1" oninput="ES27.calcDept()"></div><div class="field"><label>سعر السيستم</label><input id="dlSystemSale" readonly></div><div class="field"><label>سعر الوحدة بالفاتورة</label><input id="dlSale" type="number" min="0" oninput="ES27.calcDept()"></div><div class="field"><label>فرق السعر للهوالك</label><input id="dlDiff" readonly></div><div class="field checkboxField"><label>بند مشترك</label><label class="checkLine"><input id="dlSharedLine" type="checkbox"> يظهر عند القسم الآخر</label></div><div class="field"><label>ملاحظات</label><input id="dlNotes" placeholder="تفاصيل التنفيذ أو المقاس"></div></div>
+        ${isLaser()?'<div class="actions"><button class="btn secondary" onclick="ES27.toggleLaserCalc()">حاسبة الليزر / حساب شغلانة</button></div><div id="laserCalcBox" class="card softBox">'+laserBox()+'</div>':''}
+        <div class="deptInvoiceActions"><button class="btn deptSaveBtn" onclick="ES27.saveDeptLine()">＋ تسجيل البند في المسودة</button><button class="btn secondary" onclick="ES27.refreshDeptContext()">تحديث المراجعة</button><button class="btn deptApproveBtn" onclick="ES27.approveDeptInvoice()">✓ اعتماد فاتورة القسم</button></div><div id="deptMsg"></div>
+      </section>
+      <section class="card deptReviewCard"><div class="deptSectionTitle"><div><span>3</span><h3>مراجعة الفاتورة قبل الاعتماد</h3></div><small>البنود المعتمدة فقط تنتقل للفاتورة النهائية</small></div><div id="deptApprovalBox">${deptApprovalTable()}</div></section>
+      <section class="card deptSharedCard"><h3>البنود المشتركة من القسم الآخر</h3><div id="deptSharedBox">${deptSharedTable()}</div></section>
+    </div>`;
   }
   function screenWaste(){ return `<div class="card"><h2>هوالك القسم</h2><div class="grid four"><div class="field"><label>رقم الأوردر</label><input id="waOrder"></div><div class="field"><label>سبب الهالك</label><input id="waReason"></div><div class="field"><label>قيمة التالف</label><input id="waAmount" type="number"></div><div class="field"><label>تعويض</label><input id="waPaid" type="number"></div></div><button class="btn" onclick="ES27.saveWaste()">حفظ الهالك</button></div>${table((state.data.wasteLines||[]).filter(r=>isAdmin()||String(r.department||'')===userDept()),['القسم','الأوردر','السبب','قيمة','تعويض'],r=>[esc(r.department),esc(r.orderId),esc(r.reason),money(r.amount),money(r.paid)])}`; }
-  function screenFinal(){ return `<div class="card"><h2>تقفيل الفاتورة النهائية</h2><div class="grid three"><div class="field"><label>رقم الأوردر</label><input id="fiOrder"></div><div class="field"><label>العميل</label><input id="fiCustomer" list="custList"><datalist id="custList">${customerOptions()}</datalist></div><div class="field"><label>مدفوع</label><input id="fiPaid" type="number"></div></div><button class="btn secondary" onclick="ES27.collectDeptLines()">استدعاء أجزاء وائل وجابر</button><button class="btn" onclick="ES27.saveFinal()">تقفيل الفاتورة</button><div id="finalBox" class="invoiceBox"></div></div>`; }
+  function screenFinalLegacy(){ return `<div class="card"><h2>تقفيل الفاتورة النهائية</h2><div class="grid three"><div class="field"><label>رقم الأوردر</label><input id="fiOrder"></div><div class="field"><label>العميل</label><input id="fiCustomer" list="custList"><datalist id="custList">${customerOptions()}</datalist></div><div class="field"><label>مدفوع</label><input id="fiPaid" type="number"></div></div><button class="btn secondary" onclick="ES27.collectDeptLines()">استدعاء أجزاء وائل وجابر</button><button class="btn" onclick="ES27.saveFinal()">تقفيل الفاتورة</button><div id="finalBox" class="invoiceBox"></div></div>`; }
+  function screenFinal(){
+    return `<div class="deptInvoicePage finalInvoicePage">
+      <section class="deptInvoiceHero finalInvoiceHero">
+        <div><span class="deptEyebrow">تقفيل موثوق من السيرفر</span><h2>الفاتورة النهائية الموحّدة</h2><p>يتم احتساب الإجمالي من بنود الأقسام المعتمدة داخل Google Sheets، ولا يتم الاعتماد على أرقام المتصفح.</p></div>
+        <div class="deptHeroBadges"><span>V1889 Trusted Invoice</span><span>منع السحب المكرر</span></div>
+      </section>
+      <section class="card deptInvoiceEditor">
+        <div class="deptSectionTitle"><div><span>1</span><h3>بيانات الفاتورة</h3></div><small>الأوردر والعميل والمدفوع</small></div>
+        <div class="grid three"><div class="field"><label>رقم الأوردر</label><input id="fiOrder" placeholder="رقم الأوردر"></div><div class="field"><label>العميل</label><input id="fiCustomer" list="custList" placeholder="ابحث بالاسم أو الرقم" oninput="ES27.refreshFinalDebt()"><datalist id="custList">${customerOptions()}</datalist><div id="finalCustomerDebt" class="deptDebtSlot">${deptCustomerDebtHtml('')}</div></div><div class="field"><label>المدفوع</label><input id="fiPaid" type="number" value="0"></div></div>
+        <div class="deptInvoiceActions"><button class="btn secondary" onclick="ES27.collectDeptLines()">استدعاء البنود المعتمدة</button><button class="btn deptApproveBtn" onclick="ES27.saveFinal()">تقفيل الفاتورة من السيرفر</button></div>
+      </section>
+      <section class="card deptReviewCard"><div class="deptSectionTitle"><div><span>2</span><h3>مراجعة البنود</h3></div><small>لن تُسحب البنود غير المعتمدة</small></div><div id="finalBox" class="invoiceBox"><div class="empty">اكتب رقم الأوردر ثم استدعِ البنود المعتمدة.</div></div></section>
+    </div>`;
+  }
   function screenDeptView(){ return `<div class="card"><h2>أجزاء الأقسام</h2>${table(state.data.deptLines,['أوردر','القسم','البند','كمية','سعر'],r=>[esc(r.orderId),esc(r.department),esc(r.itemName),esc(r.qty),money(r.sale)])}</div>`; }
 
   async function load(silent){
@@ -565,13 +572,17 @@
     try{
       const r = await api('getAccounting');
       if(!r || r.success === false) throw new Error(r && r.message || 'تعذر تحميل البيانات');
+      let customerRows = [];
+      let supplierRows = [];
+      try{ const cr=await api('getEasyStoreCustomers',{limit:1000}); if(cr&&cr.success) customerRows=cr.customers||[]; }catch(e){}
+      try{ const sr=await api('getEasyStoreSuppliers',{}); if(sr&&sr.success) supplierRows=sr.suppliers||sr.rows||[]; }catch(e){}
       mergeData(normalizeIncomingData({
         materials: r.materials || r.rawMaterials || [],
         templates: r.templates || r.items || [],
-        suppliers: r.suppliers || [],
+        suppliers: supplierRows.length ? supplierRows : (r.suppliers || []),
         purchases: r.purchases || [],
         sales: r.sales || [],
-        customers: r.customers || [],
+        customers: customerRows.length ? customerRows : (r.customers || []),
         stockMoves: r.stockMoves || [],
         wasteLines: r.wasteLines || [],
         deptLines: r.deptLines || [],
@@ -626,7 +637,7 @@
     async copySaleText(){ closeFloatingPanels(); const t=this.invoicePlainText(); try{ await navigator.clipboard.writeText(t); flash('تم نسخ نص الفاتورة'); }catch(e){ prompt('انسخ نص الفاتورة',t); } },
     openSaleWhatsApp(){ closeFloatingPanels(); const t=this.invoicePlainText(); window.open('https://wa.me/?text='+encodeURIComponent(t),'_blank'); },
     downloadSaleImage(){ closeFloatingPanels(); const canvas=document.createElement('canvas'); canvas.width=1200; canvas.height=900; const ctx=canvas.getContext('2d'); ctx.fillStyle='#fff'; ctx.fillRect(0,0,1200,900); ctx.fillStyle='#0f766e'; ctx.fillRect(0,0,1200,120); ctx.fillStyle='#fff'; ctx.font='bold 44px Arial'; ctx.textAlign='right'; ctx.fillText('فاتورة مطبعجي',1120,75); ctx.fillStyle='#111827'; ctx.font='28px Arial'; const lines=this.invoicePlainText().split('\n'); let y=170; lines.forEach(l=>{ ctx.fillText(l,1120,y); y+=42; }); const a=document.createElement('a'); a.download='matbagy-sale-'+(val('saNo')||Date.now())+'.png'; a.href=canvas.toDataURL('image/png'); a.click(); },
-    async saveItem(){ const p={department:val('itDept'),itemName:val('itName'),category:val('itType')||'صنف بيع',size:val('itSize'),salePrice:num(val('itSale')),fixedCost:num(val('itCost')),computedUnitCost:num(val('itCost')),active:'نعم',recordType:'template'}; if(!p.itemName) return flash('اكتب اسم الصنف',true); const res=upsertByNameDept(state.data.templates,p,templateName,matDept); saveLocal(); try{ const r=await api('saveAccountingTemplate',Object.assign({upsert:'1'},p)); if(r&&r.success===false) throw new Error(r.message||'السيرفر رفض حفظ الصنف'); delete p.serverPending; delete p.pendingReason; saveLocal(); shell(); flash(res.updated?'تم تحديث الصنف على السيرفر':'تم حفظ الصنف على السيرفر'); }catch(e){ p.serverPending='نعم'; p.pendingReason=e.message||'فشل الاتصال بالسيرفر'; saveLocal(); shell(); flash('اتحفظ محليًا فقط: '+p.pendingReason+' — اضغط تحديث/حفظ مرة أخرى بعد إصلاح السيرفر عشان يظهر لكل الأجهزة.', true); } },
+    saveItem(){ const p={department:val('itDept'),itemName:val('itName'),category:val('itType')||'صنف بيع',size:val('itSize'),salePrice:num(val('itSale')),fixedCost:num(val('itCost')),computedUnitCost:num(val('itCost')),active:'نعم',recordType:'template'}; if(!p.itemName) return flash('اكتب اسم الصنف',true); const res=upsertByNameDept(state.data.templates,p,templateName,matDept); saveLocal(); api('saveAccountingTemplate',Object.assign({upsert:'1'},p)).then(r=>{ if(r&&r.success===false) return flash(r.message||'تعذر مزامنة الصنف',true); load(true); }).catch(e=>flash('تم الحفظ محليًا وتعذرت مزامنة الصنف: '+(e.message||''),true)); shell(); flash(res.updated?'الصنف موجود وتم تحديثه في الكتالوج':'تم حفظ الصنف في الكتالوج'); },
     editItem(i){ const r=productTemplates()[i]; if(!r) return; set('itDept',matDept(r)); set('itName',templateName(r)); set('itType',r.category||matType(r)); set('itSize',r.size); set('itSale',matSale(r)); set('itCost',matCost(r)); },
     clearItemForm(){ ['itName','itSize','itSale','itCost'].forEach(id=>set(id,'')); },
     archiveItem(i){ const r=productTemplates()[i]; if(!r || !confirm('إيقاف الصنف ' + templateName(r) + '؟')) return; r.active='لا'; r['مفعل']='لا'; saveLocal(); api('archiveAccountingTemplate',{itemName:templateName(r),department:matDept(r)}).catch(()=>{}); shell(); },
@@ -667,20 +678,52 @@
     clearComps(){ state.recipeComps=[]; const c=$('compList'); if(c) c.innerHTML=compTable(); this.calcRecipe(); },
     clearRecipeForm(){ state.recipeComps=[]; ['recName','recSize','recSale','recCost','recProfit','compQty','compAiPieces','compManualPieces','compWaste','compCost'].forEach(id=>set(id,'')); set('compQty','1'); const c=$('compList'); if(c) c.innerHTML=compTable(); },
     calcRecipe(){ const current = val('compMat') && !state.recipeComps.length ? num(val('compCost')) : 0; const cost=state.recipeComps.reduce((s,c)=>s+num(c.cost),0) + current; set('recCost',cost.toFixed(2)); const g=gp(cost,num(val('recSale'))); set('recProfit',g.profit.toFixed(2)); return cost; },
-    saveRecipe(){ if(val('compMat') && !state.recipeComps.length) this.addComp(); const cost=this.calcRecipe(); const p={department:val('recDept'),itemName:val('recName'),size:val('recSize'),salePrice:num(val('recSale')),fixedCost:cost,computedUnitCost:cost,calculatedUnitCost:cost,componentsJson:JSON.stringify(state.recipeComps),category:'صنف بمكونات',recordType:'template',active:'نعم'}; if(!p.itemName) return flash('اكتب اسم الصنف',true); const res=upsertByNameDept(state.data.templates,p,templateName,matDept); saveLocal(); api('saveAccountingTemplate',Object.assign({upsert:'1'},p)).catch(()=>{}); state.active='kitchen'; shell(); flash(res.updated?'الصنف موجود وتم تحديثه':'تم حفظ الصنف بمكوناته'); },
+    saveRecipe(){ if(val('compMat') && !state.recipeComps.length) this.addComp(); const cost=this.calcRecipe(); const p={department:val('recDept'),itemName:val('recName'),size:val('recSize'),salePrice:num(val('recSale')),fixedCost:cost,computedUnitCost:cost,calculatedUnitCost:cost,componentsJson:JSON.stringify(state.recipeComps),category:'صنف بمكونات',recordType:'template',active:'نعم'}; if(!p.itemName) return flash('اكتب اسم الصنف',true); const res=upsertByNameDept(state.data.templates,p,templateName,matDept); saveLocal(); api('saveAccountingTemplate',Object.assign({upsert:'1'},p)).then(r=>{ if(r&&r.success===false) return flash(r.message||'تعذر مزامنة الصنف',true); load(true); }).catch(e=>flash('تم الحفظ محليًا وتعذرت مزامنة الصنف: '+(e.message||''),true)); state.active='kitchen'; shell(); flash(res.updated?'الصنف موجود وتم تحديثه في الكتالوج':'تم حفظ الصنف بمكوناته في الكتالوج'); },
     recalcCascade(){ recalcTemplatesLocal(); saveLocal(); render(); flash('تم تحديث الأسعار المرتبطة محليًا.'); api('recalcAccountingMaterialsCascade',{}).catch(()=>{}); },
-    applyDeptItem(){ const r=selectedDeptTemplate(); if(!r) return; set('dlItem',templateName(r)); set('dlItemDept',matDept(r)); set('dlSystemSale',matSale(r).toFixed(2)); set('dlSale',matSale(r).toFixed(2)); const sh=$('dlSharedLine'); if(sh){ sh.checked=isSharedDeptName(matDept(r)); sh.disabled=isSharedDeptName(matDept(r)); } this.calcDept(); this.renderDeptSharedLines(); },
+    applyDeptItem(){ const r=selectedDeptTemplate(); if(!r) return; set('dlItem',templateName(r)); set('dlItemDept',matDept(r)); set('dlSystemSale',matSale(r).toFixed(2)); set('dlSale',matSale(r).toFixed(2)); const sh=$('dlSharedLine'); if(sh){ sh.checked=isSharedDeptName(matDept(r)); sh.disabled=isSharedDeptName(matDept(r)); } this.calcDept(); refreshDeptContextUi(); },
     calcDept(){ const q=num(val('dlQty'))||1, sys=num(val('dlSystemSale')), sale=num(val('dlSale')); set('dlDiff',((sale-sys)*q).toFixed(2)); },
     renderDeptSharedLines(){ const b=$('deptSharedBox'); if(b) b.innerHTML=deptSharedTable(); },
-    renderDeptApproval(){ const b=$('deptApprovalBox'); if(b) b.innerHTML=deptApprovalTable(); },
-    approveDeptInvoice(){ const order=val('dlOrder') || qs.get('orderId') || qs.get('order') || ''; const d=userDept(); if(!order) return flash('رقم الأوردر مطلوب للاعتماد.',true); const rows=deptReviewRows(); if(!rows.length) return flash('لا توجد بنود مسجلة للاعتماد.',true); if(!confirm('اعتماد فاتورة قسم '+d+' للأوردر '+order+'؟')) return; rows.forEach(r=>{ r.approvalStatus='معتمد من القسم'; r.billingStatus='معتمد من القسم'; r.closeStatus='معتمد من القسم'; r['حالة اعتماد القسم']='معتمد من القسم'; r['حالة الفوترة']='معتمد من القسم'; r['حالة التقفيل']='معتمد من القسم'; r.approvedBy=user.name; r.approvedAt=new Date().toISOString(); }); saveLocal(); api('approveAccountingDeptInvoice',{orderId:order,department:d,customerName:val('dlCustomer')}).then(res=>{ if(res&&res.success===false) flash(res.message||'تعذر الاعتماد على السيرفر',true); else flash((res&&res.message)||'تم اعتماد فاتورة القسم.'); }).catch(e=>flash(e.message||'تعذر اعتماد الفاتورة على السيرفر',true)); shell(); },
+    renderDeptApproval(){ const b=$('deptApprovalBox'); if(b) b.innerHTML=deptApprovalTable(); const stats=$('deptInvoiceStats'); if(stats) stats.innerHTML=deptInvoiceStatsHtml(); },
+    refreshDeptContext(){ refreshDeptContextUi(); },
+    approveDeptInvoiceLegacy(){ const order=val('dlOrder') || qs.get('orderId') || qs.get('order') || ''; const d=userDept(); if(!order) return flash('رقم الأوردر مطلوب للاعتماد.',true); const rows=deptReviewRows(); if(!rows.length) return flash('لا توجد بنود مسجلة للاعتماد.',true); if(!confirm('اعتماد فاتورة قسم '+d+' للأوردر '+order+'؟')) return; rows.forEach(r=>{ r.approvalStatus='معتمد من القسم'; r.billingStatus='معتمد من القسم'; r.closeStatus='معتمد من القسم'; r['حالة اعتماد القسم']='معتمد من القسم'; r['حالة الفوترة']='معتمد من القسم'; r['حالة التقفيل']='معتمد من القسم'; r.approvedBy=user.name; r.approvedAt=new Date().toISOString(); }); saveLocal(); api('approveAccountingDeptInvoice',{orderId:order,department:d,customerName:val('dlCustomer')}).then(res=>{ if(res&&res.success===false) flash(res.message||'تعذر الاعتماد على السيرفر',true); else flash((res&&res.message)||'تم اعتماد فاتورة القسم.'); }).catch(e=>flash(e.message||'تعذر اعتماد الفاتورة على السيرفر',true)); shell(); },
+    async approveDeptInvoice(){
+      const order=val('dlOrder') || qs.get('orderId') || qs.get('order') || '';
+      const d=userDept();
+      if(!order) return flash('رقم الأوردر مطلوب للاعتماد.',true);
+      const rows=deptReviewRows();
+      if(!rows.length) return flash('لا توجد بنود مسجلة للاعتماد.',true);
+      if(!confirm('اعتماد فاتورة قسم '+d+' للأوردر '+order+'؟')) return;
+      flash('جاري اعتماد فاتورة القسم على السيرفر...');
+      try{
+        const res=await api('approveAccountingDeptInvoice',{orderId:order,department:d,customerName:val('dlCustomer')});
+        if(!res || res.success===false) throw new Error((res&&res.message)||'تعذر اعتماد الفاتورة على السيرفر.');
+        rows.forEach(r=>{ r.approvalStatus='معتمد من القسم'; r.billingStatus='معتمد من القسم'; r.closeStatus='معتمد من القسم'; r['حالة اعتماد القسم']='معتمد من القسم'; r['حالة الفوترة']='معتمد من القسم'; r['حالة التقفيل']='معتمد من القسم'; r.approvedBy=user.name; r.approvedAt=new Date().toISOString(); });
+        saveLocal(); shell(); flash(res.message||'تم اعتماد فاتورة القسم.');
+      }catch(e){ flash(e.message||'تعذر اعتماد الفاتورة على السيرفر.',true); }
+    },
     toggleLaserCalc(){ const b=$('laserCalcBox'); if(b) b.classList.toggle('hidden'); },
     saveDeptLineAndOpenSales(){ this.saveDeptLine(); const order=encodeURIComponent(val('dlOrder')); const customer=encodeURIComponent(val('dlCustomer')); setTimeout(()=>{ location.href='?screen=sales&orderId='+order+'&customer='+customer+'&v=es32-v1880-clean-core'; }, 500); },
-    saveDeptLine(){ this.calcDept(); const tpl=selectedDeptTemplate(); const itemDept=tpl?matDept(tpl):val('dlItemDept'); const shared=($('dlSharedLine')&&$('dlSharedLine').checked)||isSharedDeptName(itemDept); const p={lineId:'DLINE-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,6),orderId:val('dlOrder'),customerName:val('dlCustomer'),department:userDept(),itemDepartment:itemDept||userDept(),sharedLine:shared?'نعم':'لا',billingStatus:'مسجل - قيد مراجعة القسم',closeStatus:'قيد مراجعة القسم',approvalStatus:'قيد مراجعة القسم',itemName:val('dlItem'),qty:num(val('dlQty')),systemSale:num(val('dlSystemSale')),sale:num(val('dlSale')),diff:num(val('dlDiff')),notes:val('dlNotes'),user:user.name,date:new Date().toISOString()}; if(!p.customerName||!p.orderId||!p.itemName){ return flash('اسم العميل ورقم الأوردر والصنف مطلوبين.',true); } if(shared){ const dup=(state.data.deptLines||[]).find(x=>isSharedLineRecord(x)&&sameDeptInvoiceContext(x,p.orderId,p.customerName)&&nkey(rowItem(x))===nkey(p.itemName)&&isUnbilledDeptLine(x)); if(dup){ return flash('البند المشترك مسجل بالفعل بواسطة '+rowDept(dup)+' وسيظهر تلقائيًا عند القسم الآخر. لا تسجله مرتين.',true); } } state.data.deptLines.unshift(p); if(p.diff) state.data.wasteLines.unshift({department:p.department,orderId:p.orderId,reason:'فرق سعر عن السيستم',amount:p.diff,paid:0}); saveLocal(); api('saveAccountingDeptLine',p).then(r=>{ if(r&&r.lineId) p.id=r.lineId; }).catch(()=>{}); shell(); flash(shared?'تم حفظ بند مشترك في مسودة القسم وسيظهر عند القسم الآخر':'تم حفظ البند في مسودة فاتورة القسم. راجع البنود ثم اضغط اعتماد فاتورة القسم.'); },
+    saveDeptLine(){ this.calcDept(); const tpl=selectedDeptTemplate(); const itemDept=tpl?matDept(tpl):val('dlItemDept'); const shared=($('dlSharedLine')&&$('dlSharedLine').checked)||isSharedDeptName(itemDept); const unitSale=num(val('dlSale')); const qty=num(val('dlQty'))||1; const p={lineId:'DLINE-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,6),orderId:val('dlOrder'),customerName:val('dlCustomer'),department:userDept(),itemDepartment:itemDept||userDept(),sharedLine:shared?'نعم':'لا',billingStatus:'مسجل - قيد مراجعة القسم',closeStatus:'قيد مراجعة القسم',approvalStatus:'قيد مراجعة القسم',catalogItemId:tpl?(tpl.id||tpl.ID||tpl.catalogItemId||''):'',templateId:tpl?(tpl.id||tpl.ID||''):'',materialName:tpl?(tpl.materialName||tpl['الخامة']||''):'',itemName:val('dlItem'),qty:qty,systemSale:num(val('dlSystemSale')),systemSalePrice:num(val('dlSystemSale')),sale:unitSale,salePrice:unitSale,unitSalePrice:unitSale,lineTotal:unitSale*qty,diff:num(val('dlDiff')),notes:val('dlNotes'),user:user.name,date:new Date().toISOString()}; if(!p.customerName||!p.orderId||!p.itemName){ return flash('اسم العميل ورقم الأوردر والصنف مطلوبين.',true); } if(shared){ const dup=(state.data.deptLines||[]).find(x=>isSharedLineRecord(x)&&sameDeptInvoiceContext(x,p.orderId,p.customerName)&&nkey(rowItem(x))===nkey(p.itemName)&&isUnbilledDeptLine(x)); if(dup){ return flash('البند المشترك مسجل بالفعل بواسطة '+rowDept(dup)+' وسيظهر تلقائيًا عند القسم الآخر. لا تسجله مرتين.',true); } } state.data.deptLines.unshift(p); if(p.diff) state.data.wasteLines.unshift({department:p.department,orderId:p.orderId,reason:'فرق سعر عن السيستم',amount:p.diff,paid:0}); saveLocal(); api('saveAccountingDeptLine',p).then(r=>{ if(r&&r.lineId){p.id=r.lineId;p.ID=r.lineId;} saveLocal(); }).catch(e=>flash('تم حفظ المسودة محليًا وتعذر تأكيدها على السيرفر: '+(e.message||''),true)); set('dlItemSel',''); set('dlItem',''); set('dlItemDept',''); set('dlSystemSale',''); set('dlSale',''); set('dlDiff',''); set('dlNotes',''); set('dlQty','1'); refreshDeptContextUi(); flash(shared?'تم حفظ بند مشترك في مسودة القسم وسيظهر عند القسم الآخر':'تم حفظ البند في مسودة فاتورة القسم. يمكنك إضافة بند جديد ثم الاعتماد.'); },
     aiLaser(){ const m=matByName(val('aiMat')); const w=num(val('aiW')),h=num(val('aiH')),q=num(val('aiQty'))||1; if(!m||!w||!h) return flash('اختار خامة الليزر واكتب المقاس',true); const rawW=num(m.width||m.rawWidth), rawH=num(m.height||m.rawHeight); let pieces=rawW&&rawH?Math.max(Math.floor(rawW/w)*Math.floor(rawH/h),Math.floor(rawW/h)*Math.floor(rawH/w)):1; const waste=num(val('aiWaste')); const adopted=Math.max(1,Math.floor(pieces/(1+waste/100))); const cost=matCost(m)/adopted; const sale=(cost*(num(val('aiFactor'))||2.2)); set('dlItem','ليزر '+materialName(m)+' '+w+'×'+h); set('dlItemDept','ليزر'); const sh=$('dlSharedLine'); if(sh){ sh.checked=false; sh.disabled=false; } set('dlQty',q); set('dlSystemSale',sale.toFixed(2)); set('dlSale',sale.toFixed(2)); this.calcDept(); const a=$('aiMsg'); if(a) a.textContent='الناتج '+pieces+' / المعتمد '+adopted+' / سعر مقترح '+money(sale); },
     saveWaste(){ const p={department:userDept(),orderId:val('waOrder'),reason:val('waReason'),amount:num(val('waAmount')),paid:num(val('waPaid')),user:user.name,date:new Date().toISOString()}; state.data.wasteLines.unshift(p); saveLocal(); api('saveAccountingWaste',p).catch(()=>{}); shell(); flash('تم حفظ الهالك'); },
-    collectDeptLines(){ const order=val('fiOrder'); const rows=(state.data.deptLines||[]).filter(isUnbilledDeptLine).filter(isDeptApprovedForFinal).filter(r=>String(rowOrderId(r)||'')===String(order||'')); const total=rows.reduce((s,r)=>s+rowLineTotal(r),0); const b=$('finalBox'); if(b) b.innerHTML=table(rows,['القسم','البند','كمية','سعر'],r=>[esc(r.department),esc(r.itemName),esc(r.qty),money(r.sale)])+'<div class="softBox"><b>الإجمالي المعتمد: '+money(total)+'</b></div>'; },
-    saveFinal(){ const order=val('fiOrder'); const rows=(state.data.deptLines||[]).filter(isUnbilledDeptLine).filter(isDeptApprovedForFinal).filter(r=>String(rowOrderId(r)||'')===String(order||'')); const lineIds=rows.map(r=>r.id||r.ID||r['ID']).filter(Boolean); if(!order) return flash('رقم الأوردر مطلوب.',true); api('saveAccountingFinalInvoice',{orderId:order,customerName:val('fiCustomer'),lineIds:JSON.stringify(lineIds),paid:num(val('fiPaid'))}).then(res=>{ if(!res||res.success===false){ flash((res&&res.message)||'تعذر تقفيل الفاتورة.',true); return; } const p={invoiceNo:res.invoiceNo,orderId:order,customerName:val('fiCustomer'),finalTotal:res.finalTotal,paid:res.paid,remaining:res.remaining,date:new Date().toISOString()}; state.data.finalInvoices.unshift(p); rows.forEach(r=>{r.billingStatus='تم السحب للفاتورة النهائية';r.closeStatus='تم التقفيل';r['مسحوب للفاتورة النهائية؟']='نعم';r['رقم الفاتورة النهائية']=res.invoiceNo;}); saveLocal(); shell(); flash(res.message||'تم تقفيل الفاتورة من البنود المعتمدة.'); }).catch(e=>flash(e.message||'تعذر الاتصال بالسيرفر.',true)); },
+    collectDeptLines(){ const order=val('fiOrder'); const rows=(state.data.deptLines||[]).filter(isUnbilledDeptLine).filter(isDeptApprovedForFinal).filter(r=>String(rowOrderId(r)||'')===String(order||'')); const total=rows.reduce((s,r)=>s+rowLineTotal(r),0); const b=$('finalBox'); if(b) b.innerHTML=table(rows,['القسم','البند','كمية','سعر الوحدة','الإجمالي'],r=>[esc(rowDept(r)),esc(rowItem(r)),esc(rowQty(r)),money(rowSale(r)),money(rowLineTotal(r))])+'<div class="softBox"><b>الإجمالي: '+money(total)+'</b></div>'; },
+    async saveFinal(){
+      const order=val('fiOrder');
+      if(!order) return flash('رقم الأوردر مطلوب لتقفيل الفاتورة.',true);
+      const rows=(state.data.deptLines||[]).filter(isUnbilledDeptLine).filter(isDeptApprovedForFinal).filter(r=>String(rowOrderId(r)||'')===String(order||''));
+      const lineIds=rows.map(rowLineId).filter(Boolean);
+      const p={orderId:order,customer:val('fiCustomer'),customerName:val('fiCustomer'),paid:num(val('fiPaid')),lineIds:JSON.stringify(lineIds),date:new Date().toISOString()};
+      flash('جاري التحقق من البنود المعتمدة وتقفيل الفاتورة...');
+      try{
+        const res=await api('saveAccountingFinalInvoice',p);
+        if(!res || res.success===false) throw new Error((res&&res.message)||'تعذر تقفيل الفاتورة على السيرفر.');
+        const saved=Object.assign({},p,{no:res.invoiceNo,invoiceNo:res.invoiceNo,subtotal:res.subtotal,finalTotal:res.finalTotal,total:res.finalTotal,remaining:res.remaining,remain:res.remaining,trustedByServer:!!res.trustedByServer});
+        state.data.finalInvoices.unshift(saved);
+        rows.forEach(r=>{ r.closeStatus='تم التقفيل'; r.billingStatus='تم السحب للفاتورة النهائية'; r.invoiceNo=res.invoiceNo; r['حالة التقفيل']='تم التقفيل'; r['حالة الفوترة']='تم السحب للفاتورة النهائية'; r['رقم الفاتورة النهائية']=res.invoiceNo; });
+        saveLocal(); shell(); flash(res.message||('تم تقفيل الفاتورة رقم '+res.invoiceNo));
+      }catch(e){ flash(e.message||'تعذر تقفيل الفاتورة على السيرفر.',true); }
+    },
+    refreshFinalDebt(){ const b=$('finalCustomerDebt'); if(b) b.innerHTML=deptCustomerDebtHtml(val('fiCustomer')); },
     health(){ const h=$('healthBox'); if(h) h.innerHTML='جاري الفحص...'; api('getAccounting').then(r=>{ if(h) h.innerHTML = r && r.success!==false ? '✅ الاتصال سليم والبيانات قابلة للتحميل. الإصدار: '+VERSION : '⚠️ الرد غير ناجح: '+esc(r.message); }).catch(e=>{ if(h) h.innerHTML='❌ فشل الاتصال: '+esc(e.message); }); }
   };
 
@@ -718,100 +761,3 @@ window.EASYSTORE_V1886_PRODUCT_CATALOG_ONLY = true;
 
 /* V1887 - Dept approval flow */
 window.EASYSTORE_V1887_DEPT_APPROVAL_FLOW = true;
-
-
-/*********************** V1896 - Visible Customer Debt Badge ***********************/
-(function(){
-  'use strict';
-  window.EASYSTORE_VERSION = 'ES33 V1896 Debt + Catalog Hard Lock';
-  window.EASYSTORE_MATBAGY_VERSION = 'ES33 V1896 Debt + Catalog Hard Lock';
-  function $(id){return document.getElementById(id);}
-  function txt(v){return String(v==null?'':v).replace(/\s+/g,' ').trim();}
-  function nkey(v){return txt(v).toLowerCase().replace(/[إأآا]/g,'ا').replace(/[ى]/g,'ي').replace(/[ةه]/g,'ه').replace(/[ؤ]/g,'و').replace(/[ئ]/g,'ي');}
-  function num(v){var n=parseFloat(String(v||'').replace(/[٬,]/g,'.').replace(/[^0-9.\-]/g,''));return isFinite(n)?n:0;}
-  function money(n){return num(n).toLocaleString('ar-EG',{maximumFractionDigits:2})+' ج';}
-  function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(m){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m];});}
-  function readData(){try{return JSON.parse(localStorage.getItem('EASYSTORE_CLEAN_V1880_DATA')||'{}');}catch(e){return {};}}
-  function debtOf(c){return num(c && (c.debtAmount||c.debt||c.currentBalance||c.remainingBalance||c.balance||c['مديونية']||c['مديونية حالية']||c['رصيد العميل']||0));}
-  function nameOf(c){return txt(c && (c.name||c.customerName||c.customer||c['اسم العميل']||''));}
-  function phoneOf(c){return txt(c && (c.phone||c.mobile||c.customerPhone||c['رقم العميل']||c['الهاتف']||''));}
-  function findCustomer(){
-    var q=nkey(($('saCustomer')||{}).value||'');
-    var data=readData(), rows=data.customers||[];
-    if(!q || !rows.length) return null;
-    return rows.find(function(c){var blob=nkey([nameOf(c),phoneOf(c),c.type,c.manager,debtOf(c)].join(' ')); return blob.indexOf(q)!==-1 || q.indexOf(nkey(nameOf(c)))!==-1;})||null;
-  }
-  function updateDebtInline(){
-    var c=findCustomer();
-    var d=debtOf(c);
-    var label=$('saCustomerDebtInline');
-    if(label){ label.innerHTML = d>0 ? '<span class="debtBadge strongDebt">مديونية العميل: '+esc(money(d))+'</span>' : '<span class="okBadge">لا مديونية</span>'; }
-    var box=$('saleCustomerDebtBox');
-    if(!box){
-      var ctx=$('saleCustomerContext');
-      if(ctx){ box=document.createElement('div'); box.id='saleCustomerDebtBox'; box.className='saleCustomerDebtBox'; ctx.parentNode.insertBefore(box, ctx); }
-    }
-    if(box){
-      var nm=c?nameOf(c):txt(($('saCustomer')||{}).value||'');
-      box.className='saleCustomerDebtBox '+(d>0?'hasDebt':'noDebt');
-      box.innerHTML=d>0 ? '<b>مديونية العميل '+esc(nm||'')+':</b> '+esc(money(d))+' <span>راجع التحصيل قبل التسليم النهائي.</span>' : '<b>مديونية العميل:</b> لا توجد مديونية مسجلة.';
-    }
-  }
-  var oldRender = window.ES27 && window.ES27.refreshSaleCustomerContext;
-  function wire(){
-    var input=$('saCustomer');
-    if(input && input.dataset.v1894Debt!=='1'){
-      input.dataset.v1894Debt='1';
-      input.addEventListener('input',function(){setTimeout(updateDebtInline,100);});
-      input.addEventListener('change',function(){setTimeout(updateDebtInline,100);});
-      input.addEventListener('focus',function(){setTimeout(updateDebtInline,100);});
-    }
-    if(window.ES27 && window.ES27.refreshSaleCustomerContext && !window.ES27.refreshSaleCustomerContext.__v1894){
-      var orig=window.ES27.refreshSaleCustomerContext;
-      window.ES27.refreshSaleCustomerContext=function(){var r=orig.apply(this,arguments); setTimeout(updateDebtInline,80); return r;};
-      window.ES27.refreshSaleCustomerContext.__v1894=true;
-    }
-    setTimeout(updateDebtInline,80);
-  }
-  document.addEventListener('DOMContentLoaded',wire);
-  document.addEventListener('click',function(ev){var t=ev.target;if(t&&t.closest&&t.closest('#saCustomerDrop,.customerDrop,.btn,[onclick*="pickSaleCustomer"],[onclick*="loadSaleCustomer"]')) setTimeout(function(){wire();updateDebtInline();},200);},true);
-  setTimeout(wire,300); setTimeout(wire,1300);
-})();
-
-
-/*********************** V1896 - Shared Catalog Mirror Lock ***********************/
-(function(){
-  'use strict';
-  var VERSION='ES33 V1896 Debt + Catalog Hard Lock';
-  window.EASYSTORE_VERSION=VERSION;
-  window.EASYSTORE_MATBAGY_VERSION=VERSION;
-  window.EASYSTORE_V1896_DEBT_ADDORDER_CATALOG_HARD_LOCK=true;
-  function read(){ try{return JSON.parse(localStorage.getItem('EASYSTORE_CLEAN_V1880_DATA')||'{}');}catch(e){return{};} }
-  function mirror(){
-    try{
-      var d=read();
-      var templates=[].concat(d.templates||[], d.items||[], d.products||[], d.recipes||[]).filter(function(r){
-        var name=(r && (r.itemName||r.templateName||r.productName||r.name||r['اسم البند']||r['اسم الصنف']||''));
-        return String(name||'').trim();
-      });
-      var payload=JSON.stringify({templates:templates,items:templates,products:templates,recipes:templates,materials:d.materials||[],customers:d.customers||[],updatedAt:new Date().toISOString(),version:'V1896'});
-      ['MATBAGY_SHARED_CATALOG_LATEST','MATBAGY_SHARED_CATALOG_V1896','MATBAGY_SHARED_CATALOG_V1895','MATBAGY_SHARED_CATALOG_V1894','MATBAGY_SHARED_CATALOG_V1893','MATBAGY_SHARED_CATALOG_V1892'].forEach(function(k){localStorage.setItem(k,payload);});
-      return templates.length;
-    }catch(e){return 0;}
-  }
-  function wrap(){
-    if(window.ES27 && !window.ES27.__v1896Mirror){
-      ['load','saveItem','saveRecipe','saveDeptLine'].forEach(function(fn){
-        if(typeof window.ES27[fn]==='function'){
-          var old=window.ES27[fn];
-          window.ES27[fn]=function(){ var r=old.apply(this,arguments); setTimeout(mirror,150); setTimeout(mirror,900); return r; };
-        }
-      });
-      window.ES27.__v1896Mirror=true;
-    }
-    mirror();
-  }
-  document.addEventListener('DOMContentLoaded',function(){setTimeout(wrap,300);setTimeout(wrap,1400);});
-  document.addEventListener('click',function(ev){var t=ev.target;if(t&&/حفظ|تحديث|الصنف|مكونات/.test((t.textContent||'')+' '+(t.id||''))){setTimeout(mirror,350);setTimeout(mirror,1200);}},true);
-  setTimeout(wrap,500);setTimeout(wrap,2000);
-})();
