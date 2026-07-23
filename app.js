@@ -1,7 +1,7 @@
 (function(){
   'use strict';
 
-  const VERSION = 'ES32 V1880 Clean Core';
+  const VERSION = 'ES34 V1909 Sales Merge Flow';
   window.EASYSTORE_MATBAGY_VERSION = VERSION;
 
   const app = document.getElementById('app');
@@ -313,26 +313,42 @@
   function salePulledIds(){ const ids={}; (state.salePulledLines||[]).forEach(r=>{ ids[nkey(rowLineId(r)||JSON.stringify(r))]=true; }); return ids; }
   function salePulledTotal(){ return (state.salePulledLines||[]).reduce((s,r)=>s + rowLineTotal(r),0); }
   function salePulledLineIds(){ return (state.salePulledLines||[]).map(rowLineId).filter(Boolean); }
+  function salePulledDeptSummary(){
+    const rows=state.salePulledLines||[];
+    const byDept={}, orderMap={};
+    let shared=0;
+    rows.forEach(r=>{
+      const d=rowDept(r)||'قسم';
+      byDept[d]=(byDept[d]||0)+1;
+      if(isSharedLineRecord(r)) shared++;
+      if(rowOrderId(r)) orderMap[rowOrderId(r)]=true;
+    });
+    const parts=Object.keys(byDept).map(d=>d+': '+byDept[d]+' بند');
+    if(shared) parts.push('مشترك: '+shared);
+    return { text:parts.length?parts.join(' / '):'لم يتم ضم بنود بعد', orders:Object.keys(orderMap) };
+  }
   function updateSaleTotalsFromPulled(){
     const pulled = salePulledTotal();
     const manual = num(val('saQty'))*num(val('saUnit'));
     const total = Math.max(0, pulled + manual - num(val('saDiscount')));
     set('saTotal', total.toFixed(2));
     set('saRemain', Math.max(0,total-num(val('saPaid'))).toFixed(2));
-    const b=$('salePulledSummary'); if(b) b.innerHTML = '<b>إجمالي بنود وائل/جابر:</b> '+money(pulled)+' / <b>إجمالي الفاتورة:</b> '+money(total);
+    const s=salePulledDeptSummary();
+    const orderWarn=s.orders.length>1?' <span class="warnText">اختار أوردر واحد قبل الحفظ النهائي.</span>':'';
+    const b=$('salePulledSummary'); if(b) b.innerHTML = '<b>تجميع وائل/جابر:</b> '+esc(s.text)+' / <b>إجمالي بنود الأقسام:</b> '+money(pulled)+' / <b>إجمالي الفاتورة:</b> '+money(total)+orderWarn;
   }
   function salePulledTable(){
     const rows = state.salePulledLines || [];
     if(!rows.length) return '<div class="empty">لم يتم سحب بنود من الأقسام بعد.</div>';
-    return table(rows,['القسم','رقم الأوردر','البند','كمية','سعر','حذف'],(r,i)=>[esc(rowDept(r)),esc(rowOrderId(r)),esc(rowItem(r)),esc(rowQty(r)),money(rowSale(r)),`<button class="btn small danger" onclick="ES27.removePulledLine(${i})">حذف</button>`]);
+    return table(rows,['القسم','مشترك','رقم الأوردر','البند','كمية','سعر','حذف'],(r,i)=>[esc(rowDept(r)),isSharedLineRecord(r)?'<span class="pill warn">مشترك</span>':'-',esc(rowOrderId(r)),esc(rowItem(r)),esc(rowQty(r)),money(rowSale(r)),`<button class="btn small danger" onclick="ES27.removePulledLine(${i})">حذف</button>`]);
   }
   function saleCandidateTable(rows){
     rows = rows || saleCandidateLines();
     if(!rows.length) return '<div class="empty">لا توجد بنود غير مفوترة مطابقة للعميل/الأوردر.</div>';
     const picked=salePulledIds();
-    return table(rows,['ضم','القسم','الأوردر','العميل','البند','كمية','سعر'],(r,i)=>{
+    return table(rows,['ضم','القسم','مشترك','الأوردر','العميل','البند','كمية','سعر'],(r,i)=>{
       const key=nkey(rowLineId(r)||JSON.stringify(r));
-      return [`<input type="checkbox" class="saleLinePick" data-key="${esc(key)}" ${picked[key]?'checked':''}>`,esc(rowDept(r)),esc(rowOrderId(r)),esc(rowCustomer(r)),esc(rowItem(r)),esc(rowQty(r)),money(rowSale(r))];
+      return [`<input type="checkbox" class="saleLinePick" data-key="${esc(key)}" ${picked[key]?'checked':''}>`,esc(rowDept(r)),isSharedLineRecord(r)?'<span class="pill warn">مشترك</span>':'-',esc(rowOrderId(r)),esc(rowCustomer(r)),esc(rowItem(r)),esc(rowQty(r)),money(rowSale(r))];
     });
   }
   function renderSalePulledBoxes(){
@@ -357,6 +373,29 @@
     const ord=nkey(val('saOrder'));
     return (state.data.finalInvoices||[]).filter(r=>saleMatchesCustomer(r,c)).filter(r=>!ord || nkey(saleOrderId(r)).includes(ord));
   }
+  function salesHistoryRows(){
+    const out=[], seen={};
+    function add(r,source){
+      const no=saleFinalNo(r) || (r.id||r.ID||'');
+      const key=nkey(no || JSON.stringify(r));
+      if(seen[key]) return;
+      seen[key]=true;
+      out.push(Object.assign({historySource:source},r));
+    }
+    (state.data.sales||[]).forEach(r=>add(r,'مبيعات'));
+    (state.data.finalInvoices||[]).forEach(r=>add({
+      no:saleFinalNo(r),
+      invoiceNo:saleFinalNo(r),
+      orderId:saleOrderId(r),
+      customer:r.customer||r.customerName||r['اسم العميل']||'',
+      item:r.item||r['بند يدوي']||'فاتورة موحدة من بنود الأقسام',
+      qty:r.qty||r.lineCount||'',
+      total:r.total||r.finalTotal||r['الإجمالي النهائي']||0,
+      paid:r.paid||r['المدفوع']||0,
+      remain:r.remain||r.remaining||r['الباقي']||0
+    },'تقفيل نهائي'));
+    return out;
+  }
   function orderIdsForCustomer(c){
     const map={};
     (state.data.deptLines||[]).forEach(r=>{ if(customerMatchesRow(r,c) && rowOrderId(r)) map[rowOrderId(r)] = true; });
@@ -369,6 +408,7 @@
     return 'DRAFT-' + base;
   }
   function officialSaleNo(){ return 'ES-' + Date.now().toString().slice(-7); }
+  function selectedSaleTemplate(){ const raw=val('saItem'); return raw==='' ? null : (visibleTemplates()[num(raw)] || null); }
   function setInvoiceNoForContext(c){
     const finals = currentSaleRowsForCustomer(c).concat(finalRowsForCustomer(c));
     const final = finals.find(r=>saleFinalNo(r) && !/^DRAFT/i.test(saleFinalNo(r)));
@@ -438,7 +478,7 @@
     const qOrder = esc(qs.get('orderId') || qs.get('order') || '');
     const qCustomer = esc(qs.get('customer') || qs.get('customerName') || '');
     return `<div class="card"><h2>فاتورة مبيعات موحدة</h2>
-      <div class="hint">اكتب جزء من اسم العميل أو اضغط على الخانة لتحميل عملاء المنصة. تقدر تسحب بنود وائل وجابر غير المفوترة وتطلع فاتورة واحدة للعميل.</div>
+      <div class="hint">وائل وجابر يسجلوا بنود كل قسم، والبند المشترك يظهر للطرف الآخر. ضياء/رحمه/ريفان من هنا يسحبوا فاتورتي القسمين ويقفلوهم كفاتورة واحدة للعميل.</div>
       <div class="grid four">
         <div class="field"><label>رقم الفاتورة</label><input id="saNo" value="SAL-${Date.now().toString().slice(-6)}"></div>
         <div class="field customerField"><label>العميل</label><input id="saCustomer" value="${qCustomer}" autocomplete="off" onfocus="ES27.focusSaleCustomer()" oninput="ES27.searchSaleCustomers(this.value)" onkeydown="ES27.unlockCustomerDropdown()"><div id="saCustomerDrop" class="customerDrop hidden"></div></div>
@@ -455,11 +495,11 @@
         <div class="field"><label>مدفوع</label><input id="saPaid" type="number" value="0" oninput="ES27.calcSale()"></div>
       </div>
       <div class="grid two"><div class="field"><label>متبقي</label><input id="saRemain" readonly></div><div class="field"><label>ملاحظات</label><input id="saNotes"></div></div>
-      <div class="actions"><button class="btn secondary" onclick="ES27.pullDeptCandidates()">سحب بنود وائل وجابر</button><button class="btn" onclick="ES27.addPickedDeptLines()">ضم البنود المحددة</button><button class="btn" onclick="ES27.saveSale()">حفظ الفاتورة الموحدة</button><span class="menuWrap"><button class="btn secondary" onclick="ES27.toggleClientInvoiceMenu(event)">فاتورة العميل ▾</button><span id="clientInvoiceMenu" class="clientInvoiceMenu hidden"><button onclick="ES27.showPricePreview()">عرض التسعير</button><button onclick="ES27.printSale()">PDF / طباعة</button><button onclick="ES27.downloadSaleImage()">صورة</button><button onclick="ES27.copySaleText()">نسخ نص الفاتورة</button><button onclick="ES27.openSaleWhatsApp()">إرسال واتساب</button></span></span></div>
+      <div class="actions"><button class="btn secondary" onclick="ES27.pullDeptCandidates()">سحب فاتورتي وائل وجابر</button><button class="btn" onclick="ES27.addPickedDeptLines()">ضم البنود المحددة</button><button class="btn" onclick="ES27.saveSale()">حفظ الفاتورة الموحدة</button><span class="menuWrap"><button class="btn secondary" onclick="ES27.toggleClientInvoiceMenu(event)">فاتورة العميل ▾</button><span id="clientInvoiceMenu" class="clientInvoiceMenu hidden"><button onclick="ES27.showPricePreview()">عرض التسعير</button><button onclick="ES27.printSale()">PDF / طباعة</button><button onclick="ES27.downloadSaleImage()">صورة</button><button onclick="ES27.copySaleText()">نسخ نص الفاتورة</button><button onclick="ES27.openSaleWhatsApp()">إرسال واتساب</button></span></span></div>
       <div id="salePulledSummary" class="softBox"></div>
     </div>
     <div class="split"><div class="card"><h3>بنود غير مفوترة من الأقسام</h3><div id="saleCandidatesBox">${saleCandidateTable()}</div></div><div class="card"><h3>البنود المضمومة للفاتورة</h3><div id="salePulledBox">${salePulledTable()}</div></div></div>
-    ${table(state.data.sales,['رقم','عميل','صنف/تجميع','كمية','إجمالي','مدفوع','متبقي'],s=>[esc(s.no||s.invoiceNo),esc(s.customer),esc(s.item||s.itemName||s.description),esc(s.qty),money(s.total),money(s.paid),money(s.remain)])}`;
+    <div class="card"><h3>فواتير المبيعات المحفوظة</h3>${table(salesHistoryRows(),['رقم','عميل','صنف/تجميع','كمية','إجمالي','مدفوع','متبقي','المصدر'],s=>[esc(s.no||s.invoiceNo),esc(s.customer),esc(s.item||s.itemName||s.description),esc(s.qty),money(s.total),money(s.paid),money(s.remain),esc(s.historySource||'مبيعات')])}</div>`;
   }
 
   function screenStock(){ return `<div class="card"><h2>المخزون</h2>${table(materialRows(),['الخامة/الصنف','القسم','النوع','الرصيد','حد النقص','تكلفة','بيع','حالة'],r=>[esc(materialName(r)),esc(matDept(r)),esc(materialKindLabel(matType(r))),esc(matStock(r)),esc(matMin(r)),isAdmin()?money(matCost(r)):'<span class="costHidden">مخفي</span>',money(matSale(r)),activeRow(r)?'مفعل':'موقوف'])}</div><div class="card"><h3>حركة المخزون</h3>${table(state.data.stockMoves,['التاريخ','الخامة','داخل','خارج','الرصيد','المصدر'],r=>[esc(r.date||r['وقت التسجيل']||''),esc(r.materialName||r['الخامة']||''),esc(r.inQty||r['داخل']||''),esc(r.outQty||r['خارج']||''),esc(r.balance||r['الرصيد']||''),esc(r.source||r['المصدر']||'')])}</div>`; }
@@ -598,7 +638,7 @@
   window.ES27 = {
     go(t){ state.active = t; shell(); },
     load,
-    hardReload(){ const url = location.pathname + '?v=es32-v1880-clean-core-' + Date.now() + '&name=' + encodeURIComponent(user.name) + '&username=' + encodeURIComponent(user.username) + '&token=' + encodeURIComponent(user.token || ''); location.href = url; },
+    hardReload(){ const url = location.pathname + '?v=es34-v1909-sales-merge-flow-' + Date.now() + '&name=' + encodeURIComponent(user.name) + '&username=' + encodeURIComponent(user.username) + '&token=' + encodeURIComponent(user.token || ''); location.href = url; },
     quickSearch(q){ q=nkey(q); if(!q) return; const found = templates().find(r=>nkey(templateName(r)).includes(q)) || materials().find(r=>nkey(materialName(r)).includes(q)); if(found) flash('تم العثور على: ' + (templateName(found)||materialName(found))); },
     saveSupplier(){ const s={name:val('supName'),phone:val('supPhone'),opening:num(val('supOpening')),address:val('supAddress')}; if(!s.name) return flash('اكتب اسم المورد',true); const i=state.data.suppliers.findIndex(x=>nkey(x.name||x.supplier)===nkey(s.name)); if(i>=0) state.data.suppliers[i]=s; else state.data.suppliers.unshift(s); saveLocal(); api('saveEasyStoreSupplier',s).catch(()=>{}); shell(); flash('تم حفظ المورد'); },
     editSupplier(i){ const s=state.data.suppliers[i]; if(!s) return; set('supName',s.name||s.supplier); set('supPhone',s.phone); set('supOpening',s.opening||s.openingBalance); set('supAddress',s.address); },
@@ -643,22 +683,49 @@
     archiveItem(i){ const r=productTemplates()[i]; if(!r || !confirm('إيقاف الصنف ' + templateName(r) + '؟')) return; r.active='لا'; r['مفعل']='لا'; saveLocal(); api('archiveAccountingTemplate',{itemName:templateName(r),department:matDept(r)}).catch(()=>{}); shell(); },
     calcPurchase(){ const total=num(val('puQty'))*num(val('puUnit')); set('puTotal',total.toFixed(2)); set('puRemain',Math.max(0,total-num(val('puPaid'))).toFixed(2)); },
     savePurchase(){ this.calcPurchase(); const p={no:val('puNo'),supplier:val('puSupplier'),paymentType:val('puPay'),dueDate:val('puDue'),material:val('puMat'),qty:num(val('puQty')),unit:num(val('puUnit')),paid:num(val('puPaid')),total:num(val('puTotal')),remain:num(val('puRemain')),notes:val('puNotes'),date:new Date().toISOString()}; state.data.purchases.unshift(p); state.data.stockMoves.unshift({date:now(),materialName:p.material,inQty:p.qty,outQty:0,balance:'',source:'فاتورة شراء '+p.no}); saveLocal(); api('saveEasyStorePurchaseV2',p).catch(()=>{}); shell(); flash('تم حفظ فاتورة الشراء'); },
-    applySaleItem(){ const r=visibleTemplates()[num(val('saItem'))]; if(!r) return; set('saUnit',matSale(r)); this.calcSale(); },
+    applySaleItem(){ const r=selectedSaleTemplate(); if(!r) return; set('saUnit',matSale(r)); this.calcSale(); },
     calcSale(){ updateSaleTotalsFromPulled(); },
     async saveSale(){
       this.calcSale();
-      const r=visibleTemplates()[num(val('saItem'))];
+      const r=selectedSaleTemplate();
       const lineIds=salePulledLineIds();
-      const desc = (state.salePulledLines||[]).map(x=>rowDept(x)+': '+rowItem(x)+' × '+rowQty(x)).join(' / ');
+      const pulledRows=state.salePulledLines||[];
+      const manualQty=num(val('saQty'));
+      const manualUnit=num(val('saUnit'));
+      const manualAmount=manualQty*manualUnit;
+      const manualDescription=(r?templateName(r):val('saItem'));
+      const desc = pulledRows.map(x=>rowDept(x)+': '+rowItem(x)+' × '+rowQty(x)).join(' / ');
+      const pulledOrders=salePulledDeptSummary().orders;
+      if(!val('saCustomer')) return flash('اختار العميل قبل حفظ الفاتورة.',true);
+      if(lineIds.length && !val('saOrder')) return flash('رقم الأوردر مطلوب لتقفيل بنود وائل/جابر.',true);
+      if(lineIds.length && pulledOrders.length>1) return flash('لا يمكن تقفيل أكتر من أوردر في نفس الفاتورة. اختار رقم أوردر واحد ثم اسحب البنود.',true);
+      if(!lineIds.length && !manualDescription && !manualAmount) return flash('أضف بند يدوي أو اسحب بنود وائل/جابر أولًا.',true);
       if(/^DRAFT/i.test(val('saNo')) || !val('saNo')) set('saNo', officialSaleNo());
-      const p={no:val('saNo'),customer:val('saCustomer'),customerPhone:customerMainPhone(state.saleSelectedCustomer||{}),orderId:val('saOrder'),paymentType:val('saPay'),item:desc || (r?templateName(r):val('saItem')) || 'فاتورة مبيعات موحدة',qty:num(val('saQty'))||1,unit:num(val('saUnit')),discount:num(val('saDiscount')),paid:num(val('saPaid')),total:num(val('saTotal')),remain:num(val('saRemain')),notes:val('saNotes'),lineIds:JSON.stringify(lineIds),date:new Date().toISOString()};
-      state.data.sales.unshift(p);
-      if(p.item) state.data.stockMoves.unshift({date:now(),materialName:p.item,inQty:0,outQty:p.qty,balance:'',source:'فاتورة بيع '+p.no});
-      (state.salePulledLines||[]).forEach(x=>{ x.closeStatus='تم التقفيل'; x.invoiceNo=p.no; x['حالة التقفيل']='تم التقفيل'; x['رقم الفاتورة النهائية']=p.no; });
-      saveLocal();
-      try{ await api('saveEasyStoreSaleV2',p); }catch(e){}
-      if(lineIds.length){ try{ await api('saveAccountingFinalInvoice',{orderId:p.orderId,customerName:p.customer,subtotal:p.total,discount:num(val('saDiscount')),finalTotal:p.total,paid:p.paid,remaining:p.remain,lineIds:JSON.stringify(lineIds),notes:p.notes,status:p.remain>0?'عليها باقي':'مدفوعة'}); }catch(e){} }
-      state.salePulledLines=[]; state.saleSelectedCustomer=null; shell(); flash('تم حفظ الفاتورة الرسمية رقم '+p.no+' وربطها ببنود وائل/جابر.');
+      const p={no:val('saNo'),customer:val('saCustomer'),customerPhone:customerMainPhone(state.saleSelectedCustomer||{}),orderId:val('saOrder'),paymentType:val('saPay'),item:desc || manualDescription || 'فاتورة مبيعات موحدة',qty:manualQty||pulledRows.length||1,unit:manualUnit,discount:num(val('saDiscount')),paid:num(val('saPaid')),total:num(val('saTotal')),remain:num(val('saRemain')),notes:val('saNotes'),lineIds:JSON.stringify(lineIds),date:new Date().toISOString()};
+      flash('جاري حفظ الفاتورة على السيرفر...');
+      try{
+        if(lineIds.length){
+          const res=await api('saveAccountingFinalInvoice',{orderId:p.orderId,customerName:p.customer,paymentType:p.paymentType,paid:p.paid,discount:p.discount,lineIds:JSON.stringify(lineIds),manualDescription:manualDescription||'',manualAmount:manualAmount||0,notes:p.notes,status:p.remain>0?'عليها باقي':'مدفوعة'});
+          if(!res || res.success===false) throw new Error((res&&res.message)||'تعذر تقفيل الفاتورة على السيرفر.');
+          p.no=res.invoiceNo||p.no;
+          p.invoiceNo=p.no;
+          p.total=num(res.finalTotal)||p.total;
+          p.paid=num(res.paid)||p.paid;
+          p.remain=(res.remaining!==undefined)?num(res.remaining):p.remain;
+          set('saNo',p.no); set('saTotal',p.total.toFixed(2)); set('saPaid',p.paid); set('saRemain',p.remain.toFixed(2));
+          state.data.finalInvoices.unshift({invoiceNo:p.no,no:p.no,orderId:p.orderId,customer:p.customer,customerName:p.customer,total:p.total,finalTotal:p.total,paid:p.paid,remain:p.remain,remaining:p.remain,lineCount:res.lineCount,item:p.item,date:new Date().toISOString()});
+        } else {
+          const res=await api('saveEasyStoreSaleV2',p);
+          if(!res || res.success===false) throw new Error((res&&res.message)||'تعذر حفظ فاتورة البيع على السيرفر.');
+        }
+        state.data.sales.unshift(p);
+        if(!lineIds.length && p.item) state.data.stockMoves.unshift({date:now(),materialName:p.item,inQty:0,outQty:p.qty,balance:'',source:'فاتورة بيع '+p.no});
+        pulledRows.forEach(x=>{ x.closeStatus='تم التقفيل'; x.invoiceNo=p.no; x['حالة التقفيل']='تم التقفيل'; x['رقم الفاتورة النهائية']=p.no; });
+        saveLocal();
+        state.salePulledLines=[]; state.saleSelectedCustomer=null; shell(); flash('تم حفظ الفاتورة الرسمية رقم '+p.no+' وربطها ببنود وائل/جابر.');
+      }catch(e){
+        flash('لم يتم حفظ الفاتورة: '+(e.message||e),true);
+      }
     },
     printSale(){ closeFloatingPanels(); const w=window.open('','_blank'); if(!w) return alert('اسمح بفتح نافذة الطباعة.'); w.document.write(this.invoiceHtml()); w.document.close(); },
     kitchenMode(mode){ const b=$('kitchenBox'); if(b) b.innerHTML = mode==='recipe' ? recipeForm() : rawForm(); },
@@ -702,7 +769,7 @@
       }catch(e){ flash(e.message||'تعذر اعتماد الفاتورة على السيرفر.',true); }
     },
     toggleLaserCalc(){ const b=$('laserCalcBox'); if(b) b.classList.toggle('hidden'); },
-    saveDeptLineAndOpenSales(){ this.saveDeptLine(); const order=encodeURIComponent(val('dlOrder')); const customer=encodeURIComponent(val('dlCustomer')); setTimeout(()=>{ location.href='?screen=sales&orderId='+order+'&customer='+customer+'&v=es32-v1880-clean-core'; }, 500); },
+    saveDeptLineAndOpenSales(){ this.saveDeptLine(); const order=encodeURIComponent(val('dlOrder')); const customer=encodeURIComponent(val('dlCustomer')); setTimeout(()=>{ location.href='?screen=sales&orderId='+order+'&customer='+customer+'&v=es34-v1909-sales-merge-flow'; }, 500); },
     saveDeptLine(){ this.calcDept(); const tpl=selectedDeptTemplate(); const itemDept=tpl?matDept(tpl):val('dlItemDept'); const shared=($('dlSharedLine')&&$('dlSharedLine').checked)||isSharedDeptName(itemDept); const unitSale=num(val('dlSale')); const qty=num(val('dlQty'))||1; const p={lineId:'DLINE-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,6),orderId:val('dlOrder'),customerName:val('dlCustomer'),department:userDept(),itemDepartment:itemDept||userDept(),sharedLine:shared?'نعم':'لا',billingStatus:'مسجل - قيد مراجعة القسم',closeStatus:'قيد مراجعة القسم',approvalStatus:'قيد مراجعة القسم',catalogItemId:tpl?(tpl.id||tpl.ID||tpl.catalogItemId||''):'',templateId:tpl?(tpl.id||tpl.ID||''):'',materialName:tpl?(tpl.materialName||tpl['الخامة']||''):'',itemName:val('dlItem'),qty:qty,systemSale:num(val('dlSystemSale')),systemSalePrice:num(val('dlSystemSale')),sale:unitSale,salePrice:unitSale,unitSalePrice:unitSale,lineTotal:unitSale*qty,diff:num(val('dlDiff')),notes:val('dlNotes'),user:user.name,date:new Date().toISOString()}; if(!p.customerName||!p.orderId||!p.itemName){ return flash('اسم العميل ورقم الأوردر والصنف مطلوبين.',true); } if(shared){ const dup=(state.data.deptLines||[]).find(x=>isSharedLineRecord(x)&&sameDeptInvoiceContext(x,p.orderId,p.customerName)&&nkey(rowItem(x))===nkey(p.itemName)&&isUnbilledDeptLine(x)); if(dup){ return flash('البند المشترك مسجل بالفعل بواسطة '+rowDept(dup)+' وسيظهر تلقائيًا عند القسم الآخر. لا تسجله مرتين.',true); } } state.data.deptLines.unshift(p); if(p.diff) state.data.wasteLines.unshift({department:p.department,orderId:p.orderId,reason:'فرق سعر عن السيستم',amount:p.diff,paid:0}); saveLocal(); api('saveAccountingDeptLine',p).then(r=>{ if(r&&r.lineId){p.id=r.lineId;p.ID=r.lineId;} saveLocal(); }).catch(e=>flash('تم حفظ المسودة محليًا وتعذر تأكيدها على السيرفر: '+(e.message||''),true)); set('dlItemSel',''); set('dlItem',''); set('dlItemDept',''); set('dlSystemSale',''); set('dlSale',''); set('dlDiff',''); set('dlNotes',''); set('dlQty','1'); refreshDeptContextUi(); flash(shared?'تم حفظ بند مشترك في مسودة القسم وسيظهر عند القسم الآخر':'تم حفظ البند في مسودة فاتورة القسم. يمكنك إضافة بند جديد ثم الاعتماد.'); },
     aiLaser(){ const m=matByName(val('aiMat')); const w=num(val('aiW')),h=num(val('aiH')),q=num(val('aiQty'))||1; if(!m||!w||!h) return flash('اختار خامة الليزر واكتب المقاس',true); const rawW=num(m.width||m.rawWidth), rawH=num(m.height||m.rawHeight); let pieces=rawW&&rawH?Math.max(Math.floor(rawW/w)*Math.floor(rawH/h),Math.floor(rawW/h)*Math.floor(rawH/w)):1; const waste=num(val('aiWaste')); const adopted=Math.max(1,Math.floor(pieces/(1+waste/100))); const cost=matCost(m)/adopted; const sale=(cost*(num(val('aiFactor'))||2.2)); set('dlItem','ليزر '+materialName(m)+' '+w+'×'+h); set('dlItemDept','ليزر'); const sh=$('dlSharedLine'); if(sh){ sh.checked=false; sh.disabled=false; } set('dlQty',q); set('dlSystemSale',sale.toFixed(2)); set('dlSale',sale.toFixed(2)); this.calcDept(); const a=$('aiMsg'); if(a) a.textContent='الناتج '+pieces+' / المعتمد '+adopted+' / سعر مقترح '+money(sale); },
     saveWaste(){ const p={department:userDept(),orderId:val('waOrder'),reason:val('waReason'),amount:num(val('waAmount')),paid:num(val('waPaid')),user:user.name,date:new Date().toISOString()}; state.data.wasteLines.unshift(p); saveLocal(); api('saveAccountingWaste',p).catch(()=>{}); shell(); flash('تم حفظ الهالك'); },
