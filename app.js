@@ -1,7 +1,7 @@
 (function(){
   'use strict';
 
-  const VERSION = 'ES36 V1911 Admin Final Tab';
+  const VERSION = 'ES37 V1912 Final Pending Search';
   window.EASYSTORE_MATBAGY_VERSION = VERSION;
 
   const app = document.getElementById('app');
@@ -199,6 +199,12 @@
       drop.innerHTML = '';
       drop.__rows = [];
     }
+    const finalDrop = $('fiCustomerDrop');
+    if(finalDrop){
+      finalDrop.classList.add('hidden');
+      finalDrop.innerHTML = '';
+      finalDrop.__rows = [];
+    }
     const menu = $('clientInvoiceMenu');
     if(menu) menu.classList.add('hidden');
   }
@@ -304,12 +310,13 @@
   }
   function pendingFinalGroups(){
     const map={};
-    (state.data.deptLines||[]).filter(isUnbilledDeptLine).filter(isDeptApprovedForFinal).forEach(r=>{
+    (state.data.deptLines||[]).filter(isUnbilledDeptLine).forEach(r=>{
       const order=rowOrderId(r)||'بدون رقم';
       const customer=rowCustomer(r)||'عميل غير محدد';
       const key=nkey(order)+'|'+nkey(customer);
-      if(!map[key]) map[key]={orderId:order,customerName:customer,rows:[],departments:{},shared:0};
+      if(!map[key]) map[key]={orderId:order,customerName:customer,rows:[],departments:{},shared:0,approved:0};
       map[key].rows.push(r);
+      if(isDeptApprovedForFinal(r)) map[key].approved++;
       const d=rowDept(r)||'قسم';
       map[key].departments[d]=(map[key].departments[d]||0)+1;
       if(isSharedLineRecord(r)) map[key].shared++;
@@ -318,15 +325,19 @@
   }
   function pendingFinalTable(){
     const rows=pendingFinalGroups();
-    if(!rows.length) return '<div class="empty">لا توجد فواتير جاهزة للتقفيل حاليًا.</div>';
-    const heads=['الأوردر','العميل','الأقسام','بنود','إجمالي','إجراء'];
-    if(isAdmin()) heads.splice(5,0,'ربحية ضياء');
+    if(!rows.length) return '<div class="empty">لا توجد فواتير أقسام غير مقفولة حاليًا.</div>';
+    const heads=['الأوردر','العميل','الأقسام','بنود','الحالة','إجمالي','إجراء'];
+    if(isAdmin()) heads.splice(6,0,'ربحية ضياء');
     return table(rows,heads,g=>{
       const st=profitStatsForLines(g.rows);
       const deptText=Object.keys(g.departments).map(d=>d+': '+g.departments[d]).join(' / ')+(g.shared?' / مشترك: '+g.shared:'');
-      const base=[esc(g.orderId),esc(g.customerName),esc(deptText),esc(g.rows.length),money(st.total)];
+      const ready = g.approved === g.rows.length;
+      const status = ready ? '<span class="pill">جاهزة للتقفيل</span>' : '<span class="pill warn">محتاجة اعتماد القسم '+g.approved+'/'+g.rows.length+'</span>';
+      const base=[esc(g.orderId),esc(g.customerName),esc(deptText),esc(g.rows.length),status,money(st.total)];
       if(isAdmin()) base.push('<span class="profitOnly">تكلفة: '+money(st.cost)+' / ربح: '+money(st.profit)+' / '+st.margin.toFixed(1)+'%</span>');
-      base.push(`<button class="btn small" onclick="ES27.pickPendingFinal('${esc(String(g.orderId)).replace(/'/g,'&#39;')}','${esc(String(g.customerName)).replace(/'/g,'&#39;')}')">مراجعة وتقفيل</button>`);
+      base.push(ready
+        ? `<button class="btn small" onclick="ES27.pickPendingFinal('${esc(String(g.orderId)).replace(/'/g,'&#39;')}','${esc(String(g.customerName)).replace(/'/g,'&#39;')}')">مراجعة وتقفيل</button>`
+        : `<button class="btn small secondary" onclick="ES27.approvePendingFinal('${esc(String(g.orderId)).replace(/'/g,'&#39;')}','${esc(String(g.customerName)).replace(/'/g,'&#39;')}')">اعتماد وفتح للتقفيل</button>`);
       return base;
     });
   }
@@ -465,6 +476,14 @@
     (state.data.finalInvoices||[]).forEach(r=>{ if(saleMatchesCustomer(r,c) && saleOrderId(r)) map[saleOrderId(r)] = true; });
     return Object.keys(map).filter(Boolean);
   }
+  function pendingGroupsForCustomer(c){
+    return pendingFinalGroups().filter(g=>customerMatchesRow({customerName:g.customerName,customer:g.customerName},c));
+  }
+  function autoPickFinalOrderForCustomer(c){
+    if(val('fiOrder')) return;
+    const g=pendingGroupsForCustomer(c)[0];
+    if(g) set('fiOrder',g.orderId);
+  }
   function saleDraftNo(order,c){
     const base = String(order || customerMainPhone(c) || customerMainName(c) || Date.now()).replace(/[^0-9A-Za-z\u0600-\u06FF_-]+/g,'').slice(-12) || Date.now().toString().slice(-6);
     return 'DRAFT-' + base;
@@ -533,6 +552,13 @@
     rows = rows || [];
     if(!rows.length){ box.innerHTML='<div class="custDropHint">اكتب جزء من الاسم أو الرقم للبحث في عملاء المنصة.</div>'; box.classList.remove('hidden'); return; }
     box.innerHTML=rows.map((c,i)=>`<button type="button" onclick="ES27.pickSaleCustomer(${i})" data-cust-index="${i}">${esc(customerLabel(c))}</button>`).join('');
+    box.__rows=rows; box.classList.remove('hidden');
+  }
+  function renderFinalCustomerDropdown(rows){
+    const box=$('fiCustomerDrop'); if(!box) return;
+    rows = rows || [];
+    if(!rows.length){ box.innerHTML='<div class="custDropHint">اكتب جزء من الاسم أو الرقم للبحث في عملاء المنصة.</div>'; box.classList.remove('hidden'); return; }
+    box.innerHTML=rows.map((c,i)=>`<button type="button" onclick="ES27.pickFinalCustomer(${i})" data-cust-index="${i}">${esc(customerLabel(c))}</button>`).join('');
     box.__rows=rows; box.classList.remove('hidden');
   }
   function operatingExpenseRows(){ return materials().filter(r=>/تشغيل|مصروف|operation/i.test(String(r.materialClass||r.operationExpense||r['تصنيف الخامة']||r['ضم إلى مصروفات التشغيل']||matType(r)||''))); }
@@ -660,7 +686,7 @@
       <section class="card deptReviewCard"><div class="deptSectionTitle"><div><span>0</span><h3>فواتير محتاجة تقفيل</h3></div><small>أي أوردر عليه بنود أقسام معتمدة وغير مسحوبة يظهر هنا تلقائيًا</small></div>${pendingFinalTable()}</section>
       <section class="card deptInvoiceEditor">
         <div class="deptSectionTitle"><div><span>1</span><h3>بيانات الفاتورة</h3></div><small>الأوردر والعميل والمدفوع</small></div>
-        <div class="grid three"><div class="field"><label>رقم الأوردر</label><input id="fiOrder" placeholder="رقم الأوردر"></div><div class="field"><label>العميل</label><input id="fiCustomer" list="custList" placeholder="ابحث بالاسم أو الرقم" oninput="ES27.refreshFinalDebt()"><datalist id="custList">${customerOptions()}</datalist><div id="finalCustomerDebt" class="deptDebtSlot">${deptCustomerDebtHtml('')}</div></div><div class="field"><label>المدفوع</label><input id="fiPaid" type="number" value="0"></div></div>
+        <div class="grid three"><div class="field"><label>رقم الأوردر</label><input id="fiOrder" placeholder="رقم الأوردر"></div><div class="field customerField finalCustomerField"><label>العميل</label><input id="fiCustomer" placeholder="ابحث بالاسم أو الرقم" autocomplete="off" onfocus="ES27.focusFinalCustomer()" oninput="ES27.searchFinalCustomers(this.value)"><div id="fiCustomerDrop" class="customerDrop hidden"></div><div id="finalCustomerDebt" class="deptDebtSlot">${deptCustomerDebtHtml('')}</div></div><div class="field"><label>المدفوع</label><input id="fiPaid" type="number" value="0"></div></div>
         <div class="deptInvoiceActions"><button class="btn secondary" onclick="ES27.collectDeptLines()">استدعاء البنود المعتمدة</button><button class="btn deptApproveBtn" onclick="ES27.saveFinal()">تقفيل الفاتورة من السيرفر</button></div>
       </section>
       <section class="card deptReviewCard"><div class="deptSectionTitle"><div><span>2</span><h3>مراجعة البنود</h3></div><small>لن تُسحب البنود غير المعتمدة</small></div><div id="finalBox" class="invoiceBox"><div class="empty">اكتب رقم الأوردر ثم استدعِ البنود المعتمدة.</div></div></section>
@@ -702,7 +728,7 @@
   window.ES27 = {
     go(t){ state.active = t; shell(); },
     load,
-    hardReload(){ const url = location.pathname + '?v=es36-v1911-admin-final-tab-' + Date.now() + '&name=' + encodeURIComponent(user.name) + '&username=' + encodeURIComponent(user.username) + '&token=' + encodeURIComponent(user.token || ''); location.href = url; },
+    hardReload(){ const url = location.pathname + '?v=es37-v1912-final-pending-search-' + Date.now() + '&name=' + encodeURIComponent(user.name) + '&username=' + encodeURIComponent(user.username) + '&token=' + encodeURIComponent(user.token || ''); location.href = url; },
     quickSearch(q){ q=nkey(q); if(!q) return; const found = templates().find(r=>nkey(templateName(r)).includes(q)) || materials().find(r=>nkey(materialName(r)).includes(q)); if(found) flash('تم العثور على: ' + (templateName(found)||materialName(found))); },
     saveSupplier(){ const s={name:val('supName'),phone:val('supPhone'),opening:num(val('supOpening')),address:val('supAddress')}; if(!s.name) return flash('اكتب اسم المورد',true); const i=state.data.suppliers.findIndex(x=>nkey(x.name||x.supplier)===nkey(s.name)); if(i>=0) state.data.suppliers[i]=s; else state.data.suppliers.unshift(s); saveLocal(); api('saveEasyStoreSupplier',s).catch(()=>{}); shell(); flash('تم حفظ المورد'); },
     editSupplier(i){ const s=state.data.suppliers[i]; if(!s) return; set('supName',s.name||s.supplier); set('supPhone',s.phone); set('supOpening',s.opening||s.openingBalance); set('supAddress',s.address); },
@@ -726,6 +752,29 @@
       },260);
     },
     pickSaleCustomer(i){ const box=$('saCustomerDrop'); const rows=(box&&box.__rows)||[]; const c=rows[i]; if(!c) return; state.customerDropdownLocked=true; state.customerSearchSeq++; clearTimeout(state.customerSearchTimer); set('saCustomer',customerMainName(c)); if(!$('saOrder')?.value && qs.get('orderId')) set('saOrder',qs.get('orderId')); closeFloatingPanels(); const inp=$('saCustomer'); if(inp) inp.blur(); this.loadSaleCustomer(c); },
+    async focusFinalCustomer(){
+      const local=localCustomerMatches(val('fiCustomer'));
+      if(local.length){ renderFinalCustomerDropdown(local); return; }
+      renderFinalCustomerDropdown([]);
+      try{ const r=await api('getEasyStoreCustomers',{limit:80}); if(r&&r.success){ state.data.customers=r.customers||[]; saveLocal(); renderFinalCustomerDropdown(localCustomerMatches(val('fiCustomer'))); } }catch(e){}
+    },
+    searchFinalCustomers(q){
+      renderFinalCustomerDropdown(localCustomerMatches(q));
+      clearTimeout(state.customerSearchTimer);
+      state.customerSearchTimer=setTimeout(async()=>{
+        try{ const r=await api('searchCustomers',{q:q||'ا'}); if(r&&r.success){ const map={}; (state.data.customers||[]).forEach(c=>{map[nkey((c.name||c.customerName)+'|'+(c.phone||c.mobile))]=c}); (r.customers||[]).forEach(c=>{map[nkey((c.name||c.customerName)+'|'+(c.phone||c.mobile))]=c}); state.data.customers=Object.values(map); saveLocal(); renderFinalCustomerDropdown(localCustomerMatches(q)); } }catch(e){}
+      },260);
+      this.refreshFinalDebt();
+    },
+    pickFinalCustomer(i){
+      const box=$('fiCustomerDrop'); const rows=(box&&box.__rows)||[]; const c=rows[i]; if(!c) return;
+      set('fiCustomer',customerMainName(c));
+      autoPickFinalOrderForCustomer(c);
+      closeFloatingPanels();
+      const inp=$('fiCustomer'); if(inp) inp.blur();
+      this.refreshFinalDebt();
+      this.collectDeptLines();
+    },
     loadSaleCustomer(c){ loadSaleCustomerContext(c); },
     loadSaleCustomerFromInput(silent){ const q=val('saCustomer'); const c=state.saleSelectedCustomer || localCustomerMatches(q)[0] || {name:q}; if(c && customerMainName(c) && !state.saleSelectedCustomer) state.saleSelectedCustomer=c; loadSaleCustomerContext(c,{silent:!!silent}); },
     refreshSaleCustomerContext(){ const c=state.saleSelectedCustomer || localCustomerMatches(val('saCustomer'))[0] || {name:val('saCustomer')}; setInvoiceNoForContext(c); renderSalePulledBoxes(); renderSaleCustomerContext(c); },
@@ -853,6 +902,25 @@
         : '<div class="empty">لا توجد بنود معتمدة وغير مسحوبة لهذا الأوردر.</div>';
     },
     pickPendingFinal(order, customer){ set('fiOrder',order||''); set('fiCustomer',customer||''); this.refreshFinalDebt(); this.collectDeptLines(); },
+    async approvePendingFinal(order, customer){
+      if(!isAdmin()) return flash('اعتماد فاتورة القسم من شاشة التقفيل متاح لضياء فقط.',true);
+      const rows=(state.data.deptLines||[]).filter(isUnbilledDeptLine).filter(r=>String(rowOrderId(r)||'')===String(order||'') && (!customer || customerMatchesRow(r,{name:customer,customerName:customer})));
+      const deps=Array.from(new Set(rows.filter(r=>!isDeptApprovedForFinal(r)).map(rowDept).filter(Boolean)));
+      if(!rows.length) return flash('لا توجد بنود لهذا الأوردر.',true);
+      if(!deps.length){ this.pickPendingFinal(order,customer); return; }
+      if(!confirm('اعتماد فاتورة الأقسام للأوردر '+order+' ثم فتحها للتقفيل؟')) return;
+      flash('جاري اعتماد فاتورة القسم على السيرفر...');
+      try{
+        for(const d of deps){
+          const res=await api('approveAccountingDeptInvoice',{orderId:order,department:d,customerName:customer||''});
+          if(!res || res.success===false) throw new Error((res&&res.message)||('تعذر اعتماد قسم '+d));
+          rows.filter(r=>rowDept(r)===d).forEach(r=>{ r.approvalStatus='معتمد من القسم'; r.billingStatus='معتمد من القسم'; r.closeStatus='معتمد من القسم'; r['حالة اعتماد القسم']='معتمد من القسم'; r['حالة الفوترة']='معتمد من القسم'; r['حالة التقفيل']='معتمد من القسم'; });
+        }
+        saveLocal(); shell();
+        setTimeout(()=>{ try{ ES27.pickPendingFinal(order,customer); }catch(e){} },120);
+        flash('تم اعتماد البنود وفتحها للتقفيل.');
+      }catch(e){ flash(e.message||'تعذر اعتماد فاتورة القسم.',true); }
+    },
     reviewClosedInvoice(i){
       const inv=(state.data.finalInvoices||[])[i]; if(!inv) return;
       const no=finalInvoiceNo(inv);
@@ -908,6 +976,8 @@
     if(!insideCustomer){
       const drop = $('saCustomerDrop');
       if(drop){ drop.classList.add('hidden'); drop.innerHTML=''; drop.__rows=[]; }
+      const finalDrop = $('fiCustomerDrop');
+      if(finalDrop){ finalDrop.classList.add('hidden'); finalDrop.innerHTML=''; finalDrop.__rows=[]; }
     }
     if(!insideMenu){
       const menu = $('clientInvoiceMenu');
