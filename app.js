@@ -1,7 +1,7 @@
 (function(){
   'use strict';
 
-  const VERSION = 'ES35 V1910 Final Review Profit';
+  const VERSION = 'ES36 V1911 Admin Final Tab';
   window.EASYSTORE_MATBAGY_VERSION = VERSION;
 
   const app = document.getElementById('app');
@@ -212,7 +212,7 @@
 
   function tabs(){
     let list;
-    if(isAdmin()) list = [['dashboard','لوحة الحسابات'],['suppliers','الموردين'],['customers','العملاء'],['items','الأصناف'],['purchase','فواتير الشراء'],['sales','فواتير المبيعات'],['stock','المخزون'],['kitchen','مطبخ الحسابات'],['reports','التقارير'],['health','فحص النظام']];
+    if(isAdmin()) list = [['dashboard','لوحة الحسابات'],['suppliers','الموردين'],['customers','العملاء'],['items','الأصناف'],['purchase','فواتير الشراء'],['sales','فواتير المبيعات'],['final','التقفيل النهائي'],['stock','المخزون'],['kitchen','مطبخ الحسابات'],['reports','التقارير'],['health','فحص النظام']];
     else if(isPrint() || isLaser()) list = [['dept','فاتورة القسم'],['waste','هوالك القسم'],['stock','الأصناف المتاحة']];
     else if(isFinal()) list = [['sales','فواتير المبيعات'],['final','تقفيل الفاتورة'],['customers','العملاء'],['deptView','أجزاء الأقسام']];
     else list = [['dashboard','لوحة الحسابات'],['sales','فواتير المبيعات']];
@@ -702,7 +702,7 @@
   window.ES27 = {
     go(t){ state.active = t; shell(); },
     load,
-    hardReload(){ const url = location.pathname + '?v=es35-v1910-final-review-profit-' + Date.now() + '&name=' + encodeURIComponent(user.name) + '&username=' + encodeURIComponent(user.username) + '&token=' + encodeURIComponent(user.token || ''); location.href = url; },
+    hardReload(){ const url = location.pathname + '?v=es36-v1911-admin-final-tab-' + Date.now() + '&name=' + encodeURIComponent(user.name) + '&username=' + encodeURIComponent(user.username) + '&token=' + encodeURIComponent(user.token || ''); location.href = url; },
     quickSearch(q){ q=nkey(q); if(!q) return; const found = templates().find(r=>nkey(templateName(r)).includes(q)) || materials().find(r=>nkey(materialName(r)).includes(q)); if(found) flash('تم العثور على: ' + (templateName(found)||materialName(found))); },
     saveSupplier(){ const s={name:val('supName'),phone:val('supPhone'),opening:num(val('supOpening')),address:val('supAddress')}; if(!s.name) return flash('اكتب اسم المورد',true); const i=state.data.suppliers.findIndex(x=>nkey(x.name||x.supplier)===nkey(s.name)); if(i>=0) state.data.suppliers[i]=s; else state.data.suppliers.unshift(s); saveLocal(); api('saveEasyStoreSupplier',s).catch(()=>{}); shell(); flash('تم حفظ المورد'); },
     editSupplier(i){ const s=state.data.suppliers[i]; if(!s) return; set('supName',s.name||s.supplier); set('supPhone',s.phone); set('supOpening',s.opening||s.openingBalance); set('supAddress',s.address); },
@@ -833,7 +833,7 @@
       }catch(e){ flash(e.message||'تعذر اعتماد الفاتورة على السيرفر.',true); }
     },
     toggleLaserCalc(){ const b=$('laserCalcBox'); if(b) b.classList.toggle('hidden'); },
-    saveDeptLineAndOpenSales(){ this.saveDeptLine(); const order=encodeURIComponent(val('dlOrder')); const customer=encodeURIComponent(val('dlCustomer')); setTimeout(()=>{ location.href='?screen=sales&orderId='+order+'&customer='+customer+'&v=es35-v1910-final-review-profit'; }, 500); },
+    saveDeptLineAndOpenSales(){ this.saveDeptLine(); const order=encodeURIComponent(val('dlOrder')); const customer=encodeURIComponent(val('dlCustomer')); setTimeout(()=>{ location.href='?screen=sales&orderId='+order+'&customer='+customer+'&v=es36-v1911-admin-final-tab'; }, 500); },
     saveDeptLine(){ this.calcDept(); const tpl=selectedDeptTemplate(); const itemDept=tpl?matDept(tpl):val('dlItemDept'); const shared=($('dlSharedLine')&&$('dlSharedLine').checked)||isSharedDeptName(itemDept); const unitSale=num(val('dlSale')); const qty=num(val('dlQty'))||1; const p={lineId:'DLINE-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,6),orderId:val('dlOrder'),customerName:val('dlCustomer'),department:userDept(),itemDepartment:itemDept||userDept(),sharedLine:shared?'نعم':'لا',billingStatus:'مسجل - قيد مراجعة القسم',closeStatus:'قيد مراجعة القسم',approvalStatus:'قيد مراجعة القسم',catalogItemId:tpl?(tpl.id||tpl.ID||tpl.catalogItemId||''):'',templateId:tpl?(tpl.id||tpl.ID||''):'',materialName:tpl?(tpl.materialName||tpl['الخامة']||''):'',itemName:val('dlItem'),qty:qty,systemSale:num(val('dlSystemSale')),systemSalePrice:num(val('dlSystemSale')),sale:unitSale,salePrice:unitSale,unitSalePrice:unitSale,lineTotal:unitSale*qty,diff:num(val('dlDiff')),notes:val('dlNotes'),user:user.name,date:new Date().toISOString()}; if(!p.customerName||!p.orderId||!p.itemName){ return flash('اسم العميل ورقم الأوردر والصنف مطلوبين.',true); } if(shared){ const dup=(state.data.deptLines||[]).find(x=>isSharedLineRecord(x)&&sameDeptInvoiceContext(x,p.orderId,p.customerName)&&nkey(rowItem(x))===nkey(p.itemName)&&isUnbilledDeptLine(x)); if(dup){ return flash('البند المشترك مسجل بالفعل بواسطة '+rowDept(dup)+' وسيظهر تلقائيًا عند القسم الآخر. لا تسجله مرتين.',true); } } state.data.deptLines.unshift(p); if(p.diff) state.data.wasteLines.unshift({department:p.department,orderId:p.orderId,reason:'فرق سعر عن السيستم',amount:p.diff,paid:0}); saveLocal(); api('saveAccountingDeptLine',p).then(r=>{ if(r&&r.lineId){p.id=r.lineId;p.ID=r.lineId;} saveLocal(); }).catch(e=>flash('تم حفظ المسودة محليًا وتعذر تأكيدها على السيرفر: '+(e.message||''),true)); set('dlItemSel',''); set('dlItem',''); set('dlItemDept',''); set('dlSystemSale',''); set('dlSale',''); set('dlDiff',''); set('dlNotes',''); set('dlQty','1'); refreshDeptContextUi(); flash(shared?'تم حفظ بند مشترك في مسودة القسم وسيظهر عند القسم الآخر':'تم حفظ البند في مسودة فاتورة القسم. يمكنك إضافة بند جديد ثم الاعتماد.'); },
     aiLaser(){ const m=matByName(val('aiMat')); const w=num(val('aiW')),h=num(val('aiH')),q=num(val('aiQty'))||1; if(!m||!w||!h) return flash('اختار خامة الليزر واكتب المقاس',true); const rawW=num(m.width||m.rawWidth), rawH=num(m.height||m.rawHeight); let pieces=rawW&&rawH?Math.max(Math.floor(rawW/w)*Math.floor(rawH/h),Math.floor(rawW/h)*Math.floor(rawH/w)):1; const waste=num(val('aiWaste')); const adopted=Math.max(1,Math.floor(pieces/(1+waste/100))); const cost=matCost(m)/adopted; const sale=(cost*(num(val('aiFactor'))||2.2)); set('dlItem','ليزر '+materialName(m)+' '+w+'×'+h); set('dlItemDept','ليزر'); const sh=$('dlSharedLine'); if(sh){ sh.checked=false; sh.disabled=false; } set('dlQty',q); set('dlSystemSale',sale.toFixed(2)); set('dlSale',sale.toFixed(2)); this.calcDept(); const a=$('aiMsg'); if(a) a.textContent='الناتج '+pieces+' / المعتمد '+adopted+' / سعر مقترح '+money(sale); },
     saveWaste(){ const p={department:userDept(),orderId:val('waOrder'),reason:val('waReason'),amount:num(val('waAmount')),paid:num(val('waPaid')),user:user.name,date:new Date().toISOString()}; state.data.wasteLines.unshift(p); saveLocal(); api('saveAccountingWaste',p).catch(()=>{}); shell(); flash('تم حفظ الهالك'); },
