@@ -43,3 +43,4 @@
 .saleCustomerDebtBox{margin:10px 0 12px;padding:12px 14px;border-radius:16px;font-weight:800;border:1px solid #a7f3d0;background:#ecfdf5;color:#065f46;}
 .saleCustomerDebtBox.hasDebt{background:#fff1f2;border-color:#fecdd3;color:#9f1239;}
 .saleCustomerDebtBox span{margin-inline-start:8px;font-weight:700;}
+.profitOnly{display:inline-flex;align-items:center;gap:4px;border-radius:999px;padding:4px 8px;background:#eef2ff;color:#3730a3;border:1px solid #c7d2fe;font-weight:900;font-size:12px;white-space:nowrap}

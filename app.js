@@ -1,7 +1,7 @@
 (function(){
   'use strict';
 
-  const VERSION = 'ES34 V1909 Sales Merge Flow';
+  const VERSION = 'ES35 V1910 Final Review Profit';
   window.EASYSTORE_MATBAGY_VERSION = VERSION;
 
   const app = document.getElementById('app');
@@ -288,6 +288,68 @@
   function rowCloseStatus(r){ return String(r.closeStatus || r['حالة التقفيل'] || '').trim(); }
   function rowFinalInvoice(r){ return String(r.invoiceNo || r['رقم الفاتورة النهائية'] || r['رقم الفاتورة'] || '').trim(); }
   function isUnbilledDeptLine(r){ const st=nkey(rowCloseStatus(r)); return !rowFinalInvoice(r) && !/تم|مقفل|مقفول|closed|billed/.test(st); }
+  function lineUnitCost(r){
+    const explicit=num(r.unitCost || r.cost || r.fixedCost || r.systemCost || r['تكلفة الوحدة'] || r['التكلفة']);
+    if(explicit) return explicit;
+    const tpl=itemByName(rowItem(r));
+    return tpl ? matCost(tpl) : 0;
+  }
+  function lineCostTotal(r){ return lineUnitCost(r)*rowQty(r); }
+  function profitStatsForLines(rows){
+    const total=(rows||[]).reduce((s,r)=>s+rowLineTotal(r),0);
+    const cost=(rows||[]).reduce((s,r)=>s+lineCostTotal(r),0);
+    const profit=total-cost;
+    const margin=total ? (profit/total)*100 : 0;
+    return { total, cost, profit, margin };
+  }
+  function pendingFinalGroups(){
+    const map={};
+    (state.data.deptLines||[]).filter(isUnbilledDeptLine).filter(isDeptApprovedForFinal).forEach(r=>{
+      const order=rowOrderId(r)||'بدون رقم';
+      const customer=rowCustomer(r)||'عميل غير محدد';
+      const key=nkey(order)+'|'+nkey(customer);
+      if(!map[key]) map[key]={orderId:order,customerName:customer,rows:[],departments:{},shared:0};
+      map[key].rows.push(r);
+      const d=rowDept(r)||'قسم';
+      map[key].departments[d]=(map[key].departments[d]||0)+1;
+      if(isSharedLineRecord(r)) map[key].shared++;
+    });
+    return Object.keys(map).map(k=>map[k]).sort((a,b)=>String(b.orderId).localeCompare(String(a.orderId)));
+  }
+  function pendingFinalTable(){
+    const rows=pendingFinalGroups();
+    if(!rows.length) return '<div class="empty">لا توجد فواتير جاهزة للتقفيل حاليًا.</div>';
+    const heads=['الأوردر','العميل','الأقسام','بنود','إجمالي','إجراء'];
+    if(isAdmin()) heads.splice(5,0,'ربحية ضياء');
+    return table(rows,heads,g=>{
+      const st=profitStatsForLines(g.rows);
+      const deptText=Object.keys(g.departments).map(d=>d+': '+g.departments[d]).join(' / ')+(g.shared?' / مشترك: '+g.shared:'');
+      const base=[esc(g.orderId),esc(g.customerName),esc(deptText),esc(g.rows.length),money(st.total)];
+      if(isAdmin()) base.push('<span class="profitOnly">تكلفة: '+money(st.cost)+' / ربح: '+money(st.profit)+' / '+st.margin.toFixed(1)+'%</span>');
+      base.push(`<button class="btn small" onclick="ES27.pickPendingFinal('${esc(String(g.orderId)).replace(/'/g,'&#39;')}','${esc(String(g.customerName)).replace(/'/g,'&#39;')}')">مراجعة وتقفيل</button>`);
+      return base;
+    });
+  }
+  function finalInvoiceStatus(r){ return String(r.status || r['الحالة'] || '').trim(); }
+  function finalInvoiceNo(r){ return String(r.invoiceNo || r.no || r['رقم الفاتورة'] || '').trim(); }
+  function finalInvoiceOrder(r){ return String(r.orderId || r.order || r['رقم الأوردر'] || '').trim(); }
+  function finalInvoiceCustomer(r){ return String(r.customer || r.customerName || r['اسم العميل'] || '').trim(); }
+  function closedFinalInvoicesTable(){
+    const rows=(state.data.finalInvoices||[]).filter(r=>finalInvoiceNo(r));
+    if(!rows.length) return '<div class="empty">لا توجد فواتير مقفولة للعرض.</div>';
+    const heads=['الفاتورة','الأوردر','العميل','إجمالي','مدفوع','متبقي','الحالة','مراجعة'];
+    if(isAdmin()) heads.splice(6,0,'ربحية ضياء');
+    return table(rows,heads,(r,i)=>{
+      const inv=finalInvoiceNo(r);
+      const linked=(state.data.deptLines||[]).filter(x=>rowFinalInvoice(x)===inv || (inv && rowFinalInvoice(x)===inv));
+      const st=profitStatsForLines(linked);
+      const total=num(r.total||r.finalTotal||r['الإجمالي النهائي']||st.total);
+      const base=[esc(inv),esc(finalInvoiceOrder(r)),esc(finalInvoiceCustomer(r)),money(total),money(r.paid||r['المدفوع']),money(r.remain||r.remaining||r['الباقي']),esc(finalInvoiceStatus(r)||'مقفولة')];
+      if(isAdmin()) base.splice(6,0,linked.length?'<span class="profitOnly">تكلفة: '+money(st.cost)+' / ربح: '+money(total-st.cost)+' / '+(total?(((total-st.cost)/total)*100).toFixed(1):'0.0')+'%</span>':'<span class="muted">لا توجد بنود مرتبطة محليًا</span>');
+      base.push(`<span class="tableActions"><button class="btn small secondary" onclick="ES27.reviewClosedInvoice(${i})">عرض</button>${isAdmin()?`<button class="btn small warn" onclick="ES27.reopenFinalInvoice(${i})">إرجاع للمراجعة</button>`:''}</span>`);
+      return base;
+    });
+  }
   function rowCustomerPhone(r){ return r.customerPhone || r.phone || r.mobile || r['رقم العميل'] || r['هاتف العميل'] || ''; }
   function customerMainName(c){ return (c && (c.name || c.customerName || c['اسم العميل'] || c.customer || '')) || ''; }
   function customerMainPhone(c){ return (c && (c.phone || c.mobile || c.customerPhone || c['رقم العميل'] || c['الهاتف'] || '')) || ''; }
@@ -595,12 +657,14 @@
         <div><span class="deptEyebrow">تقفيل موثوق من السيرفر</span><h2>الفاتورة النهائية الموحّدة</h2><p>يتم احتساب الإجمالي من بنود الأقسام المعتمدة داخل Google Sheets، ولا يتم الاعتماد على أرقام المتصفح.</p></div>
         <div class="deptHeroBadges"><span>V1889 Trusted Invoice</span><span>منع السحب المكرر</span></div>
       </section>
+      <section class="card deptReviewCard"><div class="deptSectionTitle"><div><span>0</span><h3>فواتير محتاجة تقفيل</h3></div><small>أي أوردر عليه بنود أقسام معتمدة وغير مسحوبة يظهر هنا تلقائيًا</small></div>${pendingFinalTable()}</section>
       <section class="card deptInvoiceEditor">
         <div class="deptSectionTitle"><div><span>1</span><h3>بيانات الفاتورة</h3></div><small>الأوردر والعميل والمدفوع</small></div>
         <div class="grid three"><div class="field"><label>رقم الأوردر</label><input id="fiOrder" placeholder="رقم الأوردر"></div><div class="field"><label>العميل</label><input id="fiCustomer" list="custList" placeholder="ابحث بالاسم أو الرقم" oninput="ES27.refreshFinalDebt()"><datalist id="custList">${customerOptions()}</datalist><div id="finalCustomerDebt" class="deptDebtSlot">${deptCustomerDebtHtml('')}</div></div><div class="field"><label>المدفوع</label><input id="fiPaid" type="number" value="0"></div></div>
         <div class="deptInvoiceActions"><button class="btn secondary" onclick="ES27.collectDeptLines()">استدعاء البنود المعتمدة</button><button class="btn deptApproveBtn" onclick="ES27.saveFinal()">تقفيل الفاتورة من السيرفر</button></div>
       </section>
       <section class="card deptReviewCard"><div class="deptSectionTitle"><div><span>2</span><h3>مراجعة البنود</h3></div><small>لن تُسحب البنود غير المعتمدة</small></div><div id="finalBox" class="invoiceBox"><div class="empty">اكتب رقم الأوردر ثم استدعِ البنود المعتمدة.</div></div></section>
+      <section class="card deptReviewCard"><div class="deptSectionTitle"><div><span>3</span><h3>فواتير مقفولة للمراجعة</h3></div><small>ضياء فقط يقدر يرجع فاتورة للمراجعة، والربحية ظاهرة له فقط</small></div>${closedFinalInvoicesTable()}</section>
     </div>`;
   }
   function screenDeptView(){ return `<div class="card"><h2>أجزاء الأقسام</h2>${table(state.data.deptLines,['أوردر','القسم','البند','كمية','سعر'],r=>[esc(r.orderId),esc(r.department),esc(r.itemName),esc(r.qty),money(r.sale)])}</div>`; }
@@ -638,7 +702,7 @@
   window.ES27 = {
     go(t){ state.active = t; shell(); },
     load,
-    hardReload(){ const url = location.pathname + '?v=es34-v1909-sales-merge-flow-' + Date.now() + '&name=' + encodeURIComponent(user.name) + '&username=' + encodeURIComponent(user.username) + '&token=' + encodeURIComponent(user.token || ''); location.href = url; },
+    hardReload(){ const url = location.pathname + '?v=es35-v1910-final-review-profit-' + Date.now() + '&name=' + encodeURIComponent(user.name) + '&username=' + encodeURIComponent(user.username) + '&token=' + encodeURIComponent(user.token || ''); location.href = url; },
     quickSearch(q){ q=nkey(q); if(!q) return; const found = templates().find(r=>nkey(templateName(r)).includes(q)) || materials().find(r=>nkey(materialName(r)).includes(q)); if(found) flash('تم العثور على: ' + (templateName(found)||materialName(found))); },
     saveSupplier(){ const s={name:val('supName'),phone:val('supPhone'),opening:num(val('supOpening')),address:val('supAddress')}; if(!s.name) return flash('اكتب اسم المورد',true); const i=state.data.suppliers.findIndex(x=>nkey(x.name||x.supplier)===nkey(s.name)); if(i>=0) state.data.suppliers[i]=s; else state.data.suppliers.unshift(s); saveLocal(); api('saveEasyStoreSupplier',s).catch(()=>{}); shell(); flash('تم حفظ المورد'); },
     editSupplier(i){ const s=state.data.suppliers[i]; if(!s) return; set('supName',s.name||s.supplier); set('supPhone',s.phone); set('supOpening',s.opening||s.openingBalance); set('supAddress',s.address); },
@@ -769,11 +833,52 @@
       }catch(e){ flash(e.message||'تعذر اعتماد الفاتورة على السيرفر.',true); }
     },
     toggleLaserCalc(){ const b=$('laserCalcBox'); if(b) b.classList.toggle('hidden'); },
-    saveDeptLineAndOpenSales(){ this.saveDeptLine(); const order=encodeURIComponent(val('dlOrder')); const customer=encodeURIComponent(val('dlCustomer')); setTimeout(()=>{ location.href='?screen=sales&orderId='+order+'&customer='+customer+'&v=es34-v1909-sales-merge-flow'; }, 500); },
+    saveDeptLineAndOpenSales(){ this.saveDeptLine(); const order=encodeURIComponent(val('dlOrder')); const customer=encodeURIComponent(val('dlCustomer')); setTimeout(()=>{ location.href='?screen=sales&orderId='+order+'&customer='+customer+'&v=es35-v1910-final-review-profit'; }, 500); },
     saveDeptLine(){ this.calcDept(); const tpl=selectedDeptTemplate(); const itemDept=tpl?matDept(tpl):val('dlItemDept'); const shared=($('dlSharedLine')&&$('dlSharedLine').checked)||isSharedDeptName(itemDept); const unitSale=num(val('dlSale')); const qty=num(val('dlQty'))||1; const p={lineId:'DLINE-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,6),orderId:val('dlOrder'),customerName:val('dlCustomer'),department:userDept(),itemDepartment:itemDept||userDept(),sharedLine:shared?'نعم':'لا',billingStatus:'مسجل - قيد مراجعة القسم',closeStatus:'قيد مراجعة القسم',approvalStatus:'قيد مراجعة القسم',catalogItemId:tpl?(tpl.id||tpl.ID||tpl.catalogItemId||''):'',templateId:tpl?(tpl.id||tpl.ID||''):'',materialName:tpl?(tpl.materialName||tpl['الخامة']||''):'',itemName:val('dlItem'),qty:qty,systemSale:num(val('dlSystemSale')),systemSalePrice:num(val('dlSystemSale')),sale:unitSale,salePrice:unitSale,unitSalePrice:unitSale,lineTotal:unitSale*qty,diff:num(val('dlDiff')),notes:val('dlNotes'),user:user.name,date:new Date().toISOString()}; if(!p.customerName||!p.orderId||!p.itemName){ return flash('اسم العميل ورقم الأوردر والصنف مطلوبين.',true); } if(shared){ const dup=(state.data.deptLines||[]).find(x=>isSharedLineRecord(x)&&sameDeptInvoiceContext(x,p.orderId,p.customerName)&&nkey(rowItem(x))===nkey(p.itemName)&&isUnbilledDeptLine(x)); if(dup){ return flash('البند المشترك مسجل بالفعل بواسطة '+rowDept(dup)+' وسيظهر تلقائيًا عند القسم الآخر. لا تسجله مرتين.',true); } } state.data.deptLines.unshift(p); if(p.diff) state.data.wasteLines.unshift({department:p.department,orderId:p.orderId,reason:'فرق سعر عن السيستم',amount:p.diff,paid:0}); saveLocal(); api('saveAccountingDeptLine',p).then(r=>{ if(r&&r.lineId){p.id=r.lineId;p.ID=r.lineId;} saveLocal(); }).catch(e=>flash('تم حفظ المسودة محليًا وتعذر تأكيدها على السيرفر: '+(e.message||''),true)); set('dlItemSel',''); set('dlItem',''); set('dlItemDept',''); set('dlSystemSale',''); set('dlSale',''); set('dlDiff',''); set('dlNotes',''); set('dlQty','1'); refreshDeptContextUi(); flash(shared?'تم حفظ بند مشترك في مسودة القسم وسيظهر عند القسم الآخر':'تم حفظ البند في مسودة فاتورة القسم. يمكنك إضافة بند جديد ثم الاعتماد.'); },
     aiLaser(){ const m=matByName(val('aiMat')); const w=num(val('aiW')),h=num(val('aiH')),q=num(val('aiQty'))||1; if(!m||!w||!h) return flash('اختار خامة الليزر واكتب المقاس',true); const rawW=num(m.width||m.rawWidth), rawH=num(m.height||m.rawHeight); let pieces=rawW&&rawH?Math.max(Math.floor(rawW/w)*Math.floor(rawH/h),Math.floor(rawW/h)*Math.floor(rawH/w)):1; const waste=num(val('aiWaste')); const adopted=Math.max(1,Math.floor(pieces/(1+waste/100))); const cost=matCost(m)/adopted; const sale=(cost*(num(val('aiFactor'))||2.2)); set('dlItem','ليزر '+materialName(m)+' '+w+'×'+h); set('dlItemDept','ليزر'); const sh=$('dlSharedLine'); if(sh){ sh.checked=false; sh.disabled=false; } set('dlQty',q); set('dlSystemSale',sale.toFixed(2)); set('dlSale',sale.toFixed(2)); this.calcDept(); const a=$('aiMsg'); if(a) a.textContent='الناتج '+pieces+' / المعتمد '+adopted+' / سعر مقترح '+money(sale); },
     saveWaste(){ const p={department:userDept(),orderId:val('waOrder'),reason:val('waReason'),amount:num(val('waAmount')),paid:num(val('waPaid')),user:user.name,date:new Date().toISOString()}; state.data.wasteLines.unshift(p); saveLocal(); api('saveAccountingWaste',p).catch(()=>{}); shell(); flash('تم حفظ الهالك'); },
-    collectDeptLines(){ const order=val('fiOrder'); const rows=(state.data.deptLines||[]).filter(isUnbilledDeptLine).filter(isDeptApprovedForFinal).filter(r=>String(rowOrderId(r)||'')===String(order||'')); const total=rows.reduce((s,r)=>s+rowLineTotal(r),0); const b=$('finalBox'); if(b) b.innerHTML=table(rows,['القسم','البند','كمية','سعر الوحدة','الإجمالي'],r=>[esc(rowDept(r)),esc(rowItem(r)),esc(rowQty(r)),money(rowSale(r)),money(rowLineTotal(r))])+'<div class="softBox"><b>الإجمالي: '+money(total)+'</b></div>'; },
+    collectDeptLines(){
+      const order=val('fiOrder');
+      const rows=(state.data.deptLines||[]).filter(isUnbilledDeptLine).filter(isDeptApprovedForFinal).filter(r=>String(rowOrderId(r)||'')===String(order||''));
+      const st=profitStatsForLines(rows);
+      const heads=['القسم','مشترك','البند','كمية','سعر الوحدة','الإجمالي'];
+      if(isAdmin()) heads.push('تكلفة/ربح');
+      const b=$('finalBox');
+      if(b) b.innerHTML = rows.length
+        ? table(rows,heads,r=>{
+            const base=[esc(rowDept(r)),isSharedLineRecord(r)?'<span class="pill warn">مشترك</span>':'-',esc(rowItem(r)),esc(rowQty(r)),money(rowSale(r)),money(rowLineTotal(r))];
+            if(isAdmin()) base.push('<span class="profitOnly">تكلفة: '+money(lineCostTotal(r))+' / ربح: '+money(rowLineTotal(r)-lineCostTotal(r))+'</span>');
+            return base;
+          })+'<div class="softBox"><b>الإجمالي: '+money(st.total)+'</b>'+ (isAdmin()?' <span class="profitOnly">/ التكلفة: '+money(st.cost)+' / الربح: '+money(st.profit)+' / '+st.margin.toFixed(1)+'%</span>':'') +'</div>'
+        : '<div class="empty">لا توجد بنود معتمدة وغير مسحوبة لهذا الأوردر.</div>';
+    },
+    pickPendingFinal(order, customer){ set('fiOrder',order||''); set('fiCustomer',customer||''); this.refreshFinalDebt(); this.collectDeptLines(); },
+    reviewClosedInvoice(i){
+      const inv=(state.data.finalInvoices||[])[i]; if(!inv) return;
+      const no=finalInvoiceNo(inv);
+      const rows=(state.data.deptLines||[]).filter(r=>rowFinalInvoice(r)===no);
+      const total=num(inv.total||inv.finalTotal||inv['الإجمالي النهائي']||0) || rows.reduce((s,r)=>s+rowLineTotal(r),0);
+      const st=profitStatsForLines(rows);
+      const heads=['القسم','البند','كمية','سعر الوحدة','الإجمالي'];
+      if(isAdmin()) heads.push('تكلفة/ربح');
+      const b=$('finalBox');
+      if(b) b.innerHTML='<div class="softBox"><b>فاتورة:</b> '+esc(no)+' / <b>عميل:</b> '+esc(finalInvoiceCustomer(inv))+' / <b>إجمالي:</b> '+money(total)+(isAdmin()?' <span class="profitOnly">/ تكلفة: '+money(st.cost)+' / ربح: '+money(total-st.cost)+'</span>':'')+'</div>'+(rows.length?table(rows,heads,r=>{ const base=[esc(rowDept(r)),esc(rowItem(r)),esc(rowQty(r)),money(rowSale(r)),money(rowLineTotal(r))]; if(isAdmin()) base.push('<span class="profitOnly">تكلفة: '+money(lineCostTotal(r))+' / ربح: '+money(rowLineTotal(r)-lineCostTotal(r))+'</span>'); return base; }):'<div class="empty">الفاتورة محفوظة لكن البنود المرتبطة غير موجودة في التحميل الحالي.</div>');
+    },
+    async reopenFinalInvoice(i){
+      if(!isAdmin()) return flash('إرجاع الفاتورة للمراجعة متاح لضياء فقط.',true);
+      const inv=(state.data.finalInvoices||[])[i]; if(!inv) return;
+      const no=finalInvoiceNo(inv);
+      if(!no) return flash('رقم الفاتورة غير واضح.',true);
+      if(!confirm('إرجاع الفاتورة '+no+' للمراجعة؟ سيتم فتح بنود الأقسام للتقفيل من جديد وعمل عكس مالي للفاتورة القديمة.')) return;
+      flash('جاري إرجاع الفاتورة للمراجعة على السيرفر...');
+      try{
+        const res=await api('reopenAccountingFinalInvoice',{invoiceNo:no,orderId:finalInvoiceOrder(inv),reason:'مراجعة ضياء'});
+        if(!res || res.success===false) throw new Error((res&&res.message)||'تعذر إرجاع الفاتورة للمراجعة.');
+        inv.status='تحت مراجعة ضياء'; inv['الحالة']='تحت مراجعة ضياء';
+        (state.data.deptLines||[]).forEach(r=>{ if(rowFinalInvoice(r)===no){ r.closeStatus='معتمد من القسم'; r.billingStatus='معتمد من القسم'; r.invoiceNo=''; r['حالة التقفيل']='معتمد من القسم'; r['حالة الفوترة']='معتمد من القسم'; r['رقم الفاتورة النهائية']=''; } });
+        saveLocal(); shell(); flash(res.message||'تم إرجاع الفاتورة للمراجعة.');
+      }catch(e){ flash(e.message||'تعذر إرجاع الفاتورة للمراجعة.',true); }
+    },
     async saveFinal(){
       const order=val('fiOrder');
       if(!order) return flash('رقم الأوردر مطلوب لتقفيل الفاتورة.',true);
