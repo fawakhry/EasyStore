@@ -1,7 +1,7 @@
 (function(){
   'use strict';
 
-  const VERSION = 'ES44 V1919 Immediate Department Purchase Stock';
+  const VERSION = 'ES45 V1920 Custody & Department Day Close';
   window.EASYSTORE_MATBAGY_VERSION = VERSION;
 
   const app = document.getElementById('app');
@@ -14,6 +14,7 @@
   const nkey = v => String(v || '').toLowerCase().replace(/[إأآا]/g,'ا').replace(/[ى]/g,'ي').replace(/[ةه]/g,'ه').replace(/[ؤ]/g,'و').replace(/[ئ]/g,'ي').trim();
   const val = id => $(id) ? $(id).value : '';
   const set = (id,v) => { if($(id)) $(id).value = v == null ? '' : v; };
+  window.set = set;
 
   function readSso(){
     let handoff = {};
@@ -38,7 +39,7 @@
   const roleText = () => isAdmin() ? 'ضياء / مطبخ الحسابات' : isLaser() ? 'جابر / الليزر' : isPrint() ? 'وائل / الطباعة' : isFinal() ? 'رحمة أو ريفان / تقفيل فواتير' : 'موظف';
   const userDept = () => isLaser() ? 'ليزر' : isPrint() ? 'طباعة' : (user.department || '');
   function allowedScreens(){
-    if(isAdmin()) return ['dashboard','suppliers','customers','items','purchase','sales','final','stock','kitchen','reports','health'];
+    if(isAdmin()) return ['dashboard','suppliers','customers','items','purchase','sales','final','stock','kitchen','dailyClose','legacy','reports','health'];
     if(isPrint() || isLaser()) return ['dept','deptPurchases','waste','stock'];
     if(isFinal()) return ['sales','final','customers','deptView'];
     return ['sales'];
@@ -52,7 +53,9 @@
   function initialScreen(){
     const s = String(qs.get('screen') || qs.get('tab') || qs.get('view') || '').toLowerCase();
     let requested = '';
-    if(/deptpurchases|dailypurchases|daily-purchases/.test(s)) requested = 'deptPurchases';
+    if(/dailyclose|day-close|custody|عهد/.test(s)) requested = 'dailyClose';
+    else if(/legacy|classif|قديم/.test(s)) requested = 'legacy';
+    else if(/deptpurchases|dailypurchases|daily-purchases/.test(s)) requested = 'deptPurchases';
     else if(/final/.test(s)) requested = 'final';
     else if(/dept/.test(s)) requested = 'dept';
     else if(/purchase|شراء|مشتريات/.test(s)) requested = 'purchase';
@@ -80,19 +83,19 @@
     loading: false,
     data: {
       materials: [], templates: [], suppliers: [], purchases: [], dailyPurchases: [], sales: [], customers: [],
-      stockMoves: [], wasteLines: [], deptLines: [], finalInvoices: [], summary: {}
+      stockMoves: [], wasteLines: [], deptLines: [], finalInvoices: [], custodyEntries: [], custodySummary: [], departmentDayCloses: [], unclassifiedRows: [], summary: {}
     },
     recipeComps: [], salePulledLines: [], saleSelectedCustomer: null, saleCustomerContext: null, customerSearchTimer: null, customerSearchSeq: 0, customerDropdownLocked: false,
     laserQuote: null, saleRequestId: '', finalRequestId: '', purchaseRequestId: '', dailyPurchaseRequestId: '',
-    customerAccount: null, customerAccountSelected: '', customerAccountRequestId: ''
+    customerAccount: null, customerAccountSelected: '', customerAccountRequestId: '', dailyReport: null, dailyReportDate: '', dailyReportDepartment: 'ليزر'
   };
 
   function saveLocal(){ localStorage.setItem(STORE_KEY, JSON.stringify(state.data)); }
   function loadLocal(){ try{ return JSON.parse(localStorage.getItem(STORE_KEY) || '{}'); }catch(e){ return {}; } }
   function mergeData(d){
     const local = loadLocal();
-    state.data = Object.assign({materials:[],templates:[],suppliers:[],purchases:[],dailyPurchases:[],sales:[],customers:[],stockMoves:[],wasteLines:[],deptLines:[],finalInvoices:[],summary:{}}, local, d || {});
-    ['materials','templates','suppliers','purchases','dailyPurchases','sales','customers','stockMoves','wasteLines','deptLines','finalInvoices'].forEach(k=>{ if(!Array.isArray(state.data[k])) state.data[k] = []; });
+    state.data = Object.assign({materials:[],templates:[],suppliers:[],purchases:[],dailyPurchases:[],sales:[],customers:[],stockMoves:[],wasteLines:[],deptLines:[],finalInvoices:[],custodyEntries:[],custodySummary:[],departmentDayCloses:[],unclassifiedRows:[],summary:{}}, local, d || {});
+    ['materials','templates','suppliers','purchases','dailyPurchases','sales','customers','stockMoves','wasteLines','deptLines','finalInvoices','custodyEntries','custodySummary','departmentDayCloses','unclassifiedRows'].forEach(k=>{ if(!Array.isArray(state.data[k])) state.data[k] = []; });
   }
 
   function api(action, data){
@@ -248,7 +251,7 @@
     const buttons=[['all','كل الأقسام'],['laser','قسم الليزر'],['print','قسم الطباعة']];
     return `<section class="accountingScopeBar" data-accounting-scope="${esc(state.accountingScope)}"><div><span>طريقة عرض الحسابات</span><h2>${esc(accountingScopeLabel())}</h2><p>${state.accountingScope==='all'?'عرض الحسابات المجمعة.':'الفواتير والمشتريات والمخزون والتقارير الآن للقسم المختار فقط.'}</p></div><div class="accountingScopeButtons">${buttons.map(x=>`<button class="${state.accountingScope===x[0]?'active':''}" onclick="ES27.setAccountingScope('${x[0]}')">${x[1]}</button>`).join('')}</div><small>الفاتورة النهائية وحساب العميل يظلان موحدين. البنود المشتركة تظهر في الكتالوج، وتدخل ماليًا ضمن «كل الأقسام» فقط.</small></section>`;
   }
-  function accountingScopeTitle(title){ return state.accountingScope==='all'?title:(title+' · '+accountingScopeLabel()); }
+  function accountingScopeTitle(title){ if(title==='التقارير والأرباح الفعلية') title='التقارير والأرباح'; return state.accountingScope==='all'?title:(title+' · '+accountingScopeLabel()); }
   function accountingDeptOptions(selected,allowBlank){
     selected=selected||accountingScopeDepartment();
     return `${allowBlank?'<option value="">اختار القسم</option>':''}<option value="ليزر" ${selected==='ليزر'?'selected':''}>ليزر</option><option value="طباعة" ${selected==='طباعة'?'selected':''}>طباعة</option>`;
@@ -287,7 +290,7 @@
 
   function tabs(){
     let list;
-    if(isAdmin()) list = [['dashboard','لوحة الحسابات'],['suppliers','الموردين'],['customers','العملاء'],['items','الأصناف'],['purchase','فواتير الشراء'],['sales','فواتير المبيعات'],['final','التقفيل النهائي'],['stock','المخزون'],['kitchen','مطبخ الحسابات'],['reports','التقارير'],['health','فحص النظام']];
+    if(isAdmin()) list = [['dashboard','لوحة الحسابات'],['suppliers','الموردين'],['customers','العملاء'],['items','الأصناف'],['purchase','فواتير الشراء'],['sales','فواتير المبيعات'],['final','التقفيل النهائي'],['stock','المخزون'],['kitchen','مطبخ الحسابات'],['dailyClose','تقفيل الأقسام والعهد'],['legacy','تصنيف القديم'],['reports','التقارير'],['health','فحص النظام']];
     else if(isPrint() || isLaser()) list = [['dept','فاتورة القسم'],['deptPurchases','مشتريات اليوم'],['waste','هوالك القسم'],['stock','الأصناف المتاحة']];
     else if(isFinal()) list = [['sales','فواتير المبيعات'],['final','تقفيل الفاتورة'],['customers','العملاء'],['deptView','أجزاء الأقسام']];
     else list = [['dashboard','لوحة الحسابات'],['sales','فواتير المبيعات']];
@@ -312,11 +315,16 @@
   function render(){
     const sc = $('screen'); if(!sc) return;
     if(!allowedScreens().includes(state.active)) state.active = allowedScreens()[0];
-    const m = {dashboard:screenDashboard,suppliers:screenSuppliers,customers:screenCustomers,items:screenItems,purchase:screenPurchase,deptPurchases:screenDeptPurchases,sales:screenSales,stock:screenStock,kitchen:screenKitchen,reports:screenReports,health:screenHealth,dept:screenDept,waste:screenWaste,final:screenFinal,deptView:screenDeptView};
+    const m = {dashboard:screenDashboard,suppliers:screenSuppliers,customers:screenCustomers,items:screenItems,purchase:screenPurchase,deptPurchases:screenDeptPurchases,sales:screenSales,stock:screenStock,kitchen:screenKitchen,dailyClose:screenDailyClose,legacy:screenLegacy,reports:screenReports,health:screenHealth,dept:screenDept,waste:screenWaste,final:screenFinal,deptView:screenDeptView};
     sc.innerHTML = (m[state.active] || screenDashboard)();
+    if(state.active==='final') enhanceFinalPaymentMethod();
     document.querySelectorAll('.tab').forEach(b=>b.classList.toggle('active', nkey(b.textContent).includes(nkey(tabLabel(state.active)))));
   }
-  function tabLabel(t){ return ({dashboard:'لوحة',suppliers:'الموردين',customers:'العملاء',items:'الأصناف',purchase:'الشراء',deptPurchases:'مشتريات اليوم',sales:'المبيعات',stock:'المخزون',kitchen:'مطبخ',reports:'التقارير',health:'فحص',dept:'فاتورة',waste:'هوالك',final:'تقفيل',deptView:'أجزاء'})[t] || ''; }
+  function tabLabel(t){ return ({dashboard:'لوحة',suppliers:'الموردين',customers:'العملاء',items:'الأصناف',purchase:'الشراء',deptPurchases:'مشتريات اليوم',sales:'المبيعات',stock:'المخزون',kitchen:'مطبخ',dailyClose:'تقفيل الأقسام',legacy:'تصنيف',reports:'التقارير',health:'فحص',dept:'فاتورة',waste:'هوالك',final:'تقفيل',deptView:'أجزاء'})[t] || ''; }
+  function enhanceFinalPaymentMethod(){
+    const paid=$('fiPaid'); if(!paid||$('fiPayment')) return;
+    paid.closest('.field')?.insertAdjacentHTML('afterend','<div class="field"><label>طريقة الدفع</label><select id="fiPayment"><option>نقدي</option><option>إنستا باي</option><option>آجل</option><option>جزئي</option></select></div>');
+  }
 
   function screenDashboard(){
     const sales = accountingScopeSalesTotal();
@@ -376,6 +384,8 @@
   function dailyPurchaseStatus(r){ return String((r&&(r.status||r.reviewStatus))||'قيد مراجعة ضياء').trim(); }
   function isDailyPurchasePending(r){ const s=nkey(dailyPurchaseStatus(r)); return !s||/قيد|مراجعه|مراجعة|pending/.test(s); }
   function dailyPurchaseStatusBadge(r){ const s=dailyPurchaseStatus(r); const k=nkey(s); const cls=/مرفوض|رفض|rejected/.test(k)?'rejected':/معتمد|approved/.test(k)?'approved':'pending'; return `<span class="dailyPurchaseStatus ${cls}">${esc(s)}</span>`; }
+  function isDailyPurchaseApproved(r){ return /معتمد|approved/.test(nkey(dailyPurchaseStatus(r))); }
+  function isDailyPurchaseReversed(r){ return /معكوس|عكس|reversed/.test(nkey(dailyPurchaseStatus(r)+' '+(r.stockStatus||''))); }
   function dailyPurchaseStockStatus(r){ return String((r&&(r.stockStatus||r.inventoryStatus))||(isDailyPurchasePending(r)?'مضاف فورًا':'-')).trim(); }
   function dailyPurchaseStockBadge(r){ const s=dailyPurchaseStockStatus(r); const k=nkey(s); const cls=/عكس|ملغي/.test(k)?'rejected':/مضاف|معتمد/.test(k)?'approved':'pending'; return `<span class="dailyPurchaseStatus ${cls}">${esc(s)}</span>`; }
   function dailyPurchaseToken(value){ return encodeURIComponent(String(value||'')).replace(/'/g,'%27'); }
@@ -393,8 +403,8 @@
   function dailyPurchaseMaterialOptions(){ const dept=nkey(userDept()); return materialRows().filter(activeRow).filter(r=>{const d=nkey(matDept(r));return !d||d===dept||/مشترك|عام/.test(d)}).map(r=>`<option value="${esc(materialName(r))}">${esc(materialName(r))} - ${esc(matDept(r)||userDept())}</option>`).join(''); }
   function dailyPurchaseEmployeeTable(){
     const rows=deptDailyPurchaseRows();
-    if(!rows.length) return '<div class="empty">لم تسجل مشتريات اليوم بعد.</div>';
-    return table(rows,['الوقت','المورد','فاتورة المورد','الخامة','الكمية','سعر الوحدة','الإجمالي','الدفع','المخزون','المراجعة المالية'],r=>[esc(customerAccountDate(r.createdAt)),esc(r.supplier||''),esc(r.receiptNo||'-'),esc(r.material||r.materialName||''),esc(r.qty),money(r.unit),money(r.total),esc(r.paymentType||'-'),dailyPurchaseStockBadge(r),dailyPurchaseStatusBadge(r)]);
+    if(!rows.length) return custodySummaryCard()+'<div class="empty">لم تسجل مشتريات اليوم بعد.</div>';
+    return custodySummaryCard()+table(rows,['الوقت','المورد','فاتورة المورد','الخامة','الكمية','سعر الوحدة','الإجمالي','الدفع','المخزون','المراجعة المالية'],r=>[esc(customerAccountDate(r.createdAt)),esc(r.supplier||''),esc(r.receiptNo||'-'),esc(r.material||r.materialName||''),esc(r.qty),money(r.unit),money(r.total),esc(r.paymentType||'-'),dailyPurchaseStockBadge(r),dailyPurchaseStatusBadge(r)]);
   }
   function dailyPurchasePendingGroups(){
     const groups={};
@@ -413,8 +423,8 @@
     const total=groups.reduce((s,g)=>s+g.total,0);
     const groupHtml=groups.length?`<div class="dailyPurchaseGroups">${groups.map(g=>`<article class="dailyPurchaseGroup"><div><span>${esc(g.date)}</span><h3>${esc(g.employee)} · ${esc(g.department)}</h3><p>${g.rows.length} بند في انتظار المراجعة</p></div><div class="dailyPurchaseGroupTotal"><b>${money(g.total)}</b><button class="btn" onclick="ES27.approveDailyPurchaseBatch('${dailyPurchaseToken(g.employee)}','${esc(g.date)}')">اعتماد مشتريات اليوم</button></div></article>`).join('')}</div>`:'<div class="customerAccountSettled">✓ لا توجد مشتريات أقسام معلقة للمراجعة.</div>';
     const rows=visibleDailyPurchases().filter(r=>isDailyPurchasePending(r)||String(r.workDate||'')===dailyPurchaseTodayKey()).slice(0,150);
-    const reviewTable=rows.length?table(rows,['اليوم','الموظف','القسم','المورد','فاتورة المورد','الخامة','الكمية','السعر','الإجمالي','الدفع','المخزون','المراجعة','قرار'],r=>[esc(r.workDate||''),esc(dailyPurchaseEmployee(r)),esc(r.department||''),esc(r.supplier||''),esc(r.receiptNo||'-'),esc(r.material||r.materialName||''),esc(r.qty),money(r.unit),money(r.total),esc(r.paymentType||'-'),dailyPurchaseStockBadge(r),dailyPurchaseStatusBadge(r),isDailyPurchasePending(r)?`<button class="btn small danger" onclick="ES27.rejectDailyPurchase('${dailyPurchaseToken(r.id)}')">رفض وعكس المخزون</button>`:'-']):'';
-    return `<section class="card dailyPurchaseAdmin"><div class="toolbar"><div><span class="deptEyebrow">مراجعة ضياء آخر اليوم</span><h2>${esc(accountingScopeTitle('مشتريات جابر ووائل اليومية'))}</h2><p class="muted">المخزون مضاف فور التسجيل. اعتمادك يثبت فاتورة المورد فقط دون زيادة ثانية، والرفض يعكس الكمية إذا لم تُستهلك.</p></div><div class="dailyPurchaseSummary"><div><span>بنود معلقة</span><b>${pending}</b></div><div><span>إجمالي معلق</span><b>${money(total)}</b></div></div></div>${groupHtml}${reviewTable}</section>`;
+    const reviewTable=rows.length?table(rows,['اليوم','الموظف','القسم','المورد','فاتورة المورد','الخامة','الكمية','السعر','الإجمالي','الدفع','المخزون','المراجعة','قرار'],r=>[esc(r.workDate||''),esc(dailyPurchaseEmployee(r)),esc(r.department||''),esc(r.supplier||''),esc(r.receiptNo||'-'),esc(r.material||r.materialName||''),esc(r.qty),money(r.unit),money(r.total),esc(r.paymentType||'-'),dailyPurchaseStockBadge(r),dailyPurchaseStatusBadge(r),isDailyPurchasePending(r)?`<button class="btn small danger" onclick="ES27.rejectDailyPurchase('${dailyPurchaseToken(r.id)}')">رفض وعكس المخزون</button>`:(isDailyPurchaseApproved(r)&&!isDailyPurchaseReversed(r)?`<button class="btn small warn" onclick="ES27.reversePurchase('${dailyPurchaseToken(r.id)}','')">عكس اعتماد</button>`:'-')]):'';
+    return `<section class="card dailyPurchaseAdmin"><div class="toolbar"><div><span class="deptEyebrow">مراجعة ضياء آخر اليوم</span><h2>${esc(accountingScopeTitle('مشتريات جابر ووائل اليومية'))}</h2><p class="muted">المخزون مضاف فور التسجيل. الاعتماد يخصم المدفوع من عهدة الموظف، والعكس يرجع المخزون والمورد والعهدة بسجل دائم.</p></div><div class="dailyPurchaseSummary"><div><span>بنود معلقة</span><b>${pending}</b></div><div><span>إجمالي معلق</span><b>${money(total)}</b></div></div></div>${custodySummaryCard()}${groupHtml}${reviewTable}</section>`;
   }
 
   function screenDeptPurchases(){
@@ -462,7 +472,18 @@
     const tpl=itemByName(rowItem(r));
     return tpl ? matCost(tpl) : 0;
   }
-  function lineCostTotal(r){ return lineUnitCost(r)*rowQty(r); }
+  function lineCostTotal(r){
+    const hasExplicit=Object.prototype.hasOwnProperty.call(r||{},'totalCost') || Object.prototype.hasOwnProperty.call(r||{},'إجمالي التكلفة');
+    if(hasExplicit) return num(r.totalCost ?? r['إجمالي التكلفة']);
+    return lineUnitCost(r)*rowQty(r);
+  }
+  function custodySummaryCard(){
+    const today=dailyPurchaseTodayKey();
+    let rows=(state.data.custodySummary||[]).filter(r=>String(r.workDate||today)===today);
+    if(!isAdmin()) rows=rows.filter(r=>nkey(r.employee)===nkey(user.username||user.name)&&nkey(r.department)===nkey(userDept()));
+    if(!rows.length) return `<div class="hint">لم تُسلّم عهدة مشتريات لهذا الموظف اليوم.</div>`;
+    return `<div class="dailyPurchaseSummary custodySummary">${rows.map(r=>`<div><span>${esc(r.employee)} · ${esc(r.department)}</span><b>${money(r.balance)}</b><small>${r.closed?'مقفولة':r.balance>0?'سيرجع '+money(r.balance):r.balance<0?'مطلوب له '+money(Math.abs(r.balance)):'العهدة متوازنة'}</small></div>`).join('')}</div>`;
+  }
   function profitStatsForLines(rows){
     const total=(rows||[]).reduce((s,r)=>s+rowLineTotal(r),0);
     const cost=(rows||[]).reduce((s,r)=>s+lineCostTotal(r),0);
@@ -763,15 +784,42 @@
   function recipeForm(){ const selected=accountingScopeDepartment(); return `<div class="softBox"><h3>صنف بمكونات</h3><div class="grid six"><div class="field"><label>القسم</label><select id="recDept"><option ${selected==='طباعة'?'selected':''}>طباعة</option><option ${selected==='ليزر'?'selected':''}>ليزر</option><option>مشترك</option></select></div><div class="field"><label>اسم الصنف</label><input id="recName"></div><div class="field"><label>مقاس الناتج</label><input id="recSize" placeholder="مثال 15x21" oninput="ES27.updateCompCalc()"></div><div class="field"><label>سعر بيع رسمي</label><input id="recSale" type="number" oninput="ES27.calcRecipe()"></div><div class="field"><label>تكلفة محسوبة</label><input id="recCost" readonly></div><div class="field"><label>مجمل الربح</label><input id="recProfit" readonly></div></div><div class="grid six"><div class="field"><label>المكون</label><select id="compMat" onchange="ES27.updateCompCalc()"><option></option>${materialOptions()}</select></div><div class="field"><label>كمية المكون للوحدة</label><input id="compQty" type="number" value="1" oninput="ES27.updateCompCalc(false)"></div><div class="field"><label>الناتج AI</label><input id="compAiPieces" readonly></div><div class="field"><label>الناتج اليدوي</label><input id="compManualPieces" type="number" oninput="ES27.updateCompCalc(true)"></div><div class="field"><label>هالك</label><input id="compWaste" readonly></div><div class="field"><label>تكلفة المكون</label><input id="compCost" readonly></div></div><div class="actions"><button class="btn secondary" onclick="ES27.aiComp()">احسب AI للمكون</button><button class="btn" onclick="ES27.addComp()">إضافة المكون</button><button class="btn danger" onclick="ES27.clearComps()">تفريغ</button></div><div id="compList">${compTable()}</div><div class="actions"><button class="btn" onclick="ES27.saveRecipe()">حفظ / تحديث الصنف</button><button class="btn secondary" onclick="ES27.clearRecipeForm()">جديد</button></div><div class="hint">لو اخترت مكون ولم تضغط إضافة المكون، سيتم ضمه تلقائيًا عند الحفظ.</div></div>`; }
   function compTable(){ return table(state.recipeComps,['المكون','استهلاك','تكلفة','حذف'],(c,i)=>[esc(c.materialName),esc(c.qty),money(c.cost),`<button class="btn small danger" onclick="ES27.removeComp(${i})">حذف</button>`]); }
 
+  function dailyCloseReportHtml(){
+    const r=state.dailyReport;
+    if(!r) return '<div class="empty">اختر التاريخ والقسم واضغط «عرض التقرير».</div>';
+    return `<div class="dailyReportReady"><div class="grid four"><div class="kpi"><b>${money(r.sales)}</b><span>مبيعات اليوم</span></div><div class="kpi"><b>${money(r.actualJobCost)}</b><span>تكلفة الشغل الفعلية</span></div><div class="kpi"><b>${money(r.netWaste)}</b><span>صافي الهوالك</span></div><div class="kpi profitKpi"><b>${money(r.profit)}</b><span>الربح الفعلي</span></div></div><div class="grid four"><div class="kpi"><b>${money(r.purchases)}</b><span>مشتريات اليوم (معلومة)</span></div><div class="kpi"><b>${money(r.cash)}</b><span>نقدي</span></div><div class="kpi"><b>${money(r.instapay)}</b><span>إنستا باي</span></div><div class="kpi"><b>${money(r.credit)}</b><span>آجل</span></div></div><div class="grid four"><div class="kpi"><b>${money(r.receipts)}</b><span>القبض</span></div><div class="kpi"><b>${money(r.payments)}</b><span>الدفع</span></div><div class="kpi"><b>${money(r.custodyHanded)}</b><span>العهد المسلمة</span></div><div class="kpi"><b>${money(r.custodyBalance)}</b><span>رصيد العهد قبل التقفيل</span></div></div>${r.unclassifiedSales||r.unclassifiedPurchases?`<div class="warn">بيانات غير مصنفة تظهر في «كل الأقسام» فقط: مبيعات ${money(r.unclassifiedSales)} / مشتريات ${money(r.unclassifiedPurchases)}. افتح شاشة «تصنيف القديم» لإدخالها في تقرير القسم.</div>`:''}</div>`;
+  }
+  function custodyAdminTable(){
+    const rows=state.data.custodySummary||[];
+    if(!rows.length) return '<div class="empty">لا توجد عهد أو مشتريات أقسام لهذا اليوم.</div>';
+    return table(rows,['الموظف','القسم','العهدة','المشتريات المعتمدة','المتبقي','النتيجة','تقفيل'],r=>[esc(r.employee),esc(r.department),money(r.handed),money(r.approvedPurchases),money(r.balance),r.closed?'<span class="pill">مقفولة</span>':r.balance>0?'سيرجع '+money(r.balance):r.balance<0?'مطلوب له '+money(Math.abs(r.balance)):'متوازنة',r.closed?'-':`<button class="btn small" onclick="ES27.closeCustody('${dailyPurchaseToken(r.employee)}','${esc(r.department)}','${esc(r.workDate||dailyPurchaseTodayKey())}')">تقفيل العهدة</button>`]);
+  }
+  function purchaseReversalTable(){
+    const rows=(state.data.purchases||[]).slice(0,100);
+    return table(rows,['الفاتورة','القسم','المورد','الخامة','الإجمالي','الحالة','تصحيح'],p=>{const invoice=p.invoiceNo||p.no||p['رقم الفاتورة']||'',reversed=/معكوس|عكس/.test(nkey(p.reversalStatus||p['حالة العكس']||''));return[esc(invoice),esc(accountingRowDepartment(p)||'-'),esc(p.supplier||p['المورد']||''),esc(p.material||p.materialName||p['الخامة']||''),money(p.total||p['الإجمالي']),reversed?'<span class="pill warn">معكوس</span>':'معتمد',reversed?'-':`<button class="btn small warn" onclick="ES27.reversePurchase('','${dailyPurchaseToken(invoice)}')">عكس الحركة</button>`];});
+  }
+  function screenDailyClose(){
+    if(!isAdmin()) return '<div class="card"><h2>تقفيل الأقسام والعهد عند ضياء فقط.</h2></div>';
+    const date=state.dailyReportDate||dailyPurchaseTodayKey(),dept=state.dailyReportDepartment||'ليزر';
+    return `<section class="deptInvoiceHero"><div><span class="deptEyebrow">دورة نهاية اليوم</span><h2>العهدة وتقفيل الأقسام</h2><p>اقفل عهد جابر ووائل، ثم الليزر والطباعة، وبعدهما التقفيل الإجمالي للمكان.</p></div></section><section class="card"><h3>تسليم عهدة مشتريات</h3><div class="grid five"><div class="field"><label>الموظف</label><select id="cuEmployee" onchange="set('cuDept',this.value==='جابر'?'ليزر':'طباعة')"><option>جابر</option><option>وائل</option></select></div><div class="field"><label>القسم</label><select id="cuDept">${accountingDeptOptions('ليزر',false)}</select></div><div class="field"><label>المبلغ</label><input id="cuAmount" type="number" min="0"></div><div class="field"><label>طريقة التسليم</label><select id="cuMethod"><option>نقدي</option><option>إنستا باي</option></select></div><div class="field"><label>التاريخ</label><input id="cuDate" type="date" value="${esc(date)}"></div></div><div class="field"><label>ملاحظات</label><input id="cuNotes"></div><button class="btn" onclick="ES27.saveCustody()">تسليم العهدة وتسجيلها بالخزنة</button>${custodyAdminTable()}</section><section class="card"><div class="toolbar"><div><h3>التقرير اليومي الجاهز</h3><p class="muted">المشتريات للمتابعة فقط؛ الربح = المبيعات − تكلفة الشغل الفعلية − صافي الهوالك.</p></div><div class="actions"><input id="dcDate" type="date" value="${esc(date)}"><select id="dcDept"><option ${dept==='ليزر'?'selected':''}>ليزر</option><option ${dept==='طباعة'?'selected':''}>طباعة</option><option ${dept==='كل الأقسام'?'selected':''}>كل الأقسام</option></select><button class="btn secondary" onclick="ES27.loadDailyReport()">عرض التقرير</button><button class="btn" onclick="ES27.closeDepartmentDay()">حفظ التقفيل</button></div></div><div id="dailyReportBox">${dailyCloseReportHtml()}</div><div class="hint">التقفيل الإجمالي لن يعمل قبل حفظ تقفيل الليزر والطباعة لنفس اليوم.</div></section><section class="card"><h3>تصحيح مشتريات معتمدة بدون حذف</h3><p class="muted">عكس الحركة يرجع المخزون وحساب المورد والخزنة أو العهدة، ويحتفظ بسجل المراجعة.</p>${purchaseReversalTable()}</section>`;
+  }
+  function legacyEntityLabel(v){return ({purchase:'فاتورة شراء',sale:'فاتورة بيع',deptLine:'بند قسم',finalInvoice:'فاتورة نهائية'})[v]||v;}
+  function screenLegacy(){
+    if(!isAdmin()) return '<div class="card"><h2>تصنيف البيانات القديمة عند ضياء فقط.</h2></div>';
+    const rows=state.data.unclassifiedRows||[];
+    return `<section class="card"><div class="toolbar"><div><h2>تصنيف الفواتير والبيانات القديمة</h2><p class="muted">السجل غير المصنف يظهر في كل الأقسام فقط، ولا يدخل تقرير الليزر أو الطباعة حتى تصنفه مرة واحدة.</p></div><b>${rows.length} سجل غير مصنف</b></div>${table(rows,['النوع','المرجع','التاريخ','الطرف','القيمة','القسم'],(r,i)=>[esc(legacyEntityLabel(r.entity)),esc(r.label||'-'),esc(r.date||'-'),esc(r.party||'-'),money(r.amount),`<div class="tableActions"><select id="legacyDept${i}"><option>ليزر</option><option>طباعة</option></select><button class="btn small" onclick="ES27.classifyLegacy(${i})">حفظ التصنيف</button></div>`])}</section>`;
+  }
+
   function screenReports(){
     if(!isAdmin()) return '<div class="card"><h2>التقارير</h2><div class="warn">التقارير والأرباح لضياء فقط.</div></div>';
     const sales = accountingScopeSalesTotal();
     const purchases = scopedPurchases().reduce((s,r)=>s+num(r.total||r.amount),0);
     const waste = scopedWasteLines().reduce((s,r)=>s+num(r.amount||r.wasteAmount||r.remain),0);
-    const operating = operatingExpenseRows().reduce((s,r)=>s + num(r.operatingUnitCost || r['قيمة التشغيل'] || r.unitCost || r.cost),0);
+    const actualCost = scopedBilledDeptLines().reduce((s,r)=>s+lineCostTotal(r),0);
     const salesLabel=state.accountingScope==='all'?'مبيعات':'مبيعات القسم المقفولة';
-    const departmentDetails=state.accountingScope==='all'?'':`<div class="card"><h3>تفاصيل المبيعات المقفولة · ${esc(accountingScopeLabel())}</h3>${table(scopedBilledDeptLines(),['الفاتورة','الأوردر','العميل','البند','الكمية','المبيعات','التكلفة','مجمل الربح'],r=>[esc(rowFinalInvoice(r)||'-'),esc(rowOrderId(r)||'-'),esc(rowCustomer(r)||'-'),esc(rowItem(r)),esc(rowQty(r)),money(rowLineTotal(r)),money(lineCostTotal(r)),money(rowLineTotal(r)-lineCostTotal(r))])}</div>`;
-    return `<div class="card"><h2>${esc(accountingScopeTitle('التقارير والأرباح'))}</h2><div class="grid four"><div class="kpi"><b>${money(sales)}</b><span>${salesLabel}</span></div><div class="kpi"><b>${money(purchases)}</b><span>مشتريات</span></div><div class="kpi"><b>${money(waste)}</b><span>هوالك</span></div><div class="kpi"><b>${money(sales-purchases-waste-operating)}</b><span>صافي تقديري بعد التشغيل</span></div></div></div>${departmentDetails}<div class="card"><h3>${esc(accountingScopeTitle('مصروفات التشغيل المسجلة'))}</h3>${table(operatingExpenseRows(),['البند','القسم','باند التشغيل','طريقة التوزيع','القيمة'],r=>[esc(materialName(r)),esc(matDept(r)),esc(r.operatingBand||r['بند التشغيل']||''),esc(r.operatingCalcMethod||r['طريقة توزيع التشغيل']||''),money(r.operatingUnitCost||r['قيمة التشغيل']||r.unitCost)])}</div>`;
+    let departmentDetails=state.accountingScope==='all'?'':`<div class="card"><h3>تفاصيل المبيعات المقفولة · ${esc(accountingScopeLabel())}</h3>${table(scopedBilledDeptLines(),['الفاتورة','الأوردر','العميل','البند','الكمية','المبيعات','التكلفة','مجمل الربح'],r=>[esc(rowFinalInvoice(r)||'-'),esc(rowOrderId(r)||'-'),esc(rowCustomer(r)||'-'),esc(rowItem(r)),esc(rowQty(r)),money(rowLineTotal(r)),money(lineCostTotal(r)),money(rowLineTotal(r)-lineCostTotal(r))])}</div>`;
+    departmentDetails+=`<div class="card"><h3>${esc(accountingScopeTitle('مصروفات التشغيل المسجلة'))}</h3><p class="muted">تظهر للمراجعة، وتدخل الربح من خلال تكلفة بند الشغل الفعلية دون خصم مزدوج.</p>${table(operatingExpenseRows(),['البند','القسم','باند التشغيل','طريقة التوزيع','القيمة'],r=>[esc(materialName(r)),esc(matDept(r)),esc(r.operatingBand||r['بند التشغيل']||''),esc(r.operatingCalcMethod||r['طريقة توزيع التشغيل']||''),money(r.operatingUnitCost||r['قيمة التشغيل']||r.unitCost)])}</div>`;
+    return `<div class="card"><div class="toolbar"><div><h2>${esc(accountingScopeTitle('التقارير والأرباح الفعلية'))}</h2><p class="muted">الربح محسوب من تكلفة الخامات والتشغيل المستهلكة فعلًا في بنود الشغل، وليس من إجمالي مشتريات اليوم.</p></div><button class="btn" onclick="ES27.go('dailyClose')">فتح التقرير اليومي والتقفيل</button></div><div class="grid four"><div class="kpi"><b>${money(sales)}</b><span>${salesLabel}</span></div><div class="kpi"><b>${money(actualCost)}</b><span>تكلفة الشغل الفعلية</span></div><div class="kpi"><b>${money(waste)}</b><span>هوالك</span></div><div class="kpi"><b>${money(sales-actualCost-waste)}</b><span>الربح الفعلي</span></div></div><div class="hint">مشتريات الفترة: ${money(purchases)} — تظهر للمتابعة ولا تُخصم مرة ثانية من الربح.</div></div>${departmentDetails}`;
   }
   function screenHealth(){ return `<div class="card"><h2>فحص النظام</h2><button class="btn" onclick="ES27.health()">فحص الآن</button><div id="healthBox" class="hint">اضغط فحص الآن.</div></div>`; }
 
@@ -876,6 +924,10 @@
         suppliers: supplierRows.length ? supplierRows : (r.suppliers || []),
         purchases: r.purchases || [],
         dailyPurchases: r.dailyPurchases || [],
+        custodyEntries: r.custodyEntries || [],
+        custodySummary: r.custodySummary || [],
+        departmentDayCloses: r.departmentDayCloses || [],
+        unclassifiedRows: r.unclassifiedRows || [],
         sales: r.sales || [],
         customers: customerRows.length ? customerRows : (r.customers || []),
         stockMoves: r.stockMoves || [],
@@ -891,7 +943,7 @@
   }
 
   window.ES27 = {
-    go(t){ if(!allowedScreens().includes(t)) return deny('هذه الشاشة غير متاحة لصلاحية المستخدم الحالي.'); state.active = t; shell(); },
+    go(t){ if(!allowedScreens().includes(t)) return deny('هذه الشاشة غير متاحة لصلاحية المستخدم الحالي.'); state.active = t; shell(); if(t==='dailyClose'&&!state.dailyReport) this.loadDailyReport(); },
     load,
     setAccountingScope(scope){
       if(!isAdmin()) return deny('اختيار حسابات القسم متاح لضياء فقط.');
@@ -901,7 +953,41 @@
       state.recipeComps=[]; state.salePulledLines=[]; state.purchaseRequestId='';
       shell(); flash('تم فتح '+accountingScopeLabel()+'.');
     },
-    hardReload(){ const url = location.pathname + '?v=es44-v1919-immediate-department-purchase-stock-' + Date.now(); location.href = url; },
+    hardReload(){ const url = location.pathname + '?v=es45-v1920-custody-department-day-close-' + Date.now(); location.href = url; },
+    async saveCustody(){
+      if(!isAdmin()) return deny('تسليم العهدة عند ضياء فقط.');
+      const employee=val('cuEmployee'),department=val('cuDept'),amount=num(val('cuAmount')),workDate=val('cuDate')||dailyPurchaseTodayKey(),paymentMethod=val('cuMethod')||'نقدي',notes=val('cuNotes');
+      if(!employee||!department||amount<=0) return flash('اختر الموظف والقسم واكتب مبلغ عهدة أكبر من صفر.',true);
+      if(!confirm('تسليم عهدة '+money(amount)+' إلى '+employee+' لقسم '+department+'؟')) return;
+      try{const reply=await api('savePurchaseCustodyV1920',{employee,department,amount,workDate,paymentMethod,notes,requestId:'CUS-'+workDate+'-'+nkey(employee)+'-'+Date.now()});if(!reply||reply.success===false)throw new Error((reply&&reply.message)||'تعذر حفظ العهدة.');await load(true);flash(reply.message||'تم تسليم العهدة.');}catch(e){flash(e.message||'تعذر حفظ العهدة.',true);}
+    },
+    async closeCustody(encodedEmployee,department,workDate){
+      if(!isAdmin()) return deny();let employee='';try{employee=decodeURIComponent(String(encodedEmployee||''));}catch(e){employee=String(encodedEmployee||'');}
+      const summary=(state.data.custodySummary||[]).find(r=>nkey(r.employee)===nkey(employee)&&nkey(r.department)===nkey(department)&&String(r.workDate||'')===String(workDate||''));
+      const resultText=summary&&summary.balance>0?'سيُسجل رد '+money(summary.balance)+' إلى الخزنة.':summary&&summary.balance<0?'سيُسجل دفع '+money(Math.abs(summary.balance))+' للموظف.':'لا يوجد فرق.';
+      if(!confirm('تقفيل عهدة '+employee+'؟\n'+resultText))return;
+      try{const reply=await api('closePurchaseCustodyV1920',{employee,department,workDate,paymentMethod:'نقدي',requestId:'CCL-'+workDate+'-'+nkey(employee)});if(!reply||reply.success===false)throw new Error((reply&&reply.message)||'تعذر تقفيل العهدة.');await load(true);flash(reply.message||'تم تقفيل العهدة.');}catch(e){flash(e.message||'تعذر تقفيل العهدة.',true);}
+    },
+    async loadDailyReport(){
+      if(!isAdmin())return deny();const workDate=val('dcDate')||state.dailyReportDate||dailyPurchaseTodayKey(),department=val('dcDept')||state.dailyReportDepartment||'ليزر';state.dailyReportDate=workDate;state.dailyReportDepartment=department;
+      try{const reply=await api('getDailyDepartmentReportV1920',{workDate,department});if(!reply||reply.success===false)throw new Error((reply&&reply.message)||'تعذر تحميل التقرير.');state.dailyReport=reply.report||null;state.data.departmentDayCloses=reply.closes||state.data.departmentDayCloses;render();flash('تم تجهيز تقرير '+department+' ليوم '+workDate+'.');}catch(e){flash(e.message||'تعذر تحميل التقرير.',true);}
+    },
+    async closeDepartmentDay(){
+      if(!isAdmin())return deny();const workDate=val('dcDate')||state.dailyReportDate||dailyPurchaseTodayKey(),department=val('dcDept')||state.dailyReportDepartment||'ليزر';
+      if(!confirm('حفظ تقفيل '+department+' ليوم '+workDate+'؟'))return;
+      try{const reply=await api('closeDepartmentDayV1920',{workDate,department,requestId:'DAY-'+workDate+'-'+nkey(department),notes:'تقفيل من EasyStore ES45'});if(!reply||reply.success===false)throw new Error((reply&&reply.message)||'تعذر حفظ التقفيل.');state.dailyReport=reply.report||state.dailyReport;await load(true);flash(reply.message||'تم حفظ التقفيل.');}catch(e){flash(e.message||'تعذر حفظ التقفيل.',true);}
+    },
+    async classifyLegacy(index){
+      if(!isAdmin())return deny();const row=(state.data.unclassifiedRows||[])[index],department=val('legacyDept'+index);if(!row)return flash('السجل غير موجود.',true);
+      if(!confirm('تصنيف '+(row.label||'السجل')+' ضمن قسم '+department+'؟ لا يمكن تغييره من هذه الشاشة بعد الحفظ.'))return;
+      try{const reply=await api('classifyLegacyAccountingRowV1920',{entity:row.entity,rowNumber:row.rowNumber,department});if(!reply||reply.success===false)throw new Error((reply&&reply.message)||'تعذر التصنيف.');await load(true);flash(reply.message||'تم التصنيف.');}catch(e){flash(e.message||'تعذر التصنيف.',true);}
+    },
+    async reversePurchase(encodedId,encodedInvoice){
+      if(!isAdmin())return deny('عكس المشتريات عند ضياء فقط.');let id='',invoiceNo='';try{id=decodeURIComponent(String(encodedId||''));invoiceNo=decodeURIComponent(String(encodedInvoice||''));}catch(e){id=String(encodedId||'');invoiceNo=String(encodedInvoice||'');}
+      const reason=prompt('اكتب سبب عكس المشتريات. لن يتم حذف الفاتورة:','تم الاعتماد بالخطأ');if(!reason)return;
+      if(!confirm('تنفيذ عكس حركة المشتريات؟\nسيتم فحص المخزون ثم عكس المورد والخزنة أو العهدة.'))return;
+      try{const reply=await api('reverseApprovedPurchaseV1920',{id,invoiceNo,reason});if(!reply||reply.success===false)throw new Error((reply&&reply.message)||'تعذر عكس المشتريات.');await load(true);flash(reply.message||'تم عكس المشتريات.');}catch(e){flash(e.message||'تعذر عكس المشتريات.',true);}
+    },
     quickSearch(q){ q=nkey(q); if(!q) return; const found = templates().find(r=>nkey(templateName(r)).includes(q)) || materials().find(r=>nkey(materialName(r)).includes(q)); if(found) flash('تم العثور على: ' + (templateName(found)||materialName(found))); },
     async saveSupplier(){ if(!canManageAccounting()) return deny(); const s={name:val('supName'),phone:val('supPhone'),opening:num(val('supOpening')),address:val('supAddress')}; if(!s.name) return flash('اكتب اسم المورد',true); try{ const reply=await api('saveEasyStoreSupplier',s); if(!reply||reply.success===false) throw new Error((reply&&reply.message)||'تعذر حفظ المورد'); const i=state.data.suppliers.findIndex(x=>nkey(x.name||x.supplier)===nkey(s.name)); if(i>=0) state.data.suppliers[i]=s; else state.data.suppliers.unshift(s); saveLocal(); shell(); flash('تم حفظ المورد على السيرفر'); }catch(e){ flash('لم يتم حفظ المورد: '+(e.message||e),true); } },
     editSupplier(i){ const s=state.data.suppliers[i]; if(!s) return; set('supName',s.name||s.supplier); set('supPhone',s.phone); set('supOpening',s.opening||s.openingBalance); set('supAddress',s.address); },
@@ -1261,7 +1347,7 @@
       if(!order) return flash('رقم الأوردر مطلوب لتقفيل الفاتورة.',true);
       const rows=(state.data.deptLines||[]).filter(isUnbilledDeptLine).filter(isDeptApprovedForFinal).filter(r=>String(rowOrderId(r)||'')===String(order||''));
       const lineIds=rows.map(rowLineId).filter(Boolean);
-      const p={orderId:order,customer:val('fiCustomer'),customerName:val('fiCustomer'),paid:num(val('fiPaid')),lineIds:JSON.stringify(lineIds),date:new Date().toISOString()};
+      const p={orderId:order,customer:val('fiCustomer'),customerName:val('fiCustomer'),paymentType:val('fiPayment')||'نقدي',paid:num(val('fiPaid')),lineIds:JSON.stringify(lineIds),date:new Date().toISOString()};
       if(!state.finalRequestId) state.finalRequestId='FINAL-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,10);
       p.requestId=state.finalRequestId;
       flash('جاري التحقق من البنود المعتمدة وتقفيل الفاتورة...');

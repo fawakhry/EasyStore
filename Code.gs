@@ -32,7 +32,7 @@ const SHEET_NAME_ACC_FINAL_INVOICES = "حسابات - الفواتير النه�
 const SHEET_NAME_ACC_WASTE = "حسابات - هوالك الأقسام";
 const SHEET_NAME_ACC_STOCK_MOVES = "حسابات - حركة المخزون";
 const SHEET_NAME_ACC_DEPT_DAILY_PURCHASES = "حسابات - مشتريات الأقسام اليومية";
-const MATBAGY_ACCOUNTING_VERSION = "V1919_IMMEDIATE_DEPT_PURCHASE_STOCK";
+const MATBAGY_ACCOUNTING_VERSION = "V1920_CUSTODY_DEPARTMENT_DAY_CLOSE";
 const DEFAULT_PASSWORD = "";
 function employeeDefaultPassword_() {
   try { return normalize_(PropertiesService.getScriptProperties().getProperty("EMPLOYEE_DEFAULT_PASSWORD")); } catch (err) { return ""; }
@@ -124,6 +124,13 @@ function doGet(e) {
     else if (action === "saveDeptDailyPurchaseV1917") result = saveDeptDailyPurchaseV1917_(e);
     else if (action === "approveDeptDailyPurchasesV1917") result = approveDeptDailyPurchasesV1917_(e);
     else if (action === "rejectDeptDailyPurchaseV1917") result = rejectDeptDailyPurchaseV1917_(e);
+    else if (action === "savePurchaseCustodyV1920") result = savePurchaseCustodyV1920_(e);
+    else if (action === "closePurchaseCustodyV1920") result = closePurchaseCustodyV1920_(e);
+    else if (action === "getDailyDepartmentReportV1920") result = getDailyDepartmentReportV1920_(e);
+    else if (action === "closeDepartmentDayV1920") result = closeDepartmentDayV1920_(e);
+    else if (action === "getUnclassifiedAccountingRowsV1920") result = getUnclassifiedAccountingRowsV1920_(e);
+    else if (action === "classifyLegacyAccountingRowV1920") result = classifyLegacyAccountingRowV1920_(e);
+    else if (action === "reverseApprovedPurchaseV1920") result = reverseApprovedPurchaseV1920_(e);
     else if (action === "calculateAccountingLaserQuoteV1913") result = calculateAccountingLaserQuoteV1913_(e);
     else if (action === "saveAccountingMaterial") result = saveAccountingMaterial_(e);
     else if (action === "archiveAccountingMaterial") result = archiveAccountingMaterial_(e);
@@ -2711,7 +2718,7 @@ function accDeptLinesHeaders_() {
 }
 
 function accFinalInvoicesHeaders_() {
-  return ["رقم الفاتورة", "وقت التقفيل", "رقم الأوردر", "اسم العميل", "بنود الأقسام", "بند يدوي", "قيمة بند يدوي", "الإجمالي قبل الخصم", "الخصم", "الإجمالي النهائي", "المدفوع", "الباقي", "الحالة", "قفل بواسطة", "ملاحظات", "آخر تحديث"];
+  return ["رقم الفاتورة", "وقت التقفيل", "رقم الأوردر", "اسم العميل", "بنود الأقسام", "بند يدوي", "قيمة بند يدوي", "الإجمالي قبل الخصم", "الخصم", "الإجمالي النهائي", "المدفوع", "الباقي", "طريقة الدفع", "القسم المالي", "الحالة", "قفل بواسطة", "ملاحظات", "آخر تحديث"];
 }
 
 function accWasteHeaders_() {
@@ -3065,6 +3072,7 @@ function approveDeptDailyPurchasesV1917_(e) {
         failed.push({ id: row.id, material: row.material, message: result && result.message ? result.message : "تعذر اعتماد البند" });
         return;
       }
+      try { purchaseCustodySettleApprovedPurchaseV1920_(row, auth.user.username); } catch (custodyErr) { try { es16Audit_(auth.user.username,"تنبيه تسوية عهدة","مشتريات قسم",row.id,"","",custodyErr && custodyErr.message ? custodyErr.message : custodyErr); } catch (auditCustodyErr) {} }
       updateByHeaders_(sheets.dailyPurchases, row.rowNumber, {
         "الحالة": "معتمد ماليًا",
         "وقت الاعتماد": new Date(),
@@ -3139,9 +3147,9 @@ function ensureAccountingSheets_() {
   const dailyPurchases = mbEnsureSheet_(SHEET_NAME_ACC_DEPT_DAILY_PURCHASES, accDeptDailyPurchasesHeadersV1917_());
   ensureHeaderIfAnyMissing_(templates, ["تكلفة محسوبة", "مكونات الصنف"]);
   ensureHeaderIfAnyMissing_(deptLines, ["تفاصيل المكونات", "تفاصيل حاسبة الليزر", "مساحة مستهلكة", "نسبة الهالك", "مخزون مخصوم؟", "وقت خصم المخزون"]);
-  ensureHeaderIfAnyMissing_(finalInvoices, ["مفتاح العملية", "حالة العكس المالي", "وقت العكس المالي"]);
+  ensureHeaderIfAnyMissing_(finalInvoices, ["مفتاح العملية", "حالة العكس المالي", "وقت العكس المالي", "طريقة الدفع", "القسم المالي"]);
   ensureHeaderIfAnyMissing_(stockMoves, ["كمية واردة", "كمية منصرفة"]);
-  ensureHeaderIfAnyMissing_(dailyPurchases, ["حالة المخزون", "وقت إضافة المخزون", "كمية أضيفت للمخزون", "رصيد المخزون بعد الإضافة", "وقت عكس المخزون", "سبب عكس المخزون"]);
+  ensureHeaderIfAnyMissing_(dailyPurchases, ["حالة المخزون", "وقت إضافة المخزون", "كمية أضيفت للمخزون", "رصيد المخزون بعد الإضافة", "وقت عكس المخزون", "سبب عكس المخزون", "حالة العكس المالي", "وقت العكس المالي", "عكس بواسطة", "مرجع العكس"]);
   seedAccountingTemplates_(templates);
   return { materials: materials, templates: templates, deptLines: deptLines, finalInvoices: finalInvoices, waste: waste, stockMoves: stockMoves, dailyPurchases: dailyPurchases };
 }
@@ -8192,10 +8200,10 @@ function accountingSanitizeRowsV1857_(rows, mode) {
   return rows.map(function(r){ return accountingSanitizeNumberHiddenV1857_(Object.assign({}, r)); });
 }
 function easyStoreSalesHeadersV1909_() {
-  return ["ID","وقت التسجيل","رقم الفاتورة","رقم الأوردر","العميل","نوع الدفع","البند","الكمية","سعر الوحدة","خصم","الإجمالي","المدفوع","المتبقي","بنود الأقسام","مسجل بواسطة","ملاحظات"];
+  return ["ID","وقت التسجيل","رقم الفاتورة","رقم الأوردر","العميل","نوع الدفع","القسم","البند","الكمية","سعر الوحدة","خصم","الإجمالي","المدفوع","المتبقي","بنود الأقسام","مسجل بواسطة","ملاحظات"];
 }
 function easyStorePurchasesHeadersV1909_() {
-  return ["ID","وقت التسجيل","رقم الفاتورة","القسم","المورد","نوع الدفع","تاريخ الاستحقاق","الخامة","الكمية","سعر الوحدة","الإجمالي","المدفوع","المتبقي","بنود الأقسام","مسجل بواسطة","ملاحظات"];
+  return ["ID","وقت التسجيل","رقم الفاتورة","القسم","المورد","نوع الدفع","تاريخ الاستحقاق","الخامة","الكمية","سعر الوحدة","الإجمالي","المدفوع","المتبقي","بنود الأقسام","مسجل بواسطة","ملاحظات","حالة العكس","وقت العكس","عكس بواسطة","سبب العكس","مرجع العكس","معرف مشتريات القسم"];
 }
 function getAccounting_(e) {
   const auth = accountingAuthorize_(e);
@@ -8212,6 +8220,10 @@ function getAccounting_(e) {
   const salesRaw = (mode === "full" || mode === "final") ? accSheetRows_(mbEnsureSheet_("حسابات - فواتير المبيعات", easyStoreSalesHeadersV1909_())) : [];
   const purchasesRaw = (mode === "full" || mode === "final") ? accSheetRows_(mbEnsureSheet_("حسابات - فواتير الشراء", easyStorePurchasesHeadersV1909_())) : [];
   const dailyPurchases = deptDailyPurchasesForAuthV1917_(auth, deptDailyPurchaseRowsV1917_(sheets.dailyPurchases));
+  const custodyRows = purchaseCustodyRowsForAuthV1920_(auth);
+  const custodySummary = purchaseCustodySummariesV1920_(auth, deptDailyPurchaseTodayV1917_());
+  const dayCloses = mode === "full" ? accSheetRows_(ensureDepartmentDayCloseSheetV1920_()).slice(-30).reverse() : [];
+  const unclassifiedRows = mode === "full" ? collectUnclassifiedAccountingRowsV1920_().slice(0, 300) : [];
   return {
     success: true,
     permissions: {
@@ -8223,6 +8235,10 @@ function getAccounting_(e) {
       canEnterPurchaseInvoice: mode === "full" || mode === "final",
       canEnterDailyPurchase: mode === "print" || mode === "laser",
       canApproveDailyPurchases: mode === "full",
+      canManageCustody: mode === "full",
+      canCloseDepartmentDay: mode === "full",
+      canClassifyLegacy: mode === "full",
+      canReversePurchases: mode === "full",
       canSeeCosts: mode === "full",
       canSeeProfitReports: mode === "full"
     },
@@ -8233,6 +8249,10 @@ function getAccounting_(e) {
     sales: accountingSanitizeRowsV1857_(salesRaw, mode),
     purchases: accountingSanitizeRowsV1857_(purchasesRaw, mode),
     dailyPurchases: dailyPurchases,
+    custodyEntries: custodyRows,
+    custodySummary: custodySummary,
+    departmentDayCloses: dayCloses,
+    unclassifiedRows: unclassifiedRows,
     wasteLines: accountingSanitizeRowsV1857_(wasteRaw, mode),
     stockMoves: accountingSanitizeRowsV1857_(stockRaw, mode),
     summary: mode === "full" ? accountingSummary_(deptLinesAll) : accountingSummary_(deptLinesRaw).byDepartment.map ? { byDepartment: accountingSummary_(deptLinesRaw).byDepartment.map(function(x){ return { department:x.department, sales:x.sales, cost:"", profit:"", count:x.count }; }) } : { byDepartment: [] },
@@ -8243,7 +8263,7 @@ function saveEasyStorePurchase_(e) {
   const auth = accountingAuthorize_(e);
   if (!auth.ok) return { success: false, message: auth.message };
   if (!accountingCanSavePurchaseV1857_(auth)) return { success: false, message: "فواتير المشتريات عند ضياء / رحمه / ريفان فقط. وائل وجابر يسجلوا فاتورة القسم فقط." };
-  const sheet = mbEnsureSheet_("حسابات - فواتير الشراء", ["ID","وقت التسجيل","رقم الفاتورة","القسم","المورد","نوع الدفع","تاريخ الاستحقاق","الخامة","الكمية","سعر الوحدة","الإجمالي","المدفوع","المتبقي","بنود الأقسام","مسجل بواسطة","ملاحظات"]);
+  const sheet = mbEnsureSheet_("حسابات - فواتير الشراء", easyStorePurchasesHeadersV1909_());
   const qty = parseMoney_(e.parameter.qty), unit = parseMoney_(e.parameter.unitPrice || e.parameter.unit);
   const total = parseMoney_(e.parameter.total) || qty * unit;
   const paid = parseMoney_(e.parameter.paid);
@@ -8815,7 +8835,10 @@ function saveEasyStorePurchase_(e) {
   }
   if (!accountingFindMaterialRow_(ensureAccountingSheets_().materials, materialName, "")) return { success:false, message:"الخامة غير مسجلة في المخزون: "+materialName };
   const purchaseRow = sheet.getLastRow() + 1;
-  appendByHeaders_(sheet, {"ID":"PUR-"+Utilities.getUuid().slice(0,8), "وقت التسجيل":new Date(), "رقم الفاتورة":invoiceNo, "القسم":normalize_(e.parameter.department || auth.department || "إدارة"), "المورد":supplier, "نوع الدفع":normalize_(e.parameter.paymentType), "تاريخ الاستحقاق":normalize_(e.parameter.dueDate), "الخامة":materialName, "الكمية":qty, "سعر الوحدة":unit, "الإجمالي":total, "المدفوع":paid, "المتبقي":remain, "بنود الأقسام":normalize_(e.parameter.lineIds), "مسجل بواسطة":auth.user.username, "ملاحظات":normalize_(e.parameter.notes)});
+  const purchaseId = "PUR-"+Utilities.getUuid().slice(0,8);
+  const purchaseDepartment = normalize_(e.parameter.department || auth.department || "إدارة");
+  const sourceDailyPurchaseId = normalize_(e.parameter.sourceDailyPurchaseId);
+  appendByHeaders_(sheet, {"ID":purchaseId, "وقت التسجيل":new Date(), "رقم الفاتورة":invoiceNo, "القسم":purchaseDepartment, "المورد":supplier, "نوع الدفع":normalize_(e.parameter.paymentType), "تاريخ الاستحقاق":normalize_(e.parameter.dueDate), "الخامة":materialName, "الكمية":qty, "سعر الوحدة":unit, "الإجمالي":total, "المدفوع":paid, "المتبقي":remain, "بنود الأقسام":normalize_(e.parameter.lineIds), "مسجل بواسطة":auth.user.username, "ملاحظات":normalize_(e.parameter.notes), "معرف مشتريات القسم":sourceDailyPurchaseId});
   const stockResult = stockAlreadyApplied
     ? { ok:true, before:parseMoney_(e.parameter.stockBefore), after:parseMoney_(e.parameter.stockAfter), skipped:true }
     : accountingIncreaseMaterialStockV1913_(materialName, qty, { department:normalize_(e.parameter.department || auth.department || "إدارة"), username:auth.user.username, invoiceNo:invoiceNo });
@@ -8825,6 +8848,7 @@ function saveEasyStorePurchase_(e) {
   }
   if (supplier && total > 0) savePartyLedgerTransactionV1858_({ parameter:{ username:e.parameter.username, token:e.parameter.token, partyType:"supplier", partyName:supplier, operation:"purchase_invoice", amount:total, paymentMethod:normalize_(e.parameter.paymentType), refNo:invoiceNo, notes:"فاتورة مشتريات" } });
   if (supplier && paid > 0) savePartyLedgerTransactionV1858_({ parameter:{ username:e.parameter.username, token:e.parameter.token, partyType:"supplier", partyName:supplier, operation:"payment_paid", amount:paid, paymentMethod:normalize_(e.parameter.paymentType), refNo:invoiceNo, notes:"مدفوع من فاتورة المشتريات" } });
+  if (paid > 0 && !sourceDailyPurchaseId) try { accountingAppendCashboxOnceV1920_({ type:"supplier_payment", party:supplier, amount:paid, paymentMethod:normalize_(e.parameter.paymentType||"نقدي"), refNo:invoiceNo, department:purchaseDepartment, username:auth.user.username, notes:"مدفوع فاتورة شراء مباشرة", requestId:"PURCHASE-CASH-"+(requestKey||purchaseId), source:"فاتورة شراء مباشرة" }); } catch (cashboxErr) { try { es16Audit_(auth.user.username,"تنبيه حركة خزنة شراء","فاتورة شراء",invoiceNo,"","",cashboxErr && cashboxErr.message ? cashboxErr.message : cashboxErr); } catch (auditCashboxErr) {} }
   const response = { success:true, invoiceNo:invoiceNo, stockBefore:stockResult.before, stockAfter:stockResult.after, stockUpdateSkipped:stockAlreadyApplied, message:stockAlreadyApplied?"تم حفظ فاتورة الشراء وتحديث حساب المورد دون تكرار زيادة المخزون.":"تم حفظ فاتورة الشراء وتحديث حساب المورد والمخزون.", version:MATBAGY_ACCOUNTING_VERSION };
   accountingSaveIdempotentV1913_("PURCHASE", requestKey, response);
   return response;
@@ -9566,6 +9590,7 @@ function saveAccountingFinalInvoice_(e) {
       "الإجمالي النهائي": finalTotal,
       "المدفوع": paid,
       "الباقي": remaining,
+      "طريقة الدفع": normalize_(e.parameter.paymentType || (remaining > 0 ? "آجل" : "نقدي")),
       "الحالة": remaining > 0 ? "عليها باقي" : "مدفوعة",
       "مفتاح العملية": requestKey,
       "قفل بواسطة": auth.user.username,
@@ -11143,4 +11168,237 @@ function createManualOrder_(e) {
   } finally {
     try { trendosV1908CreateLock.releaseLock(); } catch (err) {}
   }
+}
+
+/************************************************************
+ * V1920 - عهد المشتريات، تقفيل الأقسام، الربح الفعلي،
+ * تصنيف البيانات القديمة وعكس المشتريات بدون حذف.
+ ************************************************************/
+function purchaseCustodyHeadersV1920_() {
+  return ["ID","وقت التسجيل","تاريخ العمل","الموظف","القسم","نوع الحركة","المبلغ","طريقة الدفع","رقم المرجع","الحالة","معرف التقفيل","مسجل بواسطة","ملاحظات","مفتاح الطلب"];
+}
+function purchaseCustodyCloseHeadersV1920_() {
+  return ["ID","وقت التقفيل","تاريخ العمل","الموظف","القسم","رصيد قبل التقفيل","نوع التسوية","قيمة التسوية","الرصيد بعد التقفيل","مسجل بواسطة","ملاحظات","مفتاح الطلب"];
+}
+function departmentDayCloseHeadersV1920_() {
+  return ["ID","وقت التقفيل","تاريخ العمل","القسم","المبيعات","تكلفة الشغل الفعلية","المشتريات","الهالك","تعويض الهالك","صافي الهالك","الربح الفعلي","القبض","الدفع","نقدي","إنستا باي","آجل","العهد المسلمة","المشتريات من العهد","تسوية العهد","رصيد العهد","مسجل بواسطة","ملاحظات","مفتاح الطلب","ملخص JSON"];
+}
+function ensurePurchaseCustodySheetV1920_() { return mbEnsureSheet_("حسابات - عهد مشتريات الأقسام", purchaseCustodyHeadersV1920_()); }
+function ensurePurchaseCustodyCloseSheetV1920_() { return mbEnsureSheet_("حسابات - تقفيل العهد", purchaseCustodyCloseHeadersV1920_()); }
+function ensureDepartmentDayCloseSheetV1920_() { return mbEnsureSheet_("حسابات - تقفيل الأقسام اليومي", departmentDayCloseHeadersV1920_()); }
+function accountingDateKeyV1920_(value) { return deptDailyPurchaseDateKeyV1917_(value); }
+function accountingDepartmentV1920_(value) {
+  const key = searchKey_(value || "");
+  if (key.indexOf("ليزر") !== -1 || key.indexOf("laser") !== -1) return "ليزر";
+  if (key.indexOf("طباع") !== -1 || key.indexOf("print") !== -1) return "طباعة";
+  if (key.indexOf("كل") !== -1 || key.indexOf("all") !== -1 || key.indexOf("اجمالي") !== -1 || key.indexOf("إجمالي") !== -1) return "كل الأقسام";
+  return "";
+}
+function accountingRowDateV1920_(row, names) {
+  names = names || ["وقت التسجيل","وقت التقفيل","وقت الحركة","وقت القفلة","تاريخ العمل"];
+  for (let i=0;i<names.length;i++) if (row[names[i]]) return accountingDateKeyV1920_(row[names[i]]);
+  return "";
+}
+function accountingRowReversedV1920_(row) {
+  const key = searchKey_((row && (row["حالة العكس"] || row["حالة العكس المالي"] || row.reversalStatus)) || "");
+  return key.indexOf("معكوس") !== -1 || key.indexOf("عكس") !== -1 || key.indexOf("ملغي") !== -1;
+}
+function accountingAppendCashboxOnceV1920_(values) {
+  values = values || {};
+  const sheet = mbEnsureSheet_("حسابات - الخزنة", es16CashboxHeaders_());
+  ensureHeaderIfAnyMissing_(sheet, ["معرف الطلب","مصدر الحركة","القسم","تاريخ العمل"]);
+  const requestId = normalize_(values.requestId);
+  if (requestId) {
+    const duplicate = accSheetRows_(sheet).find(function(row){ return normalize_(row["معرف الطلب"]) === requestId; });
+    if (duplicate) return { success:true, duplicatePrevented:true, id:duplicate["ID"] };
+  }
+  const id = "CBX-" + Utilities.getUuid().slice(0,8).toUpperCase();
+  appendByHeaders_(sheet, {
+    "ID":id,"وقت التسجيل":new Date(),"نوع الحركة":normalize_(values.type),"الطرف":normalize_(values.party),"المبلغ":parseMoney_(values.amount),
+    "طريقة الدفع":normalize_(values.paymentMethod || "نقدي"),"رقم المرجع":normalize_(values.refNo),"الخزنة":normalize_(values.cashbox || "الخزنة الرئيسية"),
+    "مسجل بواسطة":normalize_(values.username),"ملاحظات":normalize_(values.notes),"معرف الطلب":requestId,"مصدر الحركة":normalize_(values.source),
+    "القسم":accountingDepartmentV1920_(values.department) || normalize_(values.department),"تاريخ العمل":accountingDateKeyV1920_(values.workDate || new Date())
+  });
+  return { success:true, id:id };
+}
+function purchaseCustodyMovementSignV1920_(type) {
+  const key = searchKey_(type || "");
+  if (key.indexOf("تسليم") !== -1 || key.indexOf("سداد فرق") !== -1 || key.indexOf("عكس مشتريات") !== -1) return 1;
+  if (key.indexOf("تسويه مشتريات") !== -1 || key.indexOf("تسوية مشتريات") !== -1 || key.indexOf("رد باقي") !== -1) return -1;
+  return 0;
+}
+function purchaseCustodyRowsV1920_() { return accSheetRows_(ensurePurchaseCustodySheetV1920_()); }
+function purchaseCustodySummaryOneV1920_(employee, department, workDate, rows) {
+  const employeeKey = searchKey_(employee), dept = accountingDepartmentV1920_(department), date = accountingDateKeyV1920_(workDate);
+  let handed=0, approvedPurchases=0, returned=0, reimbursed=0, reversedPurchases=0, balance=0;
+  (rows || purchaseCustodyRowsV1920_()).forEach(function(row){
+    if (searchKey_(row["الموظف"]) !== employeeKey || accountingDepartmentV1920_(row["القسم"]) !== dept || accountingDateKeyV1920_(row["تاريخ العمل"] || row["وقت التسجيل"]) !== date) return;
+    const amount = parseMoney_(row["المبلغ"]), type = normalize_(row["نوع الحركة"]), key = searchKey_(type);
+    balance += purchaseCustodyMovementSignV1920_(type) * amount;
+    if (key.indexOf("تسليم") !== -1) handed += amount;
+    else if (key.indexOf("تسويه مشتريات") !== -1 || key.indexOf("تسوية مشتريات") !== -1) approvedPurchases += amount;
+    else if (key.indexOf("رد باقي") !== -1) returned += amount;
+    else if (key.indexOf("سداد فرق") !== -1) reimbursed += amount;
+    else if (key.indexOf("عكس مشتريات") !== -1) reversedPurchases += amount;
+  });
+  const close = accSheetRows_(ensurePurchaseCustodyCloseSheetV1920_()).find(function(row){ return searchKey_(row["الموظف"])===employeeKey && accountingDepartmentV1920_(row["القسم"])===dept && accountingDateKeyV1920_(row["تاريخ العمل"])===date; });
+  return { employee:employee, department:dept, workDate:date, handed:handed, approvedPurchases:approvedPurchases, returned:returned, reimbursed:reimbursed, reversedPurchases:reversedPurchases, balance:balance, employeeReturns:Math.max(0,balance), companyOwes:Math.max(0,-balance), closed:!!close, closeId:close ? close["ID"] : "" };
+}
+function purchaseCustodySummariesV1920_(auth, workDate) {
+  const date = accountingDateKeyV1920_(workDate || new Date()), events = purchaseCustodyRowsV1920_(), people = {};
+  events.forEach(function(row){ if (accountingDateKeyV1920_(row["تاريخ العمل"] || row["وقت التسجيل"]) !== date) return; people[searchKey_(row["الموظف"]) + "|" + accountingDepartmentV1920_(row["القسم"])] = { employee:normalize_(row["الموظف"]), department:accountingDepartmentV1920_(row["القسم"]) }; });
+  try { deptDailyPurchaseRowsV1917_(ensureAccountingSheets_().dailyPurchases).forEach(function(row){ if(row.workDate!==date)return; people[searchKey_(row.employee)+"|"+accountingDepartmentV1920_(row.department)]={employee:row.employee,department:accountingDepartmentV1920_(row.department)}; }); } catch(err) {}
+  if (auth && (auth.mode === "laser" || auth.mode === "print")) people = Object.keys(people).reduce(function(out,key){ const p=people[key]; if(searchKey_(p.employee)===searchKey_(auth.user.username||auth.user.name)&&p.department===auth.department)out[key]=p; return out; },{});
+  return Object.keys(people).map(function(key){ const p=people[key]; return purchaseCustodySummaryOneV1920_(p.employee,p.department,date,events); });
+}
+function purchaseCustodyRowsForAuthV1920_(auth) {
+  let rows = purchaseCustodyRowsV1920_().reverse();
+  if (auth.mode === "full") return rows.slice(0,500);
+  if (auth.mode === "laser" || auth.mode === "print") {
+    const employeeKey = searchKey_(auth.user.username || auth.user.name);
+    return rows.filter(function(row){ return searchKey_(row["الموظف"])===employeeKey && accountingDepartmentV1920_(row["القسم"])===auth.department; }).slice(0,200);
+  }
+  return [];
+}
+function savePurchaseCustodyV1920_(e) {
+  const auth=accountingAuthorize_(e); if(!auth.ok)return {success:false,message:auth.message};
+  if(auth.mode!=="full")return {success:false,message:"تسليم عهد المشتريات متاح لضياء فقط."};
+  const employee=normalize_(e.parameter.employee), department=accountingDepartmentV1920_(e.parameter.department), amount=parseMoney_(e.parameter.amount), workDate=accountingDateKeyV1920_(e.parameter.workDate||e.parameter.date||new Date()), requestId=normalize_(e.parameter.requestId||("CUSTODY-"+Utilities.getUuid()));
+  if(!employee||!department||department==="كل الأقسام"||amount<=0)return {success:false,message:"اختر جابر أو وائل والقسم واكتب مبلغ عهدة أكبر من صفر."};
+  const sheet=ensurePurchaseCustodySheetV1920_(), duplicate=accSheetRows_(sheet).find(function(row){return normalize_(row["مفتاح الطلب"])===requestId;});
+  if(duplicate)return {success:true,duplicatePrevented:true,message:"العهدة مسجلة بالفعل.",summary:purchaseCustodySummaryOneV1920_(employee,department,workDate)};
+  const id="CUS-"+Utilities.getUuid().slice(0,8).toUpperCase();
+  appendByHeaders_(sheet,{"ID":id,"وقت التسجيل":new Date(),"تاريخ العمل":workDate,"الموظف":employee,"القسم":department,"نوع الحركة":"تسليم عهدة","المبلغ":amount,"طريقة الدفع":normalize_(e.parameter.paymentMethod||"نقدي"),"رقم المرجع":normalize_(e.parameter.refNo),"الحالة":"مفتوحة","مسجل بواسطة":auth.user.username,"ملاحظات":normalize_(e.parameter.notes),"مفتاح الطلب":requestId});
+  accountingAppendCashboxOnceV1920_({type:"custody_payment",party:employee,amount:amount,paymentMethod:normalize_(e.parameter.paymentMethod||"نقدي"),refNo:id,department:department,workDate:workDate,username:auth.user.username,notes:"تسليم عهدة مشتريات",requestId:"CASH-"+requestId,source:"عهدة مشتريات"});
+  es16Audit_(auth.user.username,"تسليم عهدة مشتريات","عهدة",id,"",amount,employee+" | "+department);
+  return {success:true,message:"تم تسليم العهدة وتسجيل خروجها من الخزنة.",summary:purchaseCustodySummaryOneV1920_(employee,department,workDate),version:MATBAGY_ACCOUNTING_VERSION};
+}
+function purchaseCustodyAppendSettlementV1920_(row, username, reverse) {
+  const amount=parseMoney_(row.paid); if(amount<=0)return {success:true,skipped:true};
+  const sheet=ensurePurchaseCustodySheetV1920_(), requestId=(reverse?"DPP-CUSTODY-REV-":"DPP-CUSTODY-")+row.id;
+  if(accSheetRows_(sheet).some(function(item){return normalize_(item["مفتاح الطلب"])===requestId;}))return {success:true,duplicatePrevented:true};
+  appendByHeaders_(sheet,{"ID":"CUS-"+Utilities.getUuid().slice(0,8).toUpperCase(),"وقت التسجيل":new Date(),"تاريخ العمل":row.workDate,"الموظف":row.employee,"القسم":row.department,"نوع الحركة":reverse?"عكس مشتريات معتمدة":"تسوية مشتريات معتمدة","المبلغ":amount,"طريقة الدفع":row.paymentType,"رقم المرجع":row.officialInvoiceNo||row.id,"الحالة":"مرحلة","مسجل بواسطة":username,"ملاحظات":row.material+" | "+row.supplier,"مفتاح الطلب":requestId});
+  return {success:true};
+}
+function purchaseCustodySettleApprovedPurchaseV1920_(row, username) { return purchaseCustodyAppendSettlementV1920_(row,username,false); }
+function closePurchaseCustodyV1920_(e) {
+  const auth=accountingAuthorize_(e); if(!auth.ok)return {success:false,message:auth.message}; if(auth.mode!=="full")return {success:false,message:"تقفيل العهدة متاح لضياء فقط."};
+  const employee=normalize_(e.parameter.employee), department=accountingDepartmentV1920_(e.parameter.department), workDate=accountingDateKeyV1920_(e.parameter.workDate||e.parameter.date||new Date()), requestId=normalize_(e.parameter.requestId||("CLOSE-CUSTODY-"+employee+"-"+workDate));
+  if(!employee||!department||department==="كل الأقسام")return {success:false,message:"الموظف والقسم مطلوبان."};
+  const closeSheet=ensurePurchaseCustodyCloseSheetV1920_(), old=accSheetRows_(closeSheet).find(function(row){return searchKey_(row["الموظف"])===searchKey_(employee)&&accountingDepartmentV1920_(row["القسم"])===department&&accountingDateKeyV1920_(row["تاريخ العمل"])===workDate;});
+  if(old)return {success:true,duplicatePrevented:true,message:"العهدة مقفولة بالفعل.",summary:purchaseCustodySummaryOneV1920_(employee,department,workDate)};
+  const before=purchaseCustodySummaryOneV1920_(employee,department,workDate), closeId="CCL-"+Utilities.getUuid().slice(0,8).toUpperCase(), amount=Math.abs(before.balance), type=before.balance>0?"رد باقي العهدة":before.balance<0?"سداد فرق للموظف":"بدون تسوية";
+  if(amount>0){
+    appendByHeaders_(ensurePurchaseCustodySheetV1920_(),{"ID":"CUS-"+Utilities.getUuid().slice(0,8).toUpperCase(),"وقت التسجيل":new Date(),"تاريخ العمل":workDate,"الموظف":employee,"القسم":department,"نوع الحركة":type,"المبلغ":amount,"طريقة الدفع":normalize_(e.parameter.paymentMethod||"نقدي"),"رقم المرجع":closeId,"الحالة":"مقفولة","معرف التقفيل":closeId,"مسجل بواسطة":auth.user.username,"ملاحظات":normalize_(e.parameter.notes),"مفتاح الطلب":"SETTLE-"+requestId});
+    accountingAppendCashboxOnceV1920_({type:before.balance>0?"custody_return_receipt":"custody_extra_payment",party:employee,amount:amount,paymentMethod:normalize_(e.parameter.paymentMethod||"نقدي"),refNo:closeId,department:department,workDate:workDate,username:auth.user.username,notes:type,requestId:"CASH-SETTLE-"+requestId,source:"تقفيل عهدة"});
+  }
+  appendByHeaders_(closeSheet,{"ID":closeId,"وقت التقفيل":new Date(),"تاريخ العمل":workDate,"الموظف":employee,"القسم":department,"رصيد قبل التقفيل":before.balance,"نوع التسوية":type,"قيمة التسوية":amount,"الرصيد بعد التقفيل":0,"مسجل بواسطة":auth.user.username,"ملاحظات":normalize_(e.parameter.notes),"مفتاح الطلب":requestId});
+  es16Audit_(auth.user.username,"تقفيل عهدة","عهدة",closeId,before.balance,0,employee+" | "+department+" | "+type);
+  return {success:true,message:amount?"تم تقفيل العهدة وتسجيل التسوية في الخزنة.":"تم تقفيل العهدة بدون فرق.",before:before,summary:purchaseCustodySummaryOneV1920_(employee,department,workDate),version:MATBAGY_ACCOUNTING_VERSION};
+}
+
+function accountingDailyReportV1920_(workDate, department) {
+  const date=accountingDateKeyV1920_(workDate||new Date()), requested=accountingDepartmentV1920_(department||"كل الأقسام"), all=requested==="كل الأقسام";
+  const sheets=ensureAccountingSheets_(), deptLines=accSheetRows_(sheets.deptLines), finals=accSheetRows_(sheets.finalInvoices), purchases=accSheetRows_(mbEnsureSheet_("حسابات - فواتير الشراء",easyStorePurchasesHeadersV1909_())), sales=accSheetRows_(mbEnsureSheet_("حسابات - فواتير المبيعات",easyStoreSalesHeadersV1909_())), wastes=accSheetRows_(sheets.waste), cashRows=accSheetRows_(mbEnsureSheet_("حسابات - الخزنة",es16CashboxHeaders_()));
+  const finalMap={}, finalLineMap={};
+  finals.forEach(function(inv){ const no=normalize_(inv["رقم الفاتورة"]); if(!no)return; finalMap[no]=inv; normalize_(inv["بنود الأقسام"]).split(/[,،]/).map(normalize_).filter(Boolean).forEach(function(id){finalLineMap[id]=inv;}); });
+  let report={workDate:date,department:requested,sales:0,actualJobCost:0,purchases:0,waste:0,wasteRecovered:0,netWaste:0,profit:0,receipts:0,payments:0,cash:0,instapay:0,credit:0,custodyHanded:0,custodyPurchases:0,custodySettlement:0,custodyBalance:0,unclassifiedSales:0,unclassifiedPurchases:0,lineCount:0};
+  const invoiceGroups={};
+  deptLines.forEach(function(line){
+    const lineId=normalize_(line["ID"]), invoiceNo=normalize_(line["رقم الفاتورة النهائية"]), inv=finalMap[invoiceNo]||finalLineMap[lineId];
+    if(!inv||accountingRowDateV1920_(inv,["وقت التقفيل","وقت التسجيل"])!==date)return;
+    const dept=accountingDepartmentV1920_(line["القسم"]); if(!dept)return;
+    const no=normalize_(inv["رقم الفاتورة"]); if(!invoiceGroups[no])invoiceGroups[no]={inv:inv,byDept:{},total:0};
+    const sale=parseMoney_(line["سعر البيع"]), cost=parseMoney_(line["إجمالي التكلفة"]); if(!invoiceGroups[no].byDept[dept])invoiceGroups[no].byDept[dept]={sale:0,cost:0,count:0};
+    invoiceGroups[no].byDept[dept].sale+=sale; invoiceGroups[no].byDept[dept].cost+=cost; invoiceGroups[no].byDept[dept].count++; invoiceGroups[no].total+=sale;
+  });
+  Object.keys(invoiceGroups).forEach(function(no){
+    const group=invoiceGroups[no], inv=group.inv, finalTotal=parseMoney_(inv["الإجمالي النهائي"]), paid=parseMoney_(inv["المدفوع"]), remaining=parseMoney_(inv["الباقي"]), method=searchKey_(inv["طريقة الدفع"]||"نقدي");
+    Object.keys(group.byDept).forEach(function(dept){
+      if(!all&&dept!==requested)return; const part=group.byDept[dept], ratio=group.total>0?part.sale/group.total:0, allocatedSale=finalTotal>0?finalTotal*ratio:part.sale, allocatedPaid=paid*ratio, allocatedCredit=remaining*ratio;
+      report.sales+=allocatedSale; report.actualJobCost+=part.cost; report.lineCount+=part.count; report.credit+=allocatedCredit;
+      if(method.indexOf("انستا")!==-1||method.indexOf("insta")!==-1)report.instapay+=allocatedPaid; else report.cash+=allocatedPaid;
+    });
+  });
+  finals.forEach(function(inv){
+    if(accountingRowDateV1920_(inv,["وقت التقفيل"])!==date)return; const ids=normalize_(inv["بنود الأقسام"]), dept=accountingDepartmentV1920_(inv["القسم المالي"]); if(ids)return;
+    const amount=parseMoney_(inv["الإجمالي النهائي"]),paid=parseMoney_(inv["المدفوع"]),remain=parseMoney_(inv["الباقي"]),method=searchKey_(inv["طريقة الدفع"]);
+    if(!dept){if(all)report.unclassifiedSales+=amount;return;} if(!all&&dept!==requested)return; report.sales+=amount;report.credit+=remain;if(method.indexOf("انستا")!==-1||method.indexOf("insta")!==-1)report.instapay+=paid;else report.cash+=paid;
+  });
+  sales.forEach(function(sale){
+    const no=normalize_(sale["رقم الفاتورة"]); if(finalMap[no]||accountingRowDateV1920_(sale)!==date)return; const dept=accountingDepartmentV1920_(sale["القسم"]), amount=parseMoney_(sale["الإجمالي"]),paid=parseMoney_(sale["المدفوع"]),remain=parseMoney_(sale["المتبقي"]),method=searchKey_(sale["نوع الدفع"]);
+    if(!dept){if(all)report.unclassifiedSales+=amount;return;} if(!all&&dept!==requested)return; report.sales+=amount;report.credit+=remain;if(method.indexOf("انستا")!==-1||method.indexOf("insta")!==-1)report.instapay+=paid;else report.cash+=paid;
+  });
+  purchases.forEach(function(row){ if(accountingRowDateV1920_(row)!==date||accountingRowReversedV1920_(row))return; const dept=accountingDepartmentV1920_(row["القسم"]),amount=parseMoney_(row["الإجمالي"]); if(!dept){if(all)report.unclassifiedPurchases+=amount;return;} if(all||dept===requested)report.purchases+=amount; });
+  wastes.forEach(function(row){ if(accountingRowDateV1920_(row)!==date)return; const dept=accountingDepartmentV1920_(row["القسم"]); if(!dept||(!all&&dept!==requested))return; report.waste+=parseMoney_(row["تكلفة التالف"]||row["فرق السعر"]);report.wasteRecovered+=parseMoney_(row["تعويض التالف"]); });
+  cashRows.forEach(function(row){ if(accountingRowDateV1920_(row)!==date)return; const dept=accountingDepartmentV1920_(row["القسم"]),type=searchKey_(row["نوع الحركة"]),amount=parseMoney_(row["المبلغ"]); if(!all&&dept!==requested)return; if(type.indexOf("receipt")!==-1||type.indexOf("قبض")!==-1||type.indexOf("تحصيل")!==-1)report.receipts+=amount; else report.payments+=amount; });
+  purchaseCustodySummariesV1920_({mode:"full"},date).forEach(function(c){if(!all&&c.department!==requested)return;report.custodyHanded+=c.handed;report.custodyPurchases+=c.approvedPurchases;report.custodySettlement+=c.returned+c.reimbursed;report.custodyBalance+=c.balance;});
+  report.netWaste=Math.max(0,report.waste-report.wasteRecovered); report.profit=report.sales-report.actualJobCost-report.netWaste;
+  ["sales","actualJobCost","purchases","waste","wasteRecovered","netWaste","profit","receipts","payments","cash","instapay","credit","custodyHanded","custodyPurchases","custodySettlement","custodyBalance"].forEach(function(key){report[key]=Number(report[key].toFixed(2));});
+  return report;
+}
+function getDailyDepartmentReportV1920_(e) {
+  const auth=accountingAuthorize_(e);if(!auth.ok)return {success:false,message:auth.message};if(auth.mode!=="full")return {success:false,message:"تقارير الأرباح والتقفيل عند ضياء فقط."};
+  const department=accountingDepartmentV1920_(e.parameter.department||"كل الأقسام");if(!department)return {success:false,message:"اختر الليزر أو الطباعة أو كل الأقسام."};
+  return {success:true,report:accountingDailyReportV1920_(e.parameter.workDate||e.parameter.date,department),closes:accSheetRows_(ensureDepartmentDayCloseSheetV1920_()).slice(-30).reverse(),version:MATBAGY_ACCOUNTING_VERSION};
+}
+function closeDepartmentDayV1920_(e) {
+  const auth=accountingAuthorize_(e);if(!auth.ok)return {success:false,message:auth.message};if(auth.mode!=="full")return {success:false,message:"تقفيل الأقسام متاح لضياء فقط."};
+  const date=accountingDateKeyV1920_(e.parameter.workDate||e.parameter.date||new Date()),department=accountingDepartmentV1920_(e.parameter.department),sheet=ensureDepartmentDayCloseSheetV1920_();if(!department)return {success:false,message:"اختر القسم المطلوب تقفيله."};
+  const old=accSheetRows_(sheet).find(function(row){return accountingDateKeyV1920_(row["تاريخ العمل"])===date&&accountingDepartmentV1920_(row["القسم"])===department;});if(old)return {success:true,duplicatePrevented:true,message:"هذا التقفيل محفوظ بالفعل.",close:old,version:MATBAGY_ACCOUNTING_VERSION};
+  if(department==="كل الأقسام"){
+    const closes=accSheetRows_(sheet),laser=closes.some(function(r){return accountingDateKeyV1920_(r["تاريخ العمل"])===date&&accountingDepartmentV1920_(r["القسم"])==="ليزر";}),print=closes.some(function(r){return accountingDateKeyV1920_(r["تاريخ العمل"])===date&&accountingDepartmentV1920_(r["القسم"])==="طباعة";});
+    if(!laser||!print)return {success:false,message:"اقفل الليزر والطباعة أولًا، ثم نفّذ التقفيل الإجمالي."};
+  }
+  const report=accountingDailyReportV1920_(date,department),id="DCL-"+Utilities.getUuid().slice(0,8).toUpperCase(),requestId=normalize_(e.parameter.requestId||("DAY-CLOSE-"+date+"-"+department));
+  appendByHeaders_(sheet,{"ID":id,"وقت التقفيل":new Date(),"تاريخ العمل":date,"القسم":department,"المبيعات":report.sales,"تكلفة الشغل الفعلية":report.actualJobCost,"المشتريات":report.purchases,"الهالك":report.waste,"تعويض الهالك":report.wasteRecovered,"صافي الهالك":report.netWaste,"الربح الفعلي":report.profit,"القبض":report.receipts,"الدفع":report.payments,"نقدي":report.cash,"إنستا باي":report.instapay,"آجل":report.credit,"العهد المسلمة":report.custodyHanded,"المشتريات من العهد":report.custodyPurchases,"تسوية العهد":report.custodySettlement,"رصيد العهد":report.custodyBalance,"مسجل بواسطة":auth.user.username,"ملاحظات":normalize_(e.parameter.notes),"مفتاح الطلب":requestId,"ملخص JSON":JSON.stringify(report)});
+  es16Audit_(auth.user.username,"تقفيل يوم قسم","تقفيل",id,"",report.profit,date+" | "+department);return {success:true,message:"تم حفظ تقفيل "+department+" ليوم "+date+".",closeId:id,report:report,version:MATBAGY_ACCOUNTING_VERSION};
+}
+
+function collectUnclassifiedAccountingRowsV1920_() {
+  const sheets=ensureAccountingSheets_(), result=[];
+  function addRows(sheet,entity,label,deptHeader,predicate){
+    accSheetRows_(sheet).forEach(function(row){
+      if(predicate&&!predicate(row))return;if(accountingDepartmentV1920_(row[deptHeader]))return;
+      result.push({entity:entity,rowNumber:row.rowNumber,label:normalize_(row[label]||row["رقم الفاتورة"]||row["ID"]),date:accountingRowDateV1920_(row),amount:parseMoney_(row["الإجمالي"]||row["الإجمالي النهائي"]||row["سعر البيع"]),party:normalize_(row["المورد"]||row["العميل"]||row["اسم العميل"]),departmentHeader:deptHeader});
+    });
+  }
+  addRows(mbEnsureSheet_("حسابات - فواتير الشراء",easyStorePurchasesHeadersV1909_()),"purchase","رقم الفاتورة","القسم",function(r){return !accountingRowReversedV1920_(r);});
+  addRows(mbEnsureSheet_("حسابات - فواتير المبيعات",easyStoreSalesHeadersV1909_()),"sale","رقم الفاتورة","القسم");
+  addRows(sheets.deptLines,"deptLine","ID","القسم");
+  addRows(sheets.finalInvoices,"finalInvoice","رقم الفاتورة","القسم المالي",function(r){return !normalize_(r["بنود الأقسام"]);});
+  return result.sort(function(a,b){return String(b.date).localeCompare(String(a.date));});
+}
+function getUnclassifiedAccountingRowsV1920_(e){
+  const auth=accountingAuthorize_(e);if(!auth.ok)return {success:false,message:auth.message};if(auth.mode!=="full")return {success:false,message:"تصنيف البيانات القديمة متاح لضياء فقط."};
+  return {success:true,rows:collectUnclassifiedAccountingRowsV1920_(),version:MATBAGY_ACCOUNTING_VERSION};
+}
+function classifyLegacyAccountingRowV1920_(e){
+  const auth=accountingAuthorize_(e);if(!auth.ok)return {success:false,message:auth.message};if(auth.mode!=="full")return {success:false,message:"تصنيف البيانات القديمة متاح لضياء فقط."};
+  const entity=normalize_(e.parameter.entity),rowNumber=parseInt(e.parameter.rowNumber,10),department=accountingDepartmentV1920_(e.parameter.department);if(!rowNumber||!(department==="ليزر"||department==="طباعة"))return {success:false,message:"اختر السجل والقسم الصحيح."};
+  const sheets=ensureAccountingSheets_(), map={purchase:{sheet:mbEnsureSheet_("حسابات - فواتير الشراء",easyStorePurchasesHeadersV1909_()),header:"القسم"},sale:{sheet:mbEnsureSheet_("حسابات - فواتير المبيعات",easyStoreSalesHeadersV1909_()),header:"القسم"},deptLine:{sheet:sheets.deptLines,header:"القسم"},finalInvoice:{sheet:sheets.finalInvoices,header:"القسم المالي"}},target=map[entity];
+  if(!target||rowNumber<2||rowNumber>target.sheet.getLastRow())return {success:false,message:"السجل المطلوب غير موجود."};
+  const col=ensureHeader_(target.sheet,target.header),before=normalize_(target.sheet.getRange(rowNumber,col).getValue());if(accountingDepartmentV1920_(before))return {success:false,message:"السجل مصنف بالفعل ولا يمكن تغيير تصنيفه من هذه الشاشة."};
+  target.sheet.getRange(rowNumber,col).setValue(department);es16Audit_(auth.user.username,"تصنيف بيانات قديمة",entity,rowNumber,before,department,normalize_(e.parameter.notes));
+  return {success:true,message:"تم تصنيف السجل ضمن قسم "+department+".",remaining:collectUnclassifiedAccountingRowsV1920_().length,version:MATBAGY_ACCOUNTING_VERSION};
+}
+
+function reverseApprovedPurchaseV1920_(e){
+  const auth=accountingAuthorize_(e);if(!auth.ok)return {success:false,message:auth.message};if(auth.mode!=="full")return {success:false,message:"عكس المشتريات المعتمدة متاح لضياء فقط."};
+  const id=normalize_(e.parameter.id||e.parameter.purchaseId),invoiceNoInput=normalize_(e.parameter.invoiceNo||e.parameter.no),reason=normalize_(e.parameter.reason);if(!id&&!invoiceNoInput)return {success:false,message:"حدد بند المشتريات المطلوب عكسه."};if(!reason)return {success:false,message:"اكتب سبب العكس للحفاظ على سجل المراجعة."};
+  const sheets=ensureAccountingSheets_(),dailyRows=deptDailyPurchaseRowsV1917_(sheets.dailyPurchases),daily=dailyRows.find(function(r){return r.id===id||r.officialInvoiceNo===invoiceNoInput;}),invoiceNo=invoiceNoInput||(daily&&daily.officialInvoiceNo)||"",purchaseSheet=mbEnsureSheet_("حسابات - فواتير الشراء",easyStorePurchasesHeadersV1909_()),purchases=accSheetRows_(purchaseSheet),purchase=purchases.find(function(r){return normalize_(r["رقم الفاتورة"])===invoiceNo||normalize_(r["ID"])===id;});
+  if(!purchase)return {success:false,message:"فاتورة الشراء المعتمدة غير موجودة."};if(accountingRowReversedV1920_(purchase)||(daily&&searchKey_(daily.status).indexOf("معكوس")!==-1))return {success:true,duplicatePrevented:true,message:"تم عكس هذه المشتريات بالفعل.",version:MATBAGY_ACCOUNTING_VERSION};
+  const qty=parseMoney_(purchase["الكمية"]),material=normalize_(purchase["الخامة"]),department=accountingDepartmentV1920_(purchase["القسم"]||(daily&&daily.department)),supplier=normalize_(purchase["المورد"]),total=parseMoney_(purchase["الإجمالي"]),paid=parseMoney_(purchase["المدفوع"]),sourceDailyId=normalize_(purchase["معرف مشتريات القسم"]||(daily&&daily.id));
+  const stock=deptDailyPurchaseAdjustStockV1919_(material,-qty,{purchaseId:invoiceNo,department:department,employee:daily&&daily.employee,username:auth.user.username,notes:"عكس مشتريات معتمدة: "+reason});if(!stock.ok)return {success:false,message:stock.message||"لا يمكن عكس المخزون."};
+  if(supplier&&total>0)savePartyLedgerTransactionV1858_({parameter:{username:e.parameter.username,token:e.parameter.token,partyType:"supplier",partyName:supplier,operation:"adjustment_decrease",amount:total,paymentMethod:"عكس فاتورة شراء",refNo:invoiceNo,notes:reason}});
+  if(supplier&&paid>0)savePartyLedgerTransactionV1858_({parameter:{username:e.parameter.username,token:e.parameter.token,partyType:"supplier",partyName:supplier,operation:"adjustment_increase",amount:paid,paymentMethod:"عكس دفعة شراء",refNo:invoiceNo,notes:reason}});
+  const reversalRef="REV-"+Utilities.getUuid().slice(0,8).toUpperCase(),now=new Date();
+  updateByHeaders_(purchaseSheet,purchase.rowNumber,{"حالة العكس":"معكوس","وقت العكس":now,"عكس بواسطة":auth.user.username,"سبب العكس":reason,"مرجع العكس":reversalRef},true);
+  if(daily){
+    updateByHeaders_(sheets.dailyPurchases,daily.rowNumber,{"الحالة":"معكوس ماليًا","حالة المخزون":"تم عكس المخزون","وقت عكس المخزون":now,"سبب عكس المخزون":reason,"حالة العكس المالي":"معكوس","وقت العكس المالي":now,"عكس بواسطة":auth.user.username,"مرجع العكس":reversalRef},true);
+    purchaseCustodyAppendSettlementV1920_(daily,auth.user.username,true);
+  }
+  if(paid>0&&!sourceDailyId)accountingAppendCashboxOnceV1920_({type:"purchase_reversal_receipt",party:supplier,amount:paid,paymentMethod:normalize_(purchase["نوع الدفع"]||"نقدي"),refNo:invoiceNo,department:department,username:auth.user.username,notes:reason,requestId:"PURCHASE-REV-CASH-"+normalize_(purchase["ID"]||invoiceNo),source:"عكس فاتورة شراء"});
+  es16Audit_(auth.user.username,"عكس مشتريات معتمدة","فاتورة شراء",invoiceNo,total,0,reason+" | "+reversalRef);
+  return {success:true,message:"تم عكس المشتريات والمخزون وحساب المورد"+(sourceDailyId?" والعهدة.":" والخزنة."),stockBefore:stock.before,stockAfter:stock.after,reversalRef:reversalRef,version:MATBAGY_ACCOUNTING_VERSION};
 }
