@@ -31,7 +31,8 @@ const SHEET_NAME_ACC_DEPT_LINES = "حسابات - فواتير الأقسام";
 const SHEET_NAME_ACC_FINAL_INVOICES = "حسابات - الفواتير النهائية";
 const SHEET_NAME_ACC_WASTE = "حسابات - هوالك الأقسام";
 const SHEET_NAME_ACC_STOCK_MOVES = "حسابات - حركة المخزون";
-const MATBAGY_ACCOUNTING_VERSION = "V1915_CUSTOMER_ACCOUNTS";
+const SHEET_NAME_ACC_DEPT_DAILY_PURCHASES = "حسابات - مشتريات الأقسام اليومية";
+const MATBAGY_ACCOUNTING_VERSION = "V1917_DEPT_DAILY_PURCHASES";
 const DEFAULT_PASSWORD = "";
 function employeeDefaultPassword_() {
   try { return normalize_(PropertiesService.getScriptProperties().getProperty("EMPLOYEE_DEFAULT_PASSWORD")); } catch (err) { return ""; }
@@ -119,6 +120,10 @@ function doGet(e) {
     else if (action === "createInvoiceLine") result = createInvoiceLine_(e);
     else if (action === "initAccounting") result = initAccountingNow_(e);
     else if (action === "getAccounting") result = getAccounting_(e);
+    else if (action === "getDeptDailyPurchasesV1917") result = getDeptDailyPurchasesV1917_(e);
+    else if (action === "saveDeptDailyPurchaseV1917") result = saveDeptDailyPurchaseV1917_(e);
+    else if (action === "approveDeptDailyPurchasesV1917") result = approveDeptDailyPurchasesV1917_(e);
+    else if (action === "rejectDeptDailyPurchaseV1917") result = rejectDeptDailyPurchaseV1917_(e);
     else if (action === "calculateAccountingLaserQuoteV1913") result = calculateAccountingLaserQuoteV1913_(e);
     else if (action === "saveAccountingMaterial") result = saveAccountingMaterial_(e);
     else if (action === "archiveAccountingMaterial") result = archiveAccountingMaterial_(e);
@@ -2717,6 +2722,282 @@ function accStockMovesHeaders_() {
   return ["ID", "وقت الحركة", "نوع الحركة", "رقم الأوردر", "رقم البند", "القسم", "اسم البند", "الخامة", "كمية واردة", "كمية منصرفة", "رصيد قبل الحركة", "رصيد بعد الحركة", "مسجل بواسطة", "ملاحظات"];
 }
 
+
+/************************************************************
+ * V1917 - Daily department purchases for Gaber / Wael
+ * - Department users submit purchases as pending drafts.
+ * - Diaa alone approves a complete employee/day batch.
+ * - Inventory and supplier ledger change only after approval.
+ ************************************************************/
+function deptDailyPurchaseTodayV1917_() {
+  let tz = "Africa/Cairo";
+  try { tz = Session.getScriptTimeZone() || tz; } catch (err) {}
+  return Utilities.formatDate(new Date(), tz, "yyyy-MM-dd");
+}
+
+function deptDailyPurchaseDateKeyV1917_(value) {
+  if (!value) return "";
+  if (Object.prototype.toString.call(value) === "[object Date]" && !isNaN(value.getTime())) {
+    let tz = "Africa/Cairo";
+    try { tz = Session.getScriptTimeZone() || tz; } catch (err) {}
+    return Utilities.formatDate(value, tz, "yyyy-MM-dd");
+  }
+  const text = normalize_(value);
+  const iso = text.match(/\d{4}-\d{2}-\d{2}/);
+  if (iso) return iso[0];
+  const parsed = new Date(value);
+  if (!isNaN(parsed.getTime())) {
+    let tz = "Africa/Cairo";
+    try { tz = Session.getScriptTimeZone() || tz; } catch (err) {}
+    return Utilities.formatDate(parsed, tz, "yyyy-MM-dd");
+  }
+  return text;
+}
+
+function deptDailyPurchaseIsPendingV1917_(status) {
+  const key = searchKey_(status || "");
+  return !key || key.indexOf("قيد") !== -1 || key.indexOf("مراجعه") !== -1 || key.indexOf("مراجعة") !== -1 || key.indexOf("pending") !== -1;
+}
+
+function deptDailyPurchaseMaterialAllowedV1917_(sheet, materialName, department) {
+  if (!sheet || !materialName) return 0;
+  const h = headersMap_(sheet);
+  const colName = firstCol_(h, ["اسم الخامة", "الخامة"], 0);
+  const colDept = firstCol_(h, ["القسم"], 0);
+  if (!colName) return 0;
+  const wantedName = accountingMaterialKey_(materialName);
+  const wantedDept = normalize_(department);
+  const data = sheet.getDataRange().getValues();
+  for (let i = 1; i < data.length; i++) {
+    const rowName = accountingMaterialKey_(valueAt_(data[i], colName));
+    const rowDept = colDept ? normalize_(valueAt_(data[i], colDept)) : "";
+    if (rowName === wantedName && (!wantedDept || rowDept === wantedDept || rowDept === "مشترك" || rowDept === "عام")) return i + 1;
+  }
+  return 0;
+}
+
+function deptDailyPurchaseRowsV1917_(sheet) {
+  return accSheetRows_(sheet).map(function (row) {
+    return {
+      rowNumber: row.rowNumber,
+      id: normalize_(row["ID"] || row.id),
+      requestId: normalize_(row["مفتاح الطلب"]),
+      createdAt: row["وقت التسجيل"] || row.createdAt || "",
+      workDate: deptDailyPurchaseDateKeyV1917_(row["تاريخ العمل"] || row.createdAt),
+      employee: normalize_(row["الموظف"] || row.createdBy),
+      department: normalize_(row["القسم"] || row.department),
+      supplier: normalize_(row["المورد"]),
+      receiptNo: normalize_(row["رقم فاتورة المورد"]),
+      material: normalize_(row["الخامة"] || row.materialName),
+      qty: parseMoney_(row["الكمية"]),
+      unit: parseMoney_(row["سعر الوحدة"]),
+      total: parseMoney_(row["الإجمالي"]),
+      paymentType: normalize_(row["نوع الدفع"]),
+      paid: parseMoney_(row["المدفوع"]),
+      remain: parseMoney_(row["المتبقي"]),
+      notes: normalize_(row["ملاحظات"]),
+      status: normalize_(row["الحالة"]),
+      approvedAt: row["وقت الاعتماد"] || "",
+      approvedBy: normalize_(row["اعتمد بواسطة"]),
+      officialInvoiceNo: normalize_(row["رقم فاتورة الشراء الرسمية"]),
+      approvalKey: normalize_(row["مفتاح الاعتماد"])
+    };
+  }).reverse();
+}
+
+function deptDailyPurchasePublicV1917_(row) {
+  const safe = Object.assign({}, row || {});
+  delete safe.rowNumber;
+  delete safe.approvalKey;
+  return safe;
+}
+
+function deptDailyPurchasesForAuthV1917_(auth, rows) {
+  rows = rows || [];
+  const today = deptDailyPurchaseTodayV1917_();
+  if (auth.mode === "full") {
+    return rows.filter(function (row) { return deptDailyPurchaseIsPendingV1917_(row.status) || row.workDate === today; }).slice(0, 500).map(deptDailyPurchasePublicV1917_);
+  }
+  if (!(auth.mode === "print" || auth.mode === "laser")) return [];
+  const employeeKey = searchKey_(auth.user.username || auth.user.name || "");
+  return rows.filter(function (row) {
+    const sameEmployee = searchKey_(row.employee) === employeeKey;
+    const sameDepartment = normalize_(row.department) === normalize_(auth.department);
+    return sameEmployee && sameDepartment && (deptDailyPurchaseIsPendingV1917_(row.status) || row.workDate === today);
+  }).slice(0, 300).map(deptDailyPurchasePublicV1917_);
+}
+
+function getDeptDailyPurchasesV1917_(e) {
+  const auth = accountingAuthorize_(e);
+  if (!auth.ok) return { success: false, message: auth.message };
+  const sheet = ensureAccountingSheets_().dailyPurchases;
+  return {
+    success: true,
+    today: deptDailyPurchaseTodayV1917_(),
+    purchases: deptDailyPurchasesForAuthV1917_(auth, deptDailyPurchaseRowsV1917_(sheet)),
+    permissions: { canSubmit: auth.mode === "print" || auth.mode === "laser", canApprove: auth.mode === "full" },
+    version: MATBAGY_ACCOUNTING_VERSION
+  };
+}
+
+function saveDeptDailyPurchaseV1917_(e) {
+  const auth = accountingAuthorize_(e);
+  if (!auth.ok) return { success: false, message: auth.message };
+  if (!(auth.mode === "print" || auth.mode === "laser")) return { success: false, message: "تسجيل مشتريات اليوم متاح لجابر ووائل فقط." };
+  const material = normalize_(e.parameter.material || e.parameter.materialName);
+  const supplier = normalize_(e.parameter.supplier);
+  const qty = parseMoney_(e.parameter.qty);
+  const unit = parseMoney_(e.parameter.unit || e.parameter.unitPrice);
+  const total = qty * unit;
+  const paymentType = normalize_(e.parameter.paymentType || "نقدي") || "نقدي";
+  const paymentKey = searchKey_(paymentType);
+  const paid = paymentKey.indexOf("اجل") !== -1 || paymentKey.indexOf("آجل") !== -1 ? 0 : total;
+  const remain = Math.max(0, total - paid);
+  const requestId = normalize_(e.parameter.requestId || e.parameter.clientRequestId || ("DPP-" + Utilities.getUuid()));
+  if (!supplier || !material || qty <= 0 || unit <= 0) return { success: false, message: "المورد والخامة والكمية والسعر الأكبر من صفر مطلوبة." };
+  const sheets = ensureAccountingSheets_();
+  if (!deptDailyPurchaseMaterialAllowedV1917_(sheets.materials, material, auth.department)) return { success: false, message: "الخامة غير مسجلة لهذا القسم في المخزون: " + material + ". اطلب من ضياء إضافتها أولًا." };
+  const lock = LockService.getScriptLock();
+  lock.waitLock(20000);
+  try {
+    const current = deptDailyPurchaseRowsV1917_(sheets.dailyPurchases);
+    const duplicate = current.find(function (row) { return row.requestId === requestId; });
+    if (duplicate) return { success: true, duplicatePrevented: true, purchase: deptDailyPurchasePublicV1917_(duplicate), message: "تم منع تكرار التسجيل؛ المشتريات محفوظة بالفعل.", version: MATBAGY_ACCOUNTING_VERSION };
+    const id = "DPP-" + Utilities.getUuid().slice(0, 8).toUpperCase();
+    const workDate = deptDailyPurchaseTodayV1917_();
+    const employee = normalize_(auth.user.username || auth.user.name || "");
+    const values = {
+      "ID": id,
+      "مفتاح الطلب": requestId,
+      "وقت التسجيل": new Date(),
+      "تاريخ العمل": workDate,
+      "الموظف": employee,
+      "القسم": auth.department,
+      "المورد": supplier,
+      "رقم فاتورة المورد": normalize_(e.parameter.receiptNo || e.parameter.invoiceNo),
+      "الخامة": material,
+      "الكمية": qty,
+      "سعر الوحدة": unit,
+      "الإجمالي": total,
+      "نوع الدفع": paymentType,
+      "المدفوع": paid,
+      "المتبقي": remain,
+      "ملاحظات": normalize_(e.parameter.notes),
+      "الحالة": "قيد مراجعة ضياء"
+    };
+    appendByHeaders_(sheets.dailyPurchases, values);
+    try { es16Audit_(employee, "تسجيل مشتريات يومية", "مشتريات قسم", id, "", total, auth.department + " | " + material); } catch (auditErr) {}
+    return {
+      success: true,
+      purchase: deptDailyPurchasePublicV1917_({ id:id, requestId:requestId, createdAt:new Date(), workDate:workDate, employee:employee, department:auth.department, supplier:supplier, receiptNo:values["رقم فاتورة المورد"], material:material, qty:qty, unit:unit, total:total, paymentType:paymentType, paid:paid, remain:remain, notes:values["ملاحظات"], status:values["الحالة"], approvedAt:"", approvedBy:"", officialInvoiceNo:"" }),
+      message: "تم تسجيل المشتريات وإرسالها لمراجعة ضياء دون تغيير المخزون.",
+      version: MATBAGY_ACCOUNTING_VERSION
+    };
+  } finally {
+    try { lock.releaseLock(); } catch (err) {}
+  }
+}
+
+function approveDeptDailyPurchasesV1917_(e) {
+  const auth = accountingAuthorize_(e);
+  if (!auth.ok) return { success: false, message: auth.message };
+  if (auth.mode !== "full") return { success: false, message: "اعتماد مشتريات جابر ووائل متاح لضياء فقط." };
+  const employee = normalize_(e.parameter.employee);
+  const workDate = deptDailyPurchaseDateKeyV1917_(e.parameter.workDate || e.parameter.date);
+  if (!employee || !workDate) return { success: false, message: "الموظف وتاريخ المشتريات مطلوبان للاعتماد." };
+  const sheets = ensureAccountingSheets_();
+  const allRows = deptDailyPurchaseRowsV1917_(sheets.dailyPurchases);
+  const matches = allRows.filter(function (row) { return searchKey_(row.employee) === searchKey_(employee) && row.workDate === workDate; });
+  const pending = matches.filter(function (row) { return deptDailyPurchaseIsPendingV1917_(row.status); });
+  if (!pending.length) {
+    const alreadyApproved = matches.filter(function (row) { return searchKey_(row.status).indexOf("معتمد") !== -1; });
+    if (alreadyApproved.length) return { success: true, duplicatePrevented: true, approvedCount: 0, message: "مشتريات " + employee + " ليوم " + workDate + " معتمدة بالفعل.", version: MATBAGY_ACCOUNTING_VERSION };
+    return { success: false, message: "لا توجد مشتريات معلقة لهذا الموظف في اليوم المحدد." };
+  }
+  const invalid = pending.filter(function (row) { return !row.supplier || !row.material || row.qty <= 0 || row.unit <= 0 || !deptDailyPurchaseMaterialAllowedV1917_(sheets.materials, row.material, row.department); });
+  if (invalid.length) return { success: false, message: "تعذر الاعتماد: توجد خامة غير مسجلة أو بيانات ناقصة في " + invalid.length + " بند. راجع البنود أو ارفضها أولًا." };
+  let approvedCount = 0;
+  let approvedTotal = 0;
+  const failed = [];
+  pending.forEach(function (row) {
+    const officialInvoiceNo = "DPP-" + workDate.replace(/-/g, "") + "-" + row.id.replace(/[^A-Za-z0-9]/g, "").slice(-8);
+    const receiptNote = row.receiptNo ? (" | فاتورة المورد: " + row.receiptNo) : "";
+    const childEvent = { parameter: Object.assign({}, e.parameter, {
+      requestId: "DPP-APPROVE-" + row.id,
+      no: officialInvoiceNo,
+      invoiceNo: officialInvoiceNo,
+      department: row.department,
+      supplier: row.supplier,
+      paymentType: row.paymentType,
+      material: row.material,
+      materialName: row.material,
+      qty: row.qty,
+      unit: row.unit,
+      total: row.total,
+      paid: row.paid,
+      remain: row.remain,
+      notes: "مشتريات يومية بواسطة " + row.employee + receiptNote + (row.notes ? " | " + row.notes : "")
+    }) };
+    try {
+      const result = saveEasyStorePurchase_(childEvent);
+      if (!result || result.success === false) {
+        failed.push({ id: row.id, material: row.material, message: result && result.message ? result.message : "تعذر اعتماد البند" });
+        return;
+      }
+      updateByHeaders_(sheets.dailyPurchases, row.rowNumber, {
+        "الحالة": "معتمد ومضاف للمخزون",
+        "وقت الاعتماد": new Date(),
+        "اعتمد بواسطة": auth.user.username,
+        "رقم فاتورة الشراء الرسمية": officialInvoiceNo,
+        "مفتاح الاعتماد": "DPP-APPROVE-" + row.id
+      }, true);
+      approvedCount++;
+      approvedTotal += row.total;
+    } catch (err) {
+      failed.push({ id: row.id, material: row.material, message: err && err.message ? err.message : String(err) });
+    }
+  });
+  try { es16Audit_(auth.user.username, "اعتماد مشتريات يومية", "مشتريات قسم", employee + "-" + workDate, pending.length, approvedCount, "إجمالي معتمد: " + approvedTotal + " | فشل: " + failed.length); } catch (auditErr) {}
+  try { SpreadsheetApp.flush(); } catch (flushErr) {}
+  return {
+    success: approvedCount > 0 || failed.length === 0,
+    partial: failed.length > 0,
+    approvedCount: approvedCount,
+    approvedTotal: approvedTotal,
+    failed: failed,
+    message: failed.length ? ("تم اعتماد " + approvedCount + " بند وتعذر " + failed.length + " بند. راجع البنود المتبقية.") : ("تم اعتماد مشتريات " + employee + " ليوم " + workDate + " وإضافتها للمخزون والمشتريات الرسمية."),
+    version: MATBAGY_ACCOUNTING_VERSION
+  };
+}
+
+function rejectDeptDailyPurchaseV1917_(e) {
+  const auth = accountingAuthorize_(e);
+  if (!auth.ok) return { success: false, message: auth.message };
+  if (auth.mode !== "full") return { success: false, message: "رفض مشتريات الأقسام متاح لضياء فقط." };
+  const id = normalize_(e.parameter.id || e.parameter.purchaseId);
+  if (!id) return { success: false, message: "رقم بند المشتريات مطلوب." };
+  const sheet = ensureAccountingSheets_().dailyPurchases;
+  const lock = LockService.getScriptLock();
+  lock.waitLock(20000);
+  try {
+    const row = deptDailyPurchaseRowsV1917_(sheet).find(function (item) { return item.id === id; });
+    if (!row) return { success: false, message: "بند المشتريات غير موجود." };
+    const statusKey = searchKey_(row.status);
+    if (statusKey.indexOf("معتمد") !== -1) return { success: false, message: "لا يمكن رفض بند تم اعتماده وإضافته للمخزون." };
+    if (statusKey.indexOf("مرفوض") !== -1) return { success: true, duplicatePrevented: true, message: "البند مرفوض بالفعل.", version: MATBAGY_ACCOUNTING_VERSION };
+    const reason = normalize_(e.parameter.reason || "مرفوض بعد مراجعة ضياء");
+    updateByHeaders_(sheet, row.rowNumber, { "الحالة":"مرفوض", "وقت الاعتماد":new Date(), "اعتمد بواسطة":auth.user.username, "ملاحظات":row.notes ? (row.notes + " | سبب الرفض: " + reason) : ("سبب الرفض: " + reason) }, true);
+    try { es16Audit_(auth.user.username, "رفض مشتريات يومية", "مشتريات قسم", id, row.total, "مرفوض", reason); } catch (auditErr) {}
+    return { success: true, message: "تم رفض البند دون تغيير المخزون أو حساب المورد.", version: MATBAGY_ACCOUNTING_VERSION };
+  } finally {
+    try { lock.releaseLock(); } catch (err) {}
+  }
+}
+
+function accDeptDailyPurchasesHeadersV1917_() {
+  return ["ID", "مفتاح الطلب", "وقت التسجيل", "تاريخ العمل", "الموظف", "القسم", "المورد", "رقم فاتورة المورد", "الخامة", "الكمية", "سعر الوحدة", "الإجمالي", "نوع الدفع", "المدفوع", "المتبقي", "ملاحظات", "الحالة", "وقت الاعتماد", "اعتمد بواسطة", "رقم فاتورة الشراء الرسمية", "مفتاح الاعتماد"];
+}
+
 function ensureAccountingSheets_() {
   const materials = mbEnsureSheet_(SHEET_NAME_ACC_MATERIALS, accMaterialsHeaders_());
   const templates = mbEnsureSheet_(SHEET_NAME_ACC_TEMPLATES, accTemplatesHeaders_());
@@ -2724,12 +3005,13 @@ function ensureAccountingSheets_() {
   const finalInvoices = mbEnsureSheet_(SHEET_NAME_ACC_FINAL_INVOICES, accFinalInvoicesHeaders_());
   const waste = mbEnsureSheet_(SHEET_NAME_ACC_WASTE, accWasteHeaders_());
   const stockMoves = mbEnsureSheet_(SHEET_NAME_ACC_STOCK_MOVES, accStockMovesHeaders_());
+  const dailyPurchases = mbEnsureSheet_(SHEET_NAME_ACC_DEPT_DAILY_PURCHASES, accDeptDailyPurchasesHeadersV1917_());
   ensureHeaderIfAnyMissing_(templates, ["تكلفة محسوبة", "مكونات الصنف"]);
   ensureHeaderIfAnyMissing_(deptLines, ["تفاصيل المكونات", "تفاصيل حاسبة الليزر", "مساحة مستهلكة", "نسبة الهالك", "مخزون مخصوم؟", "وقت خصم المخزون"]);
   ensureHeaderIfAnyMissing_(finalInvoices, ["مفتاح العملية", "حالة العكس المالي", "وقت العكس المالي"]);
   ensureHeaderIfAnyMissing_(stockMoves, ["كمية واردة", "كمية منصرفة"]);
   seedAccountingTemplates_(templates);
-  return { materials: materials, templates: templates, deptLines: deptLines, finalInvoices: finalInvoices, waste: waste, stockMoves: stockMoves };
+  return { materials: materials, templates: templates, deptLines: deptLines, finalInvoices: finalInvoices, waste: waste, stockMoves: stockMoves, dailyPurchases: dailyPurchases };
 }
 
 function seedAccountingTemplates_(sheet) {
@@ -7797,6 +8079,7 @@ function getAccounting_(e) {
   const mode = auth.mode;
   const salesRaw = (mode === "full" || mode === "final") ? accSheetRows_(mbEnsureSheet_("حسابات - فواتير المبيعات", easyStoreSalesHeadersV1909_())) : [];
   const purchasesRaw = (mode === "full" || mode === "final") ? accSheetRows_(mbEnsureSheet_("حسابات - فواتير الشراء", easyStorePurchasesHeadersV1909_())) : [];
+  const dailyPurchases = deptDailyPurchasesForAuthV1917_(auth, deptDailyPurchaseRowsV1917_(sheets.dailyPurchases));
   return {
     success: true,
     permissions: {
@@ -7806,6 +8089,8 @@ function getAccounting_(e) {
       canCloseFinalInvoice: mode === "full" || mode === "final",
       canEnterDeptLine: mode === "full" || mode === "print" || mode === "laser",
       canEnterPurchaseInvoice: mode === "full" || mode === "final",
+      canEnterDailyPurchase: mode === "print" || mode === "laser",
+      canApproveDailyPurchases: mode === "full",
       canSeeCosts: mode === "full",
       canSeeProfitReports: mode === "full"
     },
@@ -7815,6 +8100,7 @@ function getAccounting_(e) {
     finalInvoices: accountingSanitizeRowsV1857_(finalInvoicesRaw, mode),
     sales: accountingSanitizeRowsV1857_(salesRaw, mode),
     purchases: accountingSanitizeRowsV1857_(purchasesRaw, mode),
+    dailyPurchases: dailyPurchases,
     wasteLines: accountingSanitizeRowsV1857_(wasteRaw, mode),
     stockMoves: accountingSanitizeRowsV1857_(stockRaw, mode),
     summary: mode === "full" ? accountingSummary_(deptLinesAll) : accountingSummary_(deptLinesRaw).byDepartment.map ? { byDepartment: accountingSummary_(deptLinesRaw).byDepartment.map(function(x){ return { department:x.department, sales:x.sales, cost:"", profit:"", count:x.count }; }) } : { byDepartment: [] },
@@ -8304,7 +8590,8 @@ function accountingSaveIdempotentV1913_(scope, rawKey, response) {
 }
 function accountingIncreaseMaterialStockV1913_(materialName, qty, ctx) {
   const sheets = ensureAccountingSheets_();
-  const rowNumber = accountingFindMaterialRow_(sheets.materials, materialName, "") || 0;
+  ctx = ctx || {};
+  const rowNumber = accountingFindMaterialRow_(sheets.materials, materialName, ctx.department || "") || accountingFindMaterialRow_(sheets.materials, materialName, "") || 0;
   if (!rowNumber) return { ok: false, message: "الخامة غير مسجلة في المخزون: " + materialName };
   const h = headersMap_(sheets.materials);
   const colStock = firstCol_(h, ["رصيد المخزن"], 0);
@@ -8649,6 +8936,7 @@ function resetAccountingToZeroV1861_(e){
     SHEET_NAME_ACC_FINAL_INVOICES,
     SHEET_NAME_ACC_WASTE,
     SHEET_NAME_ACC_STOCK_MOVES,
+    SHEET_NAME_ACC_DEPT_DAILY_PURCHASES,
     "حسابات - فواتير الشراء",
     "حسابات - فواتير المبيعات",
     "حسابات - الموردين",

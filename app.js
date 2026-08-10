@@ -1,7 +1,7 @@
 (function(){
   'use strict';
 
-  const VERSION = 'ES41 V1916 Customer Account Drawer';
+  const VERSION = 'ES42 V1917 Daily Department Purchases';
   window.EASYSTORE_MATBAGY_VERSION = VERSION;
 
   const app = document.getElementById('app');
@@ -39,7 +39,7 @@
   const userDept = () => isLaser() ? 'ليزر' : isPrint() ? 'طباعة' : (user.department || '');
   function allowedScreens(){
     if(isAdmin()) return ['dashboard','suppliers','customers','items','purchase','sales','final','stock','kitchen','reports','health'];
-    if(isPrint() || isLaser()) return ['dept','waste','stock'];
+    if(isPrint() || isLaser()) return ['dept','deptPurchases','waste','stock'];
     if(isFinal()) return ['sales','final','customers','deptView'];
     return ['sales'];
   }
@@ -52,8 +52,10 @@
   function initialScreen(){
     const s = String(qs.get('screen') || qs.get('tab') || qs.get('view') || '').toLowerCase();
     let requested = '';
-    if(/final/.test(s)) requested = 'final';
+    if(/deptpurchases|dailypurchases|daily-purchases/.test(s)) requested = 'deptPurchases';
+    else if(/final/.test(s)) requested = 'final';
     else if(/dept/.test(s)) requested = 'dept';
+    else if(/purchase|شراء|مشتريات/.test(s)) requested = 'purchase';
     else if(/sales|sale|invoice|فاتورة/.test(s)) requested = 'sales';
     else if(/customer|client|عملاء/.test(s)) requested = 'customers';
     else if(/kitchen|raw|materials/.test(s)) requested = 'kitchen';
@@ -65,11 +67,11 @@
     active: initialScreen(),
     loading: false,
     data: {
-      materials: [], templates: [], suppliers: [], purchases: [], sales: [], customers: [],
+      materials: [], templates: [], suppliers: [], purchases: [], dailyPurchases: [], sales: [], customers: [],
       stockMoves: [], wasteLines: [], deptLines: [], finalInvoices: [], summary: {}
     },
     recipeComps: [], salePulledLines: [], saleSelectedCustomer: null, saleCustomerContext: null, customerSearchTimer: null, customerSearchSeq: 0, customerDropdownLocked: false,
-    laserQuote: null, saleRequestId: '', finalRequestId: '', purchaseRequestId: '',
+    laserQuote: null, saleRequestId: '', finalRequestId: '', purchaseRequestId: '', dailyPurchaseRequestId: '',
     customerAccount: null, customerAccountSelected: '', customerAccountRequestId: ''
   };
 
@@ -77,8 +79,8 @@
   function loadLocal(){ try{ return JSON.parse(localStorage.getItem(STORE_KEY) || '{}'); }catch(e){ return {}; } }
   function mergeData(d){
     const local = loadLocal();
-    state.data = Object.assign({materials:[],templates:[],suppliers:[],purchases:[],sales:[],customers:[],stockMoves:[],wasteLines:[],deptLines:[],finalInvoices:[],summary:{}}, local, d || {});
-    ['materials','templates','suppliers','purchases','sales','customers','stockMoves','wasteLines','deptLines','finalInvoices'].forEach(k=>{ if(!Array.isArray(state.data[k])) state.data[k] = []; });
+    state.data = Object.assign({materials:[],templates:[],suppliers:[],purchases:[],dailyPurchases:[],sales:[],customers:[],stockMoves:[],wasteLines:[],deptLines:[],finalInvoices:[],summary:{}}, local, d || {});
+    ['materials','templates','suppliers','purchases','dailyPurchases','sales','customers','stockMoves','wasteLines','deptLines','finalInvoices'].forEach(k=>{ if(!Array.isArray(state.data[k])) state.data[k] = []; });
   }
 
   function api(action, data){
@@ -232,7 +234,7 @@
   function tabs(){
     let list;
     if(isAdmin()) list = [['dashboard','لوحة الحسابات'],['suppliers','الموردين'],['customers','العملاء'],['items','الأصناف'],['purchase','فواتير الشراء'],['sales','فواتير المبيعات'],['final','التقفيل النهائي'],['stock','المخزون'],['kitchen','مطبخ الحسابات'],['reports','التقارير'],['health','فحص النظام']];
-    else if(isPrint() || isLaser()) list = [['dept','فاتورة القسم'],['waste','هوالك القسم'],['stock','الأصناف المتاحة']];
+    else if(isPrint() || isLaser()) list = [['dept','فاتورة القسم'],['deptPurchases','مشتريات اليوم'],['waste','هوالك القسم'],['stock','الأصناف المتاحة']];
     else if(isFinal()) list = [['sales','فواتير المبيعات'],['final','تقفيل الفاتورة'],['customers','العملاء'],['deptView','أجزاء الأقسام']];
     else list = [['dashboard','لوحة الحسابات'],['sales','فواتير المبيعات']];
     if(!list.some(x=>x[0] === state.active)) state.active = list[0][0];
@@ -242,7 +244,7 @@
   function shell(){
     app.innerHTML = `<div class="wrap">
       <div class="top">
-        <div><h1>💰 إيزي ستور مطبعجي - برنامج الحسابات ES41</h1><p>أصناف، موردين، فواتير شراء ومبيعات، مخزون، تقارير، ومطبخ الحسابات.</p><div class="versionLine">${VERSION} / app.js محمل: ${new Date().toLocaleTimeString('ar-EG')}</div></div>
+        <div><h1>💰 إيزي ستور مطبعجي - برنامج الحسابات ES42</h1><p>أصناف، موردين، فواتير شراء ومبيعات، مخزون، تقارير، ومطبخ الحسابات.</p><div class="versionLine">${VERSION} / app.js محمل: ${new Date().toLocaleTimeString('ar-EG')}</div></div>
         <div class="actions"><span class="badge">${esc(user.name)} - ${esc(roleText())}</span><button class="btn secondary" onclick="ES27.load(true)">تحديث البيانات</button><button class="btn secondary" onclick="ES27.hardReload()">تحديث البرنامج</button><button class="btn secondary" onclick="history.back()">إغلاق</button></div>
       </div>
       <div id="mainMsg" class="msg"></div>
@@ -255,11 +257,11 @@
   function render(){
     const sc = $('screen'); if(!sc) return;
     if(!allowedScreens().includes(state.active)) state.active = allowedScreens()[0];
-    const m = {dashboard:screenDashboard,suppliers:screenSuppliers,customers:screenCustomers,items:screenItems,purchase:screenPurchase,sales:screenSales,stock:screenStock,kitchen:screenKitchen,reports:screenReports,health:screenHealth,dept:screenDept,waste:screenWaste,final:screenFinal,deptView:screenDeptView};
+    const m = {dashboard:screenDashboard,suppliers:screenSuppliers,customers:screenCustomers,items:screenItems,purchase:screenPurchase,deptPurchases:screenDeptPurchases,sales:screenSales,stock:screenStock,kitchen:screenKitchen,reports:screenReports,health:screenHealth,dept:screenDept,waste:screenWaste,final:screenFinal,deptView:screenDeptView};
     sc.innerHTML = (m[state.active] || screenDashboard)();
     document.querySelectorAll('.tab').forEach(b=>b.classList.toggle('active', nkey(b.textContent).includes(nkey(tabLabel(state.active)))));
   }
-  function tabLabel(t){ return ({dashboard:'لوحة',suppliers:'الموردين',customers:'العملاء',items:'الأصناف',purchase:'الشراء',sales:'المبيعات',stock:'المخزون',kitchen:'مطبخ',reports:'التقارير',health:'فحص',dept:'فاتورة',waste:'هوالك',final:'تقفيل',deptView:'أجزاء'})[t] || ''; }
+  function tabLabel(t){ return ({dashboard:'لوحة',suppliers:'الموردين',customers:'العملاء',items:'الأصناف',purchase:'الشراء',deptPurchases:'مشتريات اليوم',sales:'المبيعات',stock:'المخزون',kitchen:'مطبخ',reports:'التقارير',health:'فحص',dept:'فاتورة',waste:'هوالك',final:'تقفيل',deptView:'أجزاء'})[t] || ''; }
 
   function screenDashboard(){
     const sales = (state.data.sales||[]).reduce((s,r)=>s+num(r.total||r.amount),0);
@@ -306,8 +308,68 @@
   }
   function itemsTable(){ return table(productTemplates(),['الصنف','القسم','التكلفة','البيع','مجمل الربح','نسبة الربح','الحالة','إجراء'],(r,i)=>{ const cost=matCost(r), sale=matSale(r), g=gp(cost,sale); return [esc(templateName(r)),esc(matDept(r)),isAdmin()?money(cost):'<span class="costHidden">مخفي</span>',money(sale),isAdmin()?money(g.profit):'<span class="costHidden">مخفي</span>',isAdmin()?g.margin.toFixed(1)+'%':'-',activeRow(r)?'مفعل':'موقوف',`<span class="tableActions"><button class="btn small secondary" onclick="ES27.editItem(${i})">تعديل</button><button class="btn small warn" onclick="ES27.archiveItem(${i})">إيقاف</button></span>`]; }); }
 
+  function dailyPurchaseTodayKey(){
+    try{
+      const parts=new Intl.DateTimeFormat('en-GB',{timeZone:'Africa/Cairo',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(new Date());
+      const values={}; parts.forEach(p=>{ if(p.type!=='literal') values[p.type]=p.value; });
+      return values.year+'-'+values.month+'-'+values.day;
+    }catch(e){ return new Date().toISOString().slice(0,10); }
+  }
+  function dailyPurchaseEmployee(r){ return String((r&&(r.employee||r.createdBy||r.user))||'').trim(); }
+  function dailyPurchaseStatus(r){ return String((r&&(r.status||r.reviewStatus))||'قيد مراجعة ضياء').trim(); }
+  function isDailyPurchasePending(r){ const s=nkey(dailyPurchaseStatus(r)); return !s||/قيد|مراجعه|مراجعة|pending/.test(s); }
+  function dailyPurchaseStatusBadge(r){ const s=dailyPurchaseStatus(r); const k=nkey(s); const cls=/مرفوض|رفض|rejected/.test(k)?'rejected':/معتمد|approved/.test(k)?'approved':'pending'; return `<span class="dailyPurchaseStatus ${cls}">${esc(s)}</span>`; }
+  function dailyPurchaseToken(value){ return encodeURIComponent(String(value||'')).replace(/'/g,'%27'); }
+  function visibleDailyPurchases(){
+    const rows=state.data.dailyPurchases||[];
+    if(isAdmin()) return rows;
+    const who=nkey(user.username||user.name||'');
+    const dept=nkey(userDept());
+    return rows.filter(r=>nkey(dailyPurchaseEmployee(r))===who && nkey(r.department||'')===dept);
+  }
+  function deptDailyPurchaseRows(){
+    const today=dailyPurchaseTodayKey();
+    return visibleDailyPurchases().filter(r=>String(r.workDate||'')===today || isDailyPurchasePending(r));
+  }
+  function dailyPurchaseMaterialOptions(){ const dept=nkey(userDept()); return materialRows().filter(activeRow).filter(r=>{const d=nkey(matDept(r));return !d||d===dept||/مشترك|عام/.test(d)}).map(r=>`<option value="${esc(materialName(r))}">${esc(materialName(r))} - ${esc(matDept(r)||userDept())}</option>`).join(''); }
+  function dailyPurchaseEmployeeTable(){
+    const rows=deptDailyPurchaseRows();
+    if(!rows.length) return '<div class="empty">لم تسجل مشتريات اليوم بعد.</div>';
+    return table(rows,['الوقت','المورد','فاتورة المورد','الخامة','الكمية','سعر الوحدة','الإجمالي','الدفع','الحالة'],r=>[esc(customerAccountDate(r.createdAt)),esc(r.supplier||''),esc(r.receiptNo||'-'),esc(r.material||r.materialName||''),esc(r.qty),money(r.unit),money(r.total),esc(r.paymentType||'-'),dailyPurchaseStatusBadge(r)]);
+  }
+  function dailyPurchasePendingGroups(){
+    const groups={};
+    visibleDailyPurchases().filter(isDailyPurchasePending).forEach(r=>{
+      const employee=dailyPurchaseEmployee(r)||'موظف';
+      const date=String(r.workDate||dailyPurchaseTodayKey());
+      const key=nkey(employee)+'|'+date;
+      if(!groups[key]) groups[key]={employee,date,department:r.department||'',rows:[],total:0};
+      groups[key].rows.push(r); groups[key].total+=num(r.total);
+    });
+    return Object.keys(groups).map(k=>groups[k]).sort((a,b)=>String(b.date).localeCompare(String(a.date)));
+  }
+  function dailyPurchaseAdminReview(){
+    const groups=dailyPurchasePendingGroups();
+    const pending=groups.reduce((s,g)=>s+g.rows.length,0);
+    const total=groups.reduce((s,g)=>s+g.total,0);
+    const groupHtml=groups.length?`<div class="dailyPurchaseGroups">${groups.map(g=>`<article class="dailyPurchaseGroup"><div><span>${esc(g.date)}</span><h3>${esc(g.employee)} · ${esc(g.department)}</h3><p>${g.rows.length} بند في انتظار المراجعة</p></div><div class="dailyPurchaseGroupTotal"><b>${money(g.total)}</b><button class="btn" onclick="ES27.approveDailyPurchaseBatch('${dailyPurchaseToken(g.employee)}','${esc(g.date)}')">اعتماد مشتريات اليوم</button></div></article>`).join('')}</div>`:'<div class="customerAccountSettled">✓ لا توجد مشتريات أقسام معلقة للمراجعة.</div>';
+    const rows=visibleDailyPurchases().filter(r=>isDailyPurchasePending(r)||String(r.workDate||'')===dailyPurchaseTodayKey()).slice(0,150);
+    const reviewTable=rows.length?table(rows,['اليوم','الموظف','القسم','المورد','فاتورة المورد','الخامة','الكمية','السعر','الإجمالي','الدفع','الحالة','قرار'],r=>[esc(r.workDate||''),esc(dailyPurchaseEmployee(r)),esc(r.department||''),esc(r.supplier||''),esc(r.receiptNo||'-'),esc(r.material||r.materialName||''),esc(r.qty),money(r.unit),money(r.total),esc(r.paymentType||'-'),dailyPurchaseStatusBadge(r),isDailyPurchasePending(r)?`<button class="btn small danger" onclick="ES27.rejectDailyPurchase('${dailyPurchaseToken(r.id)}')">رفض</button>`:'-']):'';
+    return `<section class="card dailyPurchaseAdmin"><div class="toolbar"><div><span class="deptEyebrow">مراجعة ضياء آخر اليوم</span><h2>مشتريات جابر ووائل اليومية</h2><p class="muted">لن تدخل المشتريات الرسمية أو المخزون إلا بعد اعتمادك.</p></div><div class="dailyPurchaseSummary"><div><span>بنود معلقة</span><b>${pending}</b></div><div><span>إجمالي معلق</span><b>${money(total)}</b></div></div></div>${groupHtml}${reviewTable}</section>`;
+  }
+
+  function screenDeptPurchases(){
+    if(!canUseDepartment()) return '<div class="card"><h2>هذه الشاشة لجابر ووائل فقط.</h2></div>';
+    const rows=deptDailyPurchaseRows();
+    const today=dailyPurchaseTodayKey();
+    const todayRows=rows.filter(r=>String(r.workDate||'')===today);
+    const total=todayRows.reduce((s,r)=>s+num(r.total),0);
+    const pending=rows.filter(isDailyPurchasePending).length;
+    return `<div class="deptInvoicePage dailyPurchasePage"><section class="deptInvoiceHero dailyPurchaseHero"><div><span class="deptEyebrow">تسجيل طوال اليوم · اعتماد ضياء آخر اليوم</span><h2>مشتريات ${esc(user.name||user.username)} اليوم</h2><p>سجل كل خامة وقت شرائها. لن يزيد المخزون ولن تتسجل فاتورة رسمية قبل مراجعة ضياء.</p></div><div class="deptHeroBadges"><span>${esc(userDept())}</span><span>${esc(today)}</span><button class="btn small secondary" onclick="ES27.go('dept')">الرجوع لفاتورة القسم</button></div></section><section class="dailyPurchaseSummary deptPurchaseStats"><div><span>بنود اليوم</span><b>${todayRows.length}</b></div><div><span>إجمالي اليوم</span><b>${money(total)}</b></div><div><span>في انتظار ضياء</span><b>${pending}</b></div></section><section class="card dailyPurchaseEditor"><div class="deptSectionTitle"><div><span>＋</span><h3>إضافة مشتريات</h3></div><small>الخامة يجب أن تكون مسجلة في مخزون EasyStore</small></div><div class="grid four"><div class="field"><label>المورد</label><input id="dpSupplier" list="dpSupplierList" placeholder="اسم المورد" oninput="ES27.resetDailyPurchaseRequest()"><datalist id="dpSupplierList">${supplierOptions()}</datalist></div><div class="field"><label>رقم فاتورة / إيصال المورد</label><input id="dpReceipt" placeholder="اختياري" oninput="ES27.resetDailyPurchaseRequest()"></div><div class="field"><label>الخامة / الصنف المشترى</label><select id="dpMaterial" onchange="ES27.resetDailyPurchaseRequest()"><option value="">اختار من المخزون</option>${dailyPurchaseMaterialOptions()}</select></div><div class="field"><label>طريقة الدفع</label><select id="dpPayment" onchange="ES27.calcDailyPurchase();ES27.resetDailyPurchaseRequest()"><option>نقدي</option><option>إنستا باي</option><option>فودافون كاش</option><option>تحويل بنكي</option><option>آجل</option></select></div></div><div class="grid four"><div class="field"><label>الكمية</label><input id="dpQty" type="number" min="0.01" step="0.01" value="1" oninput="ES27.calcDailyPurchase();ES27.resetDailyPurchaseRequest()"></div><div class="field"><label>سعر الوحدة</label><input id="dpUnit" type="number" min="0.01" step="0.01" oninput="ES27.calcDailyPurchase();ES27.resetDailyPurchaseRequest()"></div><div class="field"><label>الإجمالي</label><input id="dpTotal" readonly value="0.00"></div><div class="field"><label>المدفوع الآن</label><input id="dpPaid" readonly value="0.00"></div></div><div class="field"><label>ملاحظات</label><input id="dpNotes" placeholder="تفاصيل الشراء أو سبب الشراء" oninput="ES27.resetDailyPurchaseRequest()"></div><div class="deptInvoiceActions"><button id="dpSaveBtn" class="btn deptSaveBtn" onclick="ES27.saveDailyPurchase()">تسجيل وإرسال لضياء</button><button class="btn secondary" onclick="ES27.load(true)">تحديث مشتريات اليوم</button></div></section><section class="card deptReviewCard"><div class="deptSectionTitle"><div><span>✓</span><h3>مشتريات اليوم والمتأخرات المعلقة</h3></div><small>الحالة تتحدث بعد اعتماد ضياء</small></div>${dailyPurchaseEmployeeTable()}</section></div>`;
+  }
+
   function screenPurchase(){
-    return `<div class="card"><h2>فاتورة شراء</h2><div class="grid four"><div class="field"><label>رقم الفاتورة</label><input id="puNo" value="PUR-${Date.now().toString().slice(-6)}"></div><div class="field"><label>المورد</label><input id="puSupplier" list="supList"><datalist id="supList">${supplierOptions()}</datalist></div><div class="field"><label>نوع الدفع</label><select id="puPay"><option>نقدي</option><option>آجل</option><option>جزئي</option></select></div><div class="field"><label>تاريخ استحقاق</label><input id="puDue" type="date"></div></div><div class="grid six"><div class="field"><label>الخامة/الصنف</label><select id="puMat"><option></option>${materialOptions()}</select></div><div class="field"><label>الكمية</label><input id="puQty" type="number" value="1" oninput="ES27.calcPurchase()"></div><div class="field"><label>سعر الشراء</label><input id="puUnit" type="number" oninput="ES27.calcPurchase()"></div><div class="field"><label>الإجمالي</label><input id="puTotal" readonly></div><div class="field"><label>مدفوع</label><input id="puPaid" type="number" value="0" oninput="ES27.calcPurchase()"></div><div class="field"><label>متبقي</label><input id="puRemain" readonly></div></div><div class="field"><label>ملاحظات</label><input id="puNotes"></div><button class="btn" onclick="ES27.savePurchase()">حفظ فاتورة الشراء وزيادة المخزون</button></div>${table(state.data.purchases,['رقم','مورد','خامة','كمية','إجمالي','مدفوع','متبقي'],p=>[esc(p.no||p.invoiceNo),esc(p.supplier),esc(p.material||p.materialName),esc(p.qty),money(p.total),money(p.paid),money(p.remain)])}`;
+    return `${dailyPurchaseAdminReview()}<div class="card"><h2>فاتورة شراء مباشرة لضياء</h2><div class="grid four"><div class="field"><label>رقم الفاتورة</label><input id="puNo" value="PUR-${Date.now().toString().slice(-6)}"></div><div class="field"><label>المورد</label><input id="puSupplier" list="supList"><datalist id="supList">${supplierOptions()}</datalist></div><div class="field"><label>نوع الدفع</label><select id="puPay"><option>نقدي</option><option>آجل</option><option>جزئي</option></select></div><div class="field"><label>تاريخ استحقاق</label><input id="puDue" type="date"></div></div><div class="grid six"><div class="field"><label>الخامة/الصنف</label><select id="puMat"><option></option>${materialOptions()}</select></div><div class="field"><label>الكمية</label><input id="puQty" type="number" value="1" oninput="ES27.calcPurchase()"></div><div class="field"><label>سعر الشراء</label><input id="puUnit" type="number" oninput="ES27.calcPurchase()"></div><div class="field"><label>الإجمالي</label><input id="puTotal" readonly></div><div class="field"><label>مدفوع</label><input id="puPaid" type="number" value="0" oninput="ES27.calcPurchase()"></div><div class="field"><label>متبقي</label><input id="puRemain" readonly></div></div><div class="field"><label>ملاحظات</label><input id="puNotes"></div><button class="btn" onclick="ES27.savePurchase()">حفظ فاتورة الشراء وزيادة المخزون</button></div>${table(state.data.purchases,['رقم','مورد','خامة','كمية','إجمالي','مدفوع','متبقي'],p=>[esc(p.no||p.invoiceNo),esc(p.supplier),esc(p.material||p.materialName),esc(p.qty),money(p.total),money(p.paid),money(p.remain)])}`;
   }
 
 
@@ -692,7 +754,7 @@
     return `<div class="deptInvoicePage">
       <section class="deptInvoiceHero">
         <div><span class="deptEyebrow">فاتورة تشغيل مترابطة مع كتالوج EasyStore</span><h2 id="deptInvoiceNo">فاتورة قسم ${esc(d)} / ${qOrder||'مسودة جديدة'}</h2><p>كل صنف محفوظ في البرنامج يظهر هنا بسعره وقسمه، وكل بند تسجله يرجع فورًا إلى حسابات وفواتير الأقسام.</p></div>
-        <div class="deptHeroBadges"><span>القسم: ${esc(d)}</span><span>المزامنة: Google Sheets</span></div>
+        <div class="deptHeroBadges"><span>القسم: ${esc(d)}</span><span>المزامنة: Google Sheets</span><button class="btn small secondary" onclick="ES27.go('deptPurchases')">🧾 مشتريات اليوم</button></div>
       </section>
       <section id="deptInvoiceStats" class="deptInvoiceStats">${deptInvoiceStatsHtml()}</section>
       <section class="card deptInvoiceEditor">
@@ -749,6 +811,7 @@
         templates: r.templates || r.items || [],
         suppliers: supplierRows.length ? supplierRows : (r.suppliers || []),
         purchases: r.purchases || [],
+        dailyPurchases: r.dailyPurchases || [],
         sales: r.sales || [],
         customers: customerRows.length ? customerRows : (r.customers || []),
         stockMoves: r.stockMoves || [],
@@ -766,7 +829,7 @@
   window.ES27 = {
     go(t){ if(!allowedScreens().includes(t)) return deny('هذه الشاشة غير متاحة لصلاحية المستخدم الحالي.'); state.active = t; shell(); },
     load,
-    hardReload(){ const url = location.pathname + '?v=es41-v1916-customer-account-drawer-' + Date.now(); location.href = url; },
+    hardReload(){ const url = location.pathname + '?v=es42-v1917-daily-department-purchases-' + Date.now(); location.href = url; },
     quickSearch(q){ q=nkey(q); if(!q) return; const found = templates().find(r=>nkey(templateName(r)).includes(q)) || materials().find(r=>nkey(materialName(r)).includes(q)); if(found) flash('تم العثور على: ' + (templateName(found)||materialName(found))); },
     async saveSupplier(){ if(!canManageAccounting()) return deny(); const s={name:val('supName'),phone:val('supPhone'),opening:num(val('supOpening')),address:val('supAddress')}; if(!s.name) return flash('اكتب اسم المورد',true); try{ const reply=await api('saveEasyStoreSupplier',s); if(!reply||reply.success===false) throw new Error((reply&&reply.message)||'تعذر حفظ المورد'); const i=state.data.suppliers.findIndex(x=>nkey(x.name||x.supplier)===nkey(s.name)); if(i>=0) state.data.suppliers[i]=s; else state.data.suppliers.unshift(s); saveLocal(); shell(); flash('تم حفظ المورد على السيرفر'); }catch(e){ flash('لم يتم حفظ المورد: '+(e.message||e),true); } },
     editSupplier(i){ const s=state.data.suppliers[i]; if(!s) return; set('supName',s.name||s.supplier); set('supPhone',s.phone); set('supOpening',s.opening||s.openingBalance); set('supAddress',s.address); },
@@ -813,7 +876,7 @@
       const button=$('caSaveBtn');
       if(button){button.disabled=true;button.textContent='جاري الحفظ...';}
       try{
-        const reply=await api('saveCustomerAccountMovementV1915',{customerName:name,operation,amount,paymentMethod:method,refNo,notes,requestId:state.customerAccountRequestId,source:'EasyStore ES41'});
+        const reply=await api('saveCustomerAccountMovementV1915',{customerName:name,operation,amount,paymentMethod:method,refNo,notes,requestId:state.customerAccountRequestId,source:'EasyStore ES42'});
         if(!reply || reply.success===false) throw new Error((reply&&reply.message)||'تعذر حفظ حركة العميل.');
         let account=null;
         try{ account=await api('getCustomerAccountV1915',{customerName:name}); }catch(refreshError){}
@@ -890,6 +953,41 @@
     editItem(i){ const r=productTemplates()[i]; if(!r) return; set('itDept',matDept(r)); set('itName',templateName(r)); set('itType',r.category||matType(r)); set('itSize',r.size); set('itSale',matSale(r)); set('itCost',matCost(r)); },
     clearItemForm(){ ['itName','itSize','itSale','itCost'].forEach(id=>set(id,'')); },
     archiveItem(i){ if(!canManageAccounting()) return deny(); const r=productTemplates()[i]; if(!r || !confirm('إيقاف الصنف ' + templateName(r) + '؟')) return; r.active='لا'; r['مفعل']='لا'; saveLocal(); api('archiveAccountingTemplate',{itemName:templateName(r),department:matDept(r)}).catch(()=>{}); shell(); },
+    resetDailyPurchaseRequest(){ state.dailyPurchaseRequestId=''; },
+    calcDailyPurchase(){ const total=num(val('dpQty'))*num(val('dpUnit')); const payment=nkey(val('dpPayment')); set('dpTotal',total.toFixed(2)); set('dpPaid',(/اجل|آجل/.test(payment)?0:total).toFixed(2)); },
+    async saveDailyPurchase(){
+      if(!canUseDepartment()) return deny('تسجيل مشتريات اليوم متاح لجابر ووائل فقط.');
+      this.calcDailyPurchase();
+      if(!state.dailyPurchaseRequestId) state.dailyPurchaseRequestId='DPP-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,10);
+      const p={requestId:state.dailyPurchaseRequestId,supplier:val('dpSupplier'),receiptNo:val('dpReceipt'),material:val('dpMaterial'),qty:num(val('dpQty')),unit:num(val('dpUnit')),total:num(val('dpTotal')),paymentType:val('dpPayment')||'نقدي',paid:num(val('dpPaid')),notes:val('dpNotes')};
+      if(!p.supplier||!p.material||p.qty<=0||p.unit<=0) return flash('اختار المورد والخامة واكتب كمية وسعرًا أكبر من صفر.',true);
+      const button=$('dpSaveBtn'); if(button){button.disabled=true;button.textContent='جاري التسجيل...';}
+      try{
+        const reply=await api('saveDeptDailyPurchaseV1917',p);
+        if(!reply||reply.success===false) throw new Error((reply&&reply.message)||'تعذر تسجيل مشتريات اليوم.');
+        state.dailyPurchaseRequestId='';
+        if(reply.purchase && !(state.data.dailyPurchases||[]).some(r=>nkey(r.id)===nkey(reply.purchase.id))) state.data.dailyPurchases.unshift(reply.purchase);
+        saveLocal(); shell(); flash(reply.message||'تم إرسال المشتريات لمراجعة ضياء.');
+      }catch(e){ if(button){button.disabled=false;button.textContent='إعادة محاولة التسجيل';} flash(e.message||'تعذر تسجيل مشتريات اليوم.',true); }
+    },
+    async approveDailyPurchaseBatch(encodedEmployee,workDate){
+      if(!isAdmin()) return deny('اعتماد مشتريات جابر ووائل عند ضياء فقط.');
+      let employee=''; try{employee=decodeURIComponent(String(encodedEmployee||''));}catch(e){employee=String(encodedEmployee||'');}
+      const group=dailyPurchasePendingGroups().find(g=>nkey(g.employee)===nkey(employee)&&String(g.date)===String(workDate));
+      if(!group||!group.rows.length) return flash('لا توجد مشتريات معلقة لهذه المجموعة.',true);
+      if(!confirm('اعتماد '+group.rows.length+' بند مشتريات لـ '+employee+' بإجمالي '+money(group.total)+'؟\nسيتم تحديث المخزون وحسابات الموردين.')) return;
+      try{
+        const reply=await api('approveDeptDailyPurchasesV1917',{employee,workDate,requestId:'DPP-BATCH-'+workDate+'-'+nkey(employee)});
+        if(!reply||reply.success===false) throw new Error((reply&&reply.message)||'تعذر اعتماد مشتريات اليوم.');
+        await load(true); flash(reply.message||'تم اعتماد مشتريات اليوم.',!!reply.partial);
+      }catch(e){ flash(e.message||'تعذر اعتماد مشتريات اليوم.',true); }
+    },
+    async rejectDailyPurchase(encodedId){
+      if(!isAdmin()) return deny('رفض مشتريات الأقسام عند ضياء فقط.');
+      let id=''; try{id=decodeURIComponent(String(encodedId||''));}catch(e){id=String(encodedId||'');}
+      if(!id||!confirm('رفض بند المشتريات هذا؟ لن يتغير المخزون أو حساب المورد.')) return;
+      try{ const reply=await api('rejectDeptDailyPurchaseV1917',{id,reason:'مرفوض من ضياء بعد المراجعة'}); if(!reply||reply.success===false) throw new Error((reply&&reply.message)||'تعذر رفض البند.'); await load(true); flash(reply.message||'تم رفض البند.'); }catch(e){ flash(e.message||'تعذر رفض البند.',true); }
+    },
     calcPurchase(){ const total=num(val('puQty'))*num(val('puUnit')); set('puTotal',total.toFixed(2)); set('puRemain',Math.max(0,total-num(val('puPaid'))).toFixed(2)); },
     async savePurchase(){ if(!canManageAccounting()) return deny(); this.calcPurchase(); if(!state.purchaseRequestId) state.purchaseRequestId='PUR-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,10); const p={requestId:state.purchaseRequestId,no:val('puNo'),supplier:val('puSupplier'),paymentType:val('puPay'),dueDate:val('puDue'),material:val('puMat'),qty:num(val('puQty')),unit:num(val('puUnit')),paid:num(val('puPaid')),total:num(val('puTotal')),remain:num(val('puRemain')),notes:val('puNotes'),date:new Date().toISOString()}; if(!p.no||!p.supplier||!p.material||p.qty<=0||p.unit<0) return flash('رقم الفاتورة والمورد والخامة وكمية صحيحة مطلوبة.',true); try{ const reply=await api('saveEasyStorePurchaseV2',p); if(!reply||reply.success===false) throw new Error((reply&&reply.message)||'تعذر حفظ فاتورة الشراء'); state.purchaseRequestId=''; state.data.purchases.unshift(p); state.data.stockMoves.unshift({date:now(),materialName:p.material,inQty:p.qty,outQty:0,balance:reply.stockAfter,source:'فاتورة شراء '+p.no}); saveLocal(); shell(); flash('تم حفظ فاتورة الشراء على السيرفر'); }catch(e){ flash('لم يتم حفظ فاتورة الشراء: '+(e.message||e),true); } },
     applySaleItem(){ const r=selectedSaleTemplate(); if(!r) return; set('saUnit',matSale(r)); this.calcSale(); },
@@ -988,7 +1086,7 @@
       }catch(e){ flash(e.message||'تعذر اعتماد الفاتورة على السيرفر.',true); }
     },
     toggleLaserCalc(){ const b=$('laserCalcBox'); if(b) b.classList.toggle('hidden'); },
-    async saveDeptLineAndOpenSales(){ const order=encodeURIComponent(val('dlOrder')); const customer=encodeURIComponent(val('dlCustomer')); const saved=await this.saveDeptLine(); if(saved) location.href='?screen=sales&orderId='+order+'&customer='+customer+'&v=es41-v1916-customer-account-drawer'; },
+    async saveDeptLineAndOpenSales(){ const order=encodeURIComponent(val('dlOrder')); const customer=encodeURIComponent(val('dlCustomer')); const saved=await this.saveDeptLine(); if(saved) location.href='?screen=sales&orderId='+order+'&customer='+customer+'&v=es42-v1917-daily-department-purchases'; },
     async saveDeptLine(){ this.calcDept(); const tpl=selectedDeptTemplate(); const itemDept=tpl?matDept(tpl):val('dlItemDept'); const shared=($('dlSharedLine')&&$('dlSharedLine').checked)||isSharedDeptName(itemDept); const unitSale=num(val('dlSale')); const qty=num(val('dlQty'))||1; const quote=state.laserQuote||{}; const p={lineId:'DLINE-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,6),orderId:val('dlOrder'),customerName:val('dlCustomer'),department:userDept(),itemDepartment:itemDept||userDept(),sharedLine:shared?'نعم':'لا',billingStatus:'مسجل - قيد مراجعة القسم',closeStatus:'قيد مراجعة القسم',approvalStatus:'قيد مراجعة القسم',catalogItemId:tpl?(tpl.id||tpl.ID||tpl.catalogItemId||''):'',templateId:tpl?(tpl.id||tpl.ID||''):'',materialName:quote.materialName||(tpl?(tpl.materialName||tpl['الخامة']||''):''),itemName:val('dlItem'),qty:qty,systemSale:num(val('dlSystemSale')),systemSalePrice:num(val('dlSystemSale')),sale:unitSale,salePrice:unitSale,unitSalePrice:unitSale,lineTotal:unitSale*qty,diff:num(val('dlDiff')),laserDetailsJson:Object.keys(quote).length?JSON.stringify(quote):'',consumedAreaTotal:num(quote.consumedAreaTotal),wastePercent:num(quote.wastePercent),notes:val('dlNotes'),user:user.name,date:new Date().toISOString()}; if(!p.customerName||!p.orderId||!p.itemName){ flash('اسم العميل ورقم الأوردر والصنف مطلوبين.',true); return false; } if(shared){ const dup=(state.data.deptLines||[]).find(x=>isSharedLineRecord(x)&&sameDeptInvoiceContext(x,p.orderId,p.customerName)&&nkey(rowItem(x))===nkey(p.itemName)&&isUnbilledDeptLine(x)); if(dup){ flash('البند المشترك مسجل بالفعل بواسطة '+rowDept(dup)+' وسيظهر تلقائيًا عند القسم الآخر. لا تسجله مرتين.',true); return false; } } try{ const reply=await api('saveAccountingDeptLine',p); if(!reply||reply.success===false) throw new Error((reply&&reply.message)||'تعذر حفظ مسودة القسم'); if(reply.lineId){p.id=reply.lineId;p.ID=reply.lineId;} state.data.deptLines.unshift(p); if(p.diff) state.data.wasteLines.unshift({department:p.department,orderId:p.orderId,reason:'فرق سعر عن السيستم',amount:p.diff,paid:0}); saveLocal(); state.laserQuote=null; set('dlItemSel',''); set('dlItem',''); set('dlItemDept',''); set('dlSystemSale',''); set('dlSale',''); set('dlDiff',''); set('dlNotes',''); set('dlQty','1'); refreshDeptContextUi(); flash(shared?'تم حفظ بند مشترك في مسودة القسم وسيظهر عند القسم الآخر':'تم حفظ البند في مسودة فاتورة القسم. يمكنك إضافة بند جديد ثم الاعتماد.'); return true; }catch(e){ flash('لم يتم حفظ مسودة القسم: '+(e.message||e),true); return false; } },
     async aiLaser(){
       const material=val('aiMat'), w=num(val('aiW')), h=num(val('aiH')), q=num(val('aiQty'))||1, waste=num(val('aiWaste')), customerUnitSale=num(val('aiUnitSale'));
