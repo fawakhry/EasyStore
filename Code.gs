@@ -478,6 +478,7 @@ function healthCheck_() {
 
   return {
     success: true,
+    version: MATBAGY_ACCOUNTING_VERSION,
     spreadsheet: ss.getName(),
     hasUsers: !!users,
     hasOrders: !!orders,
