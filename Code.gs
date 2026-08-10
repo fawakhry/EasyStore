@@ -40,7 +40,7 @@ const SHEET_NAME_MARKET_VENDORS = "ماركت بليس - البائعين";
 const SHEET_NAME_MARKET_PRODUCTS = "ماركت بليس - المنتجات";
 
 // اتركه فاضي لو السكريبت مربوط بنفس الشيت.
-// لو السكريبت Standalone حط ID الشيت بين علامتي التنصيص.
+// لو السكريبت Standalone اضبط TRENDOS_SPREADSHEET_ID داخل Script Properties ولا تضع المعرف في الكود العام.
 const SPREADSHEET_ID = "";
 
 function doGet(e) {
@@ -219,9 +219,11 @@ function doPost(e) {
 }
 
 function ss_() {
-  if (SPREADSHEET_ID) return SpreadsheetApp.openById(SPREADSHEET_ID);
+  let configuredSpreadsheetId = SPREADSHEET_ID;
+  try { configuredSpreadsheetId = normalize_(PropertiesService.getScriptProperties().getProperty("TRENDOS_SPREADSHEET_ID")) || configuredSpreadsheetId; } catch (err) {}
+  if (configuredSpreadsheetId) return SpreadsheetApp.openById(configuredSpreadsheetId);
   const ss = SpreadsheetApp.getActiveSpreadsheet();
-  if (!ss) throw new Error("لا يمكن فتح الشيت. اربط السكريبت بالشيت أو ضع SPREADSHEET_ID.");
+  if (!ss) throw new Error("لا يمكن فتح الشيت. اربط السكريبت بالشيت أو اضبط TRENDOS_SPREADSHEET_ID في Script Properties.");
   return ss;
 }
 
