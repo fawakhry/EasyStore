@@ -31,7 +31,7 @@ const SHEET_NAME_ACC_DEPT_LINES = "حسابات - فواتير الأقسام";
 const SHEET_NAME_ACC_FINAL_INVOICES = "حسابات - الفواتير النهائية";
 const SHEET_NAME_ACC_WASTE = "حسابات - هوالك الأقسام";
 const SHEET_NAME_ACC_STOCK_MOVES = "حسابات - حركة المخزون";
-const MATBAGY_ACCOUNTING_VERSION = "V1914_LEGACY_DEBT_RECONCILE";
+const MATBAGY_ACCOUNTING_VERSION = "V1915_CUSTOMER_ACCOUNTS";
 const DEFAULT_PASSWORD = "";
 function employeeDefaultPassword_() {
   try { return normalize_(PropertiesService.getScriptProperties().getProperty("EMPLOYEE_DEFAULT_PASSWORD")); } catch (err) { return ""; }
@@ -148,6 +148,8 @@ function doGet(e) {
     else if (action === "createManualOrder") result = createManualOrder_(e);
     else if (action === "searchCustomers") result = searchCustomers_(e);
     else if (action === "getEasyStoreCustomers") result = getEasyStoreCustomers_(e);
+    else if (action === "getCustomerAccountV1915") result = getCustomerAccountV1915_(e);
+    else if (action === "saveCustomerAccountMovementV1915") result = saveCustomerAccountMovementV1915_(e);
     else if (action === "getPartyAccountV1858" || action === "getCustomerAccount" || action === "getSupplierAccount") result = getPartyAccountV1858_(e);
     else if (action === "savePartyLedgerTransaction" || action === "saveCustomerDebt" || action === "saveCustomerPayment" || action === "saveSupplierPayment") result = savePartyLedgerTransactionV1858_(e);
     else if (action === "getPartyLedgerV1858" || action === "getAccountsLedger") result = getAccountsLedgerV1858_(e);
@@ -7883,7 +7885,7 @@ function accountsCanEditV1858_(auth) {
   return auth && (auth.mode === "full" || auth.mode === "final");
 }
 function accountsLedgerHeadersV1858_() {
-  return ["ID", "وقت التسجيل", "نوع الطرف", "اسم الطرف", "كود الطرف", "العملية", "وصف العملية", "المبلغ", "تأثير الرصيد", "طريقة الدفع", "رقم المرجع", "الرصيد قبل", "الرصيد بعد", "مسجل بواسطة", "ملاحظات"];
+  return ["ID", "وقت التسجيل", "نوع الطرف", "اسم الطرف", "كود الطرف", "العملية", "وصف العملية", "المبلغ", "تأثير الرصيد", "طريقة الدفع", "رقم المرجع", "الرصيد قبل", "الرصيد بعد", "مسجل بواسطة", "ملاحظات", "معرف الطلب", "مصدر الحركة"];
 }
 function accountsEnsureLedgerSheetV1858_() {
   return mbEnsureSheet_("حسابات - كشف العملاء والموردين", accountsLedgerHeadersV1858_());
@@ -8000,6 +8002,7 @@ function savePartyLedgerTransactionV1858_(e) {
   const partyCode = normalize_(e.parameter.partyCode || e.parameter.customerCode || e.parameter.supplierCode || "");
   const op = normalizeKey_(e.parameter.operation || e.parameter.txnType || e.parameter.kind || "manual");
   const amount = parseMoney_(e.parameter.amount || e.parameter.value || 0);
+  if (auth.mode !== "full" && (op === "opening_debt" || op === "adjustment_increase" || op === "adjustment_decrease" || op === "manual")) return { success:false, message:"إضافة المديونية والتسويات عند ضياء فقط." };
   if (!partyName) return { success:false, message:"اسم العميل/المورد مطلوب." };
   if (!amount) return { success:false, message:"اكتب المبلغ." };
   const before = accountsCurrentBalanceV1858_(partyType, partyName, partyCode);
@@ -8030,6 +8033,7 @@ function savePartyLedgerTransactionV1858_(e) {
 function getPartyAccountV1858_(e) {
   const auth = accountingAuthorize_(e);
   if (!auth.ok) return { success:false, message:auth.message };
+  if (!accountsCanEditV1858_(auth)) return { success:false, message:"حسابات العملاء والموردين عند ضياء / رحمه / ريفان فقط." };
   let partyType = normalizeKey_(e.parameter.partyType || e.parameter.type || "customer");
   if (partyType.indexOf("supplier") !== -1 || partyType.indexOf("مورد") !== -1) partyType = "supplier"; else partyType = "customer";
   const partyName = normalize_(e.parameter.partyName || e.parameter.customerName || e.parameter.supplierName || e.parameter.name || "");
@@ -8044,9 +8048,196 @@ function getPartyAccountV1858_(e) {
 function getAccountsLedgerV1858_(e) {
   const auth = accountingAuthorize_(e);
   if (!auth.ok) return { success:false, message:auth.message };
+  if (auth.mode !== "full") return { success:false, message:"كشف جميع حسابات العملاء والموردين عند ضياء فقط." };
   const sh = accountsEnsureLedgerSheetV1858_();
   const rows = accSheetRows_(sh);
   return { success:true, rows: rows, version:"V1858_ES15_LEDGER_FIX" };
+}
+
+/************************************************************
+ * V1915 / ES40 - Customer accounts and safe collections
+ * - Diaa, Rahma and Revan can view accounts and collect debts.
+ * - Diaa alone can add debt or administrative adjustments.
+ * - Request IDs protect both the ledger and cashbox from retries.
+ ************************************************************/
+function customerAccountFindV1915_(customerName) {
+  const requested = normalize_(customerName);
+  const target = searchKey_(requested);
+  const sh = ss_().getSheetByName(SHEET_NAME_CUSTOMERS);
+  if (!target || !sh || sh.getLastRow() < 2) return null;
+  const h = headersMap_(sh);
+  const colPrimary = firstCol_(h, ["اسم الشات / المكتب", "Customer Name"], 1);
+  const colName = firstCol_(h, ["اسم العميل", "Customer Name"], colPrimary);
+  const colPhone = firstCol_(h, ["رقم العميل الأساسي", "رقم العميل", "رقم الهاتف", "Phone"], 0);
+  const colManager = firstCol_(h, ["اسم المسؤول", "المسؤول", "Manager"], 0);
+  const colType = firstCol_(h, ["نوع العميل", "Customer Type"], 0);
+  const data = sh.getDataRange().getValues();
+  for (let i = 1; i < data.length; i++) {
+    const primary = normalize_(valueAt_(data[i], colPrimary));
+    const alternate = normalize_(valueAt_(data[i], colName));
+    if (searchKey_(primary) !== target && searchKey_(alternate) !== target) continue;
+    return {
+      rowNumber: i + 1,
+      name: primary || alternate || requested,
+      phone: colPhone ? cleanPhone_(valueAt_(data[i], colPhone)) : "",
+      manager: colManager ? normalize_(valueAt_(data[i], colManager)) : "",
+      type: colType ? normalize_(valueAt_(data[i], colType)) : ""
+    };
+  }
+  return null;
+}
+
+function customerAccountTransactionV1915_(r) {
+  return {
+    id: r.id || r.ID || r["ID"] || "",
+    createdAt: r.createdAt || r["وقت التسجيل"] || "",
+    operation: r.operation || r["العملية"] || "",
+    operationLabel: r.operationLabel || r["وصف العملية"] || "",
+    amount: parseMoney_(r.amount || r["المبلغ"]),
+    paymentMethod: r.paymentMethod || r["طريقة الدفع"] || "",
+    refNo: r.refNo || r["رقم المرجع"] || "",
+    balanceBefore: parseMoney_(r.balanceBefore || r["الرصيد قبل"]),
+    balanceAfter: parseMoney_(r.balanceAfter || r["الرصيد بعد"]),
+    createdBy: r.createdBy || r["مسجل بواسطة"] || "",
+    notes: r.notes || r["ملاحظات"] || "",
+    requestId: r.requestId || r["معرف الطلب"] || "",
+    source: r.source || r["مصدر الحركة"] || ""
+  };
+}
+
+function customerAccountFindRequestV1915_(ledgerSheet, requestId) {
+  const target = normalize_(requestId);
+  if (!target || ledgerSheet.getLastRow() < 2) return null;
+  accountsEnsureSheetColumnV1858_(ledgerSheet, "معرف الطلب");
+  const rows = accSheetRows_(ledgerSheet);
+  for (let i = rows.length - 1; i >= 0; i--) {
+    if (normalize_(rows[i].requestId || rows[i]["معرف الطلب"]) === target) return rows[i];
+  }
+  return null;
+}
+
+function customerAccountEnsureCashboxV1915_(values) {
+  const sh = mbEnsureSheet_("حسابات - الخزنة", es16CashboxHeaders_());
+  accountsEnsureSheetColumnV1858_(sh, "معرف الطلب");
+  accountsEnsureSheetColumnV1858_(sh, "مصدر الحركة");
+  const requestId = normalize_(values.requestId);
+  if (requestId && sh.getLastRow() >= 2) {
+    const rows = accSheetRows_(sh);
+    for (let i = rows.length - 1; i >= 0; i--) {
+      if (normalize_(rows[i].requestId || rows[i]["معرف الطلب"]) === requestId) return false;
+    }
+  }
+  appendByHeaders_(sh, {
+    "ID":"CBX-" + Utilities.getUuid().slice(0,8),
+    "وقت التسجيل":new Date(),
+    "نوع الحركة":"قبض من عميل",
+    "الطرف":values.customerName,
+    "المبلغ":values.amount,
+    "طريقة الدفع":values.paymentMethod || "نقدي",
+    "رقم المرجع":values.refNo || "",
+    "الخزنة":"الخزنة الرئيسية",
+    "مسجل بواسطة":values.createdBy || "",
+    "ملاحظات":values.notes || "تحصيل من حساب العميل",
+    "معرف الطلب":requestId,
+    "مصدر الحركة":values.source || "EasyStore ES40"
+  });
+  return true;
+}
+
+function getCustomerAccountV1915_(e) {
+  const auth = accountingAuthorize_(e);
+  if (!auth.ok) return { success:false, message:auth.message };
+  if (!accountsCanEditV1858_(auth)) return { success:false, message:"حسابات العملاء عند ضياء / رحمه / ريفان فقط." };
+  const customer = customerAccountFindV1915_(e.parameter.customerName || e.parameter.partyName || e.parameter.name || "");
+  if (!customer) return { success:false, message:"العميل غير موجود في سجل العملاء. اختر الاسم من القائمة." };
+  const rows = accountsRowsForPartyV1858_("customer", customer.name, "");
+  const balance = accountsCurrentBalanceV1858_("customer", customer.name, "");
+  const transactions = rows.slice().reverse().slice(0, 200).map(customerAccountTransactionV1915_);
+  return {
+    success:true,
+    customer:customer,
+    partyName:customer.name,
+    balance:balance,
+    transactions:transactions,
+    permissions:{ canCollect:true, canAdjust:auth.mode === "full" },
+    version:MATBAGY_ACCOUNTING_VERSION
+  };
+}
+
+function saveCustomerAccountMovementV1915_(e) {
+  const auth = accountingAuthorize_(e);
+  if (!auth.ok) return { success:false, message:auth.message };
+  if (!accountsCanEditV1858_(auth)) return { success:false, message:"حسابات العملاء عند ضياء / رحمه / ريفان فقط." };
+  const operation = normalizeKey_(e.parameter.operation || "payment_received");
+  const allowed = ["payment_received", "opening_debt", "adjustment_increase", "adjustment_decrease"];
+  if (allowed.indexOf(operation) === -1) return { success:false, message:"نوع حركة العميل غير مسموح." };
+  if (auth.mode !== "full" && operation !== "payment_received") return { success:false, message:"إضافة المديونية والتسويات عند ضياء فقط." };
+  const amount = parseMoney_(e.parameter.amount || 0);
+  if (!(amount > 0)) return { success:false, message:"اكتب مبلغًا أكبر من صفر." };
+  const requestId = normalize_(e.parameter.requestId || "");
+  if (!/^[A-Za-z0-9_-]{12,120}$/.test(requestId)) return { success:false, message:"تعذر تأمين الحركة. حدّث الصفحة وحاول مرة أخرى." };
+  const requestedName = normalize_(e.parameter.customerName || e.parameter.partyName || e.parameter.name || "");
+  const customer = customerAccountFindV1915_(requestedName);
+  if (!customer) return { success:false, message:"العميل غير موجود في سجل العملاء. اختر الاسم من القائمة." };
+  const paymentMethod = normalize_(e.parameter.paymentMethod || e.parameter.method || "نقدي");
+  const refNo = normalize_(e.parameter.refNo || e.parameter.reference || "");
+  const notes = normalize_(e.parameter.notes || "");
+  const source = normalize_(e.parameter.source || "EasyStore ES40");
+  const lock = LockService.getScriptLock();
+  try {
+    lock.waitLock(20000);
+  } catch (lockError) {
+    return { success:false, message:"يوجد تسجيل آخر جارٍ الآن. حاول مرة أخرى بعد لحظة." };
+  }
+  try {
+    const ledger = accountsEnsureLedgerSheetV1858_();
+    accountsEnsureSheetColumnV1858_(ledger, "معرف الطلب");
+    accountsEnsureSheetColumnV1858_(ledger, "مصدر الحركة");
+    const duplicate = customerAccountFindRequestV1915_(ledger, requestId);
+    if (duplicate) {
+      const old = customerAccountTransactionV1915_(duplicate);
+      const samePayload = searchKey_(duplicate.partyName || duplicate["اسم الطرف"]) === searchKey_(customer.name) && normalizeKey_(old.operation) === operation && Math.abs(old.amount - amount) < 0.001;
+      if (!samePayload) return { success:false, message:"رقم تأمين الحركة مستخدم لبيانات مختلفة. حدّث الصفحة قبل المحاولة." };
+      if (operation === "payment_received") customerAccountEnsureCashboxV1915_({ requestId:requestId, customerName:customer.name, amount:old.amount, paymentMethod:old.paymentMethod, refNo:old.refNo, notes:old.notes, createdBy:old.createdBy, source:old.source });
+      accountsUpdateMasterBalanceV1858_("customer", customer.name, old.balanceAfter, auth);
+      SpreadsheetApp.flush();
+      return { success:true, duplicatePrevented:true, balanceBefore:old.balanceBefore, balance:old.balanceAfter, message:"تم منع تكرار الحركة؛ التسجيل محفوظ بالفعل.", version:MATBAGY_ACCOUNTING_VERSION };
+    }
+    const before = accountsCurrentBalanceV1858_("customer", customer.name, "");
+    const decrease = operation === "payment_received" || operation === "adjustment_decrease";
+    if (decrease && before <= 0) return { success:false, message:"لا توجد مديونية على هذا العميل لتخفيضها." };
+    if (decrease && amount > before) return { success:false, message:"المبلغ أكبر من مديونية العميل الحالية: " + before + " ج." };
+    const after = before + (decrease ? -amount : amount);
+    const label = accountsOperationLabelV1858_(operation, "customer");
+    appendByHeaders_(ledger, {
+      "ID":"LED-" + Utilities.getUuid().slice(0,8),
+      "وقت التسجيل":new Date(),
+      "نوع الطرف":"customer",
+      "اسم الطرف":customer.name,
+      "كود الطرف":"",
+      "العملية":operation,
+      "وصف العملية":label,
+      "المبلغ":amount,
+      "تأثير الرصيد":decrease ? "نقص" : "زيادة",
+      "طريقة الدفع":paymentMethod,
+      "رقم المرجع":refNo,
+      "الرصيد قبل":before,
+      "الرصيد بعد":after,
+      "مسجل بواسطة":auth.user.username,
+      "ملاحظات":notes,
+      "معرف الطلب":requestId,
+      "مصدر الحركة":source
+    });
+    accountsUpdateMasterBalanceV1858_("customer", customer.name, after, auth);
+    if (operation === "payment_received") customerAccountEnsureCashboxV1915_({ requestId:requestId, customerName:customer.name, amount:amount, paymentMethod:paymentMethod, refNo:refNo, notes:notes, createdBy:auth.user.username, source:source });
+    es16Audit_(auth.user.username, label, "حساب العميل: " + customer.name, requestId, before, after, notes || refNo);
+    SpreadsheetApp.flush();
+    return { success:true, balanceBefore:before, balance:after, message:operation === "payment_received" ? "تم تسجيل التحصيل وتحديث حساب العميل والخزنة." : "تم حفظ الحركة وتحديث حساب العميل.", version:MATBAGY_ACCOUNTING_VERSION };
+  } catch (err) {
+    return { success:false, message:"تعذر حفظ حركة العميل: " + (err && err.message ? err.message : err) };
+  } finally {
+    try { lock.releaseLock(); } catch (ignore) {}
+  }
 }
 
 /******** Overrides to expose balances in EasyStore lists ********/
@@ -8222,7 +8413,7 @@ function easyStoreSystemHealth_(e) {
 function es16CanEditAccounts_(auth) { return auth && auth.ok && (auth.mode === "full" || auth.mode === "final"); }
 function es16AdminOnly_(auth) { return auth && auth.ok && auth.mode === "full"; }
 function es16AuditHeaders_(){ return ["ID","وقت التسجيل","المستخدم","نوع العملية","الكيان","رقم المرجع","قبل","بعد","ملاحظات"]; }
-function es16CashboxHeaders_(){ return ["ID","وقت التسجيل","نوع الحركة","الطرف","المبلغ","طريقة الدفع","رقم المرجع","الخزنة","مسجل بواسطة","ملاحظات"]; }
+function es16CashboxHeaders_(){ return ["ID","وقت التسجيل","نوع الحركة","الطرف","المبلغ","طريقة الدفع","رقم المرجع","الخزنة","مسجل بواسطة","ملاحظات","معرف الطلب","مصدر الحركة"]; }
 function es16DayCloseHeaders_(){ return ["ID","وقت القفلة","تاريخ اليوم","إجمالي قبض","إجمالي دفع","مصروفات","رصيد متوقع","رصيد فعلي","فرق","مسجل بواسطة","ملاحظات"]; }
 function es16Audit_(user, operation, entity, ref, beforeValue, afterValue, notes){
   try{

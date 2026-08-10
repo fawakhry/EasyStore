@@ -1,7 +1,7 @@
 (function(){
   'use strict';
 
-  const VERSION = 'ES39 V1914 Legacy Debt Reconcile';
+  const VERSION = 'ES40 V1915 Customer Accounts';
   window.EASYSTORE_MATBAGY_VERSION = VERSION;
 
   const app = document.getElementById('app');
@@ -55,6 +55,7 @@
     if(/final/.test(s)) requested = 'final';
     else if(/dept/.test(s)) requested = 'dept';
     else if(/sales|sale|invoice|فاتورة/.test(s)) requested = 'sales';
+    else if(/customer|client|عملاء/.test(s)) requested = 'customers';
     else if(/kitchen|raw|materials/.test(s)) requested = 'kitchen';
     return allowedScreens().includes(requested) ? requested : allowedScreens()[0];
   }
@@ -68,7 +69,8 @@
       stockMoves: [], wasteLines: [], deptLines: [], finalInvoices: [], summary: {}
     },
     recipeComps: [], salePulledLines: [], saleSelectedCustomer: null, saleCustomerContext: null, customerSearchTimer: null, customerSearchSeq: 0, customerDropdownLocked: false,
-    laserQuote: null, saleRequestId: '', finalRequestId: '', purchaseRequestId: ''
+    laserQuote: null, saleRequestId: '', finalRequestId: '', purchaseRequestId: '',
+    customerAccount: null, customerAccountSelected: '', customerAccountRequestId: ''
   };
 
   function saveLocal(){ localStorage.setItem(STORE_KEY, JSON.stringify(state.data)); }
@@ -240,7 +242,7 @@
   function shell(){
     app.innerHTML = `<div class="wrap">
       <div class="top">
-        <div><h1>💰 إيزي ستور مطبعجي - برنامج الحسابات ES32</h1><p>أصناف، موردين، فواتير شراء ومبيعات، مخزون، تقارير، ومطبخ الحسابات.</p><div class="versionLine">${VERSION} / app.js محمل: ${new Date().toLocaleTimeString('ar-EG')}</div></div>
+        <div><h1>💰 إيزي ستور مطبعجي - برنامج الحسابات ES40</h1><p>أصناف، موردين، فواتير شراء ومبيعات، مخزون، تقارير، ومطبخ الحسابات.</p><div class="versionLine">${VERSION} / app.js محمل: ${new Date().toLocaleTimeString('ar-EG')}</div></div>
         <div class="actions"><span class="badge">${esc(user.name)} - ${esc(roleText())}</span><button class="btn secondary" onclick="ES27.load(true)">تحديث البيانات</button><button class="btn secondary" onclick="ES27.hardReload()">تحديث البرنامج</button><button class="btn secondary" onclick="history.back()">إغلاق</button></div>
       </div>
       <div id="mainMsg" class="msg"></div>
@@ -271,9 +273,32 @@
   }
 
   function screenCustomers(){
-    return `<div class="card"><h2>العملاء</h2><div class="hint">العملاء يتم سحبهم من TrendOS قدر الإمكان. ابحث بالاسم أو الرقم.</div><input id="custSearch" class="searchInput" placeholder="بحث عن عميل" oninput="ES27.filterCustomers()"><div id="custTable">${customersTable(state.data.customers)}</div></div>`;
+    return `<section class="customerAccountsHero"><div><span>حسابات العملاء</span><h2>كشف الحساب والتحصيل</h2><p>ضياء ورحمة وريفان يمكنهم فتح كشف العميل وتسجيل التحصيل. إضافة المديونية والتسويات متاحة لضياء فقط.</p></div><div class="customerAccountsRoles"><b>تحصيل: ضياء / رحمة / ريفان</b><b>تسويات: ضياء فقط</b></div></section><div class="card"><div class="toolbar"><div><h2>العملاء</h2><div class="muted">ابحث بالاسم أو رقم الهاتف ثم افتح الحساب.</div></div><input id="custSearch" class="searchInput" placeholder="بحث عن عميل" oninput="ES27.filterCustomers()"></div><div id="custTable">${customersTable(state.data.customers)}</div></div><div id="customerAccountPanel">${customerAccountPanel()}</div>`;
   }
-  function customersTable(rows){ return table(rows||[],['العميل','الهاتف','النوع/المسؤول','المديونية'],c=>[esc(c.name||c.customerName||''),esc(c.phone||c.mobile||''),esc(c.type||c.manager||''),`<span class="customerDebtBadge ${customerDebtClass(c)}">${esc(customerDebtText(c))}</span>`]); }
+  function customerAccountToken(name){ return encodeURIComponent(String(name||'')).replace(/'/g,'%27'); }
+  function customersTable(rows){ return table(rows||[],['العميل','الهاتف','النوع/المسؤول','المديونية','الحساب'],c=>{ const name=customerMainName(c); const selected=nkey(state.customerAccountSelected)===nkey(name); return [esc(name),esc(c.phone||c.mobile||''),esc(c.type||c.manager||''),`<span class="customerDebtBadge ${customerDebtClass(c)}">${esc(customerDebtText(c))}</span>`,`<button class="btn small ${selected?'':'secondary'}" onclick="ES27.openCustomerAccount('${customerAccountToken(name)}')">${selected?'الحساب مفتوح':'فتح الحساب'}</button>`]; }); }
+  function customerAccountDate(value){
+    if(!value) return '-';
+    const d=new Date(value);
+    return Number.isNaN(d.getTime()) ? String(value) : d.toLocaleString('ar-EG');
+  }
+  function customerAccountOperationLabel(t){
+    return t.operationLabel || ({payment_received:'تحصيل من العميل',opening_debt:'إضافة مديونية',adjustment_increase:'تسوية بالزيادة',adjustment_decrease:'تسوية بالنقص',invoice:'فاتورة عميل'}[t.operation] || t.operation || 'حركة');
+  }
+  function customerAccountPanel(){
+    const account=state.customerAccount;
+    if(!state.customerAccountSelected) return '<div class="card customerAccountEmpty"><h3>افتح حساب عميل</h3><p>اضغط «فتح الحساب» بجوار اسم العميل لعرض الرصيد والحركات.</p></div>';
+    if(account && account.loading) return '<div class="card customerAccountEmpty"><h3>جاري تحميل كشف الحساب...</h3></div>';
+    if(account && account.error) return `<div class="card customerAccountEmpty"><h3>تعذر تحميل الحساب</h3><p>${esc(account.error)}</p><button class="btn secondary" onclick="ES27.openCustomerAccount('${customerAccountToken(state.customerAccountSelected)}')">إعادة المحاولة</button></div>`;
+    if(!account || !account.success) return '<div class="card customerAccountEmpty"><h3>اختر عميلًا لعرض حسابه.</h3></div>';
+    const customer=account.customer||{};
+    const balance=num(account.balance);
+    const canAdjust=isAdmin() && (!account.permissions || account.permissions.canAdjust!==false);
+    const transactions=Array.isArray(account.transactions)?account.transactions:[];
+    const movementOptions=`<option value="payment_received">تحصيل من العميل</option>${canAdjust?'<option value="opening_debt">إضافة مديونية</option><option value="adjustment_increase">تسوية بالزيادة</option><option value="adjustment_decrease">تسوية بالنقص</option>':''}`;
+    const movementForm=(balance>0 || canAdjust) ? `<div class="customerMovementForm"><div class="field"><label>نوع الحركة</label><select id="caOperation" onchange="ES27.resetCustomerAccountRequest()">${movementOptions}</select></div><div class="field"><label>المبلغ</label><input id="caAmount" type="number" min="0.01" step="0.01" placeholder="0.00" oninput="ES27.resetCustomerAccountRequest()"></div><div class="field"><label>طريقة الدفع</label><select id="caMethod" onchange="ES27.resetCustomerAccountRequest()"><option>نقدي</option><option>إنستا باي</option><option>فودافون كاش</option><option>تحويل بنكي</option><option>فيزا</option><option>أخرى</option></select></div><div class="field"><label>رقم مرجع / إيصال</label><input id="caRef" placeholder="اختياري" oninput="ES27.resetCustomerAccountRequest()"></div><div class="field customerMovementNotes"><label>ملاحظات</label><input id="caNotes" placeholder="سبب الحركة أو أي تفاصيل" oninput="ES27.resetCustomerAccountRequest()"></div><div class="customerMovementAction"><button id="caSaveBtn" class="btn" onclick="ES27.saveCustomerAccountMovement()">حفظ الحركة</button></div></div>` : '<div class="customerAccountSettled">✓ لا توجد مديونية لتحصيلها من هذا العميل.</div>';
+    return `<section class="card customerAccountCard"><div class="customerAccountHead"><div><span class="customerAccountEyebrow">كشف حساب العميل</span><h2>${esc(customer.name||state.customerAccountSelected)}</h2><p>${customer.phone?esc(customer.phone):'لا يوجد رقم هاتف مسجل'}${customer.type?' · '+esc(customer.type):''}${customer.manager?' · المسؤول: '+esc(customer.manager):''}</p></div><div class="customerBalanceBox ${balance>0?'hasDebt':'isClear'}"><span>الرصيد المستحق</span><b>${money(balance)}</b><small>${balance>0?'مطلوب من العميل':'الحساب مسدد'}</small></div></div><div class="customerPermissionNote">${canAdjust?'يمكنك التحصيل وإضافة المديونية أو عمل تسوية إدارية.':'يمكنك تسجيل تحصيل من مديونية العميل فقط.'}</div>${movementForm}<div class="customerLedgerTitle"><h3>حركات الحساب</h3><span>${transactions.length} حركة</span></div>${table(transactions,['الوقت','الحركة','المبلغ','طريقة الدفع','المرجع','قبل','بعد','سجل بواسطة','ملاحظات'],t=>[esc(customerAccountDate(t.createdAt)),esc(customerAccountOperationLabel(t)),money(t.amount),esc(t.paymentMethod||'-'),esc(t.refNo||'-'),money(t.balanceBefore),money(t.balanceAfter),esc(t.createdBy||'-'),esc(t.notes||'-')])}</section>`;
+  }
 
   function screenItems(){
     return `<div class="card"><h2>الأصناف</h2><div class="grid six"><div class="field"><label>القسم</label><select id="itDept"><option>طباعة</option><option>ليزر</option><option>مشترك</option><option>عام</option></select></div><div class="field"><label>اسم الصنف</label><input id="itName"></div><div class="field"><label>نوع</label><select id="itType"><option>صنف بيع</option><option>خامة</option><option>صنف مركب</option></select></div><div class="field"><label>مقاس</label><input id="itSize"></div><div class="field"><label>سعر البيع</label><input id="itSale" type="number"></div><div class="field"><label>تكلفة ثابتة</label><input id="itCost" type="number"></div></div><div class="actions"><button class="btn" onclick="ES27.saveItem()">حفظ / تحديث الصنف</button><button class="btn secondary" onclick="ES27.clearItemForm()">جديد</button></div></div>${itemsTable()}`;
@@ -740,11 +765,68 @@
   window.ES27 = {
     go(t){ if(!allowedScreens().includes(t)) return deny('هذه الشاشة غير متاحة لصلاحية المستخدم الحالي.'); state.active = t; shell(); },
     load,
-    hardReload(){ const url = location.pathname + '?v=es39-v1914-legacy-debt-reconcile-' + Date.now(); location.href = url; },
+    hardReload(){ const url = location.pathname + '?v=es40-v1915-customer-accounts-' + Date.now(); location.href = url; },
     quickSearch(q){ q=nkey(q); if(!q) return; const found = templates().find(r=>nkey(templateName(r)).includes(q)) || materials().find(r=>nkey(materialName(r)).includes(q)); if(found) flash('تم العثور على: ' + (templateName(found)||materialName(found))); },
     async saveSupplier(){ if(!canManageAccounting()) return deny(); const s={name:val('supName'),phone:val('supPhone'),opening:num(val('supOpening')),address:val('supAddress')}; if(!s.name) return flash('اكتب اسم المورد',true); try{ const reply=await api('saveEasyStoreSupplier',s); if(!reply||reply.success===false) throw new Error((reply&&reply.message)||'تعذر حفظ المورد'); const i=state.data.suppliers.findIndex(x=>nkey(x.name||x.supplier)===nkey(s.name)); if(i>=0) state.data.suppliers[i]=s; else state.data.suppliers.unshift(s); saveLocal(); shell(); flash('تم حفظ المورد على السيرفر'); }catch(e){ flash('لم يتم حفظ المورد: '+(e.message||e),true); } },
     editSupplier(i){ const s=state.data.suppliers[i]; if(!s) return; set('supName',s.name||s.supplier); set('supPhone',s.phone); set('supOpening',s.opening||s.openingBalance); set('supAddress',s.address); },
     filterCustomers(){ const q=nkey(val('custSearch')); const rows=(state.data.customers||[]).filter(c=>nkey([c.name,c.customerName,c.phone,c.mobile].join(' ')).includes(q)); const box=$('custTable'); if(box) box.innerHTML=customersTable(rows); },
+    resetCustomerAccountRequest(){ state.customerAccountRequestId=''; },
+    async openCustomerAccount(encodedName){
+      if(!canFinalize()) return deny('حسابات العملاء عند ضياء / رحمة / ريفان فقط.');
+      let name='';
+      try{name=decodeURIComponent(String(encodedName||''));}catch(e){name=String(encodedName||'');}
+      if(!name) return flash('اختر العميل أولًا.',true);
+      state.customerAccountSelected=name;
+      state.customerAccountRequestId='';
+      state.customerAccount={loading:true};
+      render();
+      try{
+        const reply=await api('getCustomerAccountV1915',{customerName:name});
+        if(!reply || reply.success===false) throw new Error((reply&&reply.message)||'تعذر تحميل كشف الحساب.');
+        state.customerAccount=reply;
+        state.customerAccountSelected=(reply.customer&&reply.customer.name)||reply.partyName||name;
+        const local=customerByName(state.customerAccountSelected);
+        if(local){ local.debt=reply.balance; local.currentBalance=reply.balance; local.remainingBalance=reply.balance; }
+        saveLocal(); render();
+      }catch(e){ state.customerAccount={error:e.message||String(e)}; render(); }
+    },
+    async saveCustomerAccountMovement(){
+      if(!canFinalize()) return deny('حسابات العملاء عند ضياء / رحمة / ريفان فقط.');
+      const name=state.customerAccountSelected;
+      const operation=val('caOperation')||'payment_received';
+      const amount=num(val('caAmount'));
+      const method=val('caMethod')||'نقدي';
+      const refNo=val('caRef');
+      const notes=val('caNotes');
+      if(!name) return flash('اختر العميل أولًا.',true);
+      if(amount<=0) return flash('اكتب مبلغًا أكبر من صفر.',true);
+      if(!isAdmin() && operation!=='payment_received') return deny('إضافة المديونية والتسويات عند ضياء فقط.');
+      const before=num(state.customerAccount&&state.customerAccount.balance);
+      const decrease=operation==='payment_received'||operation==='adjustment_decrease';
+      const after=before+(decrease?-amount:amount);
+      if(decrease && amount>before) return flash('المبلغ أكبر من مديونية العميل الحالية '+money(before)+'.',true);
+      const label=customerAccountOperationLabel({operation});
+      if(!confirm(label+' بمبلغ '+money(amount)+' للعميل '+name+'؟\nالرصيد بعد الحركة: '+money(after))) return;
+      if(!state.customerAccountRequestId) state.customerAccountRequestId='CUST-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,10);
+      const button=$('caSaveBtn');
+      if(button){button.disabled=true;button.textContent='جاري الحفظ...';}
+      try{
+        const reply=await api('saveCustomerAccountMovementV1915',{customerName:name,operation,amount,paymentMethod:method,refNo,notes,requestId:state.customerAccountRequestId,source:'EasyStore ES40'});
+        if(!reply || reply.success===false) throw new Error((reply&&reply.message)||'تعذر حفظ حركة العميل.');
+        let account=null;
+        try{ account=await api('getCustomerAccountV1915',{customerName:name}); }catch(refreshError){}
+        if(account && account.success!==false) state.customerAccount=account;
+        else if(state.customerAccount && state.customerAccount.success) state.customerAccount.balance=reply.balance;
+        state.customerAccountRequestId='';
+        const local=customerByName(name);
+        const savedBalance=account&&account.success!==false?account.balance:reply.balance;
+        if(local){ local.debt=savedBalance; local.currentBalance=savedBalance; local.remainingBalance=savedBalance; }
+        saveLocal(); render(); flash((reply.message||'تم حفظ الحركة وتحديث حساب العميل.')+(account&&account.success!==false?'':' حدّث كشف الحساب لعرض الحركة الجديدة.'));
+      }catch(e){
+        if(button){button.disabled=false;button.textContent='إعادة محاولة الحفظ';}
+        flash(e.message||'تعذر حفظ حركة العميل.',true);
+      }
+    },
     unlockCustomerDropdown(){ state.customerDropdownLocked=false; },
     closeFloatingPanels(){ closeFloatingPanels(); },
     async focusSaleCustomer(){
@@ -904,7 +986,7 @@
       }catch(e){ flash(e.message||'تعذر اعتماد الفاتورة على السيرفر.',true); }
     },
     toggleLaserCalc(){ const b=$('laserCalcBox'); if(b) b.classList.toggle('hidden'); },
-    async saveDeptLineAndOpenSales(){ const order=encodeURIComponent(val('dlOrder')); const customer=encodeURIComponent(val('dlCustomer')); const saved=await this.saveDeptLine(); if(saved) location.href='?screen=sales&orderId='+order+'&customer='+customer+'&v=es39-v1914-legacy-debt-reconcile'; },
+    async saveDeptLineAndOpenSales(){ const order=encodeURIComponent(val('dlOrder')); const customer=encodeURIComponent(val('dlCustomer')); const saved=await this.saveDeptLine(); if(saved) location.href='?screen=sales&orderId='+order+'&customer='+customer+'&v=es40-v1915-customer-accounts'; },
     async saveDeptLine(){ this.calcDept(); const tpl=selectedDeptTemplate(); const itemDept=tpl?matDept(tpl):val('dlItemDept'); const shared=($('dlSharedLine')&&$('dlSharedLine').checked)||isSharedDeptName(itemDept); const unitSale=num(val('dlSale')); const qty=num(val('dlQty'))||1; const quote=state.laserQuote||{}; const p={lineId:'DLINE-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,6),orderId:val('dlOrder'),customerName:val('dlCustomer'),department:userDept(),itemDepartment:itemDept||userDept(),sharedLine:shared?'نعم':'لا',billingStatus:'مسجل - قيد مراجعة القسم',closeStatus:'قيد مراجعة القسم',approvalStatus:'قيد مراجعة القسم',catalogItemId:tpl?(tpl.id||tpl.ID||tpl.catalogItemId||''):'',templateId:tpl?(tpl.id||tpl.ID||''):'',materialName:quote.materialName||(tpl?(tpl.materialName||tpl['الخامة']||''):''),itemName:val('dlItem'),qty:qty,systemSale:num(val('dlSystemSale')),systemSalePrice:num(val('dlSystemSale')),sale:unitSale,salePrice:unitSale,unitSalePrice:unitSale,lineTotal:unitSale*qty,diff:num(val('dlDiff')),laserDetailsJson:Object.keys(quote).length?JSON.stringify(quote):'',consumedAreaTotal:num(quote.consumedAreaTotal),wastePercent:num(quote.wastePercent),notes:val('dlNotes'),user:user.name,date:new Date().toISOString()}; if(!p.customerName||!p.orderId||!p.itemName){ flash('اسم العميل ورقم الأوردر والصنف مطلوبين.',true); return false; } if(shared){ const dup=(state.data.deptLines||[]).find(x=>isSharedLineRecord(x)&&sameDeptInvoiceContext(x,p.orderId,p.customerName)&&nkey(rowItem(x))===nkey(p.itemName)&&isUnbilledDeptLine(x)); if(dup){ flash('البند المشترك مسجل بالفعل بواسطة '+rowDept(dup)+' وسيظهر تلقائيًا عند القسم الآخر. لا تسجله مرتين.',true); return false; } } try{ const reply=await api('saveAccountingDeptLine',p); if(!reply||reply.success===false) throw new Error((reply&&reply.message)||'تعذر حفظ مسودة القسم'); if(reply.lineId){p.id=reply.lineId;p.ID=reply.lineId;} state.data.deptLines.unshift(p); if(p.diff) state.data.wasteLines.unshift({department:p.department,orderId:p.orderId,reason:'فرق سعر عن السيستم',amount:p.diff,paid:0}); saveLocal(); state.laserQuote=null; set('dlItemSel',''); set('dlItem',''); set('dlItemDept',''); set('dlSystemSale',''); set('dlSale',''); set('dlDiff',''); set('dlNotes',''); set('dlQty','1'); refreshDeptContextUi(); flash(shared?'تم حفظ بند مشترك في مسودة القسم وسيظهر عند القسم الآخر':'تم حفظ البند في مسودة فاتورة القسم. يمكنك إضافة بند جديد ثم الاعتماد.'); return true; }catch(e){ flash('لم يتم حفظ مسودة القسم: '+(e.message||e),true); return false; } },
     async aiLaser(){
       const material=val('aiMat'), w=num(val('aiW')), h=num(val('aiH')), q=num(val('aiQty'))||1, waste=num(val('aiWaste')), customerUnitSale=num(val('aiUnitSale'));
