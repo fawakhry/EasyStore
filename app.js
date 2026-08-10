@@ -1,7 +1,7 @@
 (function(){
   'use strict';
 
-  const VERSION = 'ES40 V1915 Customer Accounts';
+  const VERSION = 'ES41 V1916 Customer Account Drawer';
   window.EASYSTORE_MATBAGY_VERSION = VERSION;
 
   const app = document.getElementById('app');
@@ -242,7 +242,7 @@
   function shell(){
     app.innerHTML = `<div class="wrap">
       <div class="top">
-        <div><h1>💰 إيزي ستور مطبعجي - برنامج الحسابات ES40</h1><p>أصناف، موردين، فواتير شراء ومبيعات، مخزون، تقارير، ومطبخ الحسابات.</p><div class="versionLine">${VERSION} / app.js محمل: ${new Date().toLocaleTimeString('ar-EG')}</div></div>
+        <div><h1>💰 إيزي ستور مطبعجي - برنامج الحسابات ES41</h1><p>أصناف، موردين، فواتير شراء ومبيعات، مخزون، تقارير، ومطبخ الحسابات.</p><div class="versionLine">${VERSION} / app.js محمل: ${new Date().toLocaleTimeString('ar-EG')}</div></div>
         <div class="actions"><span class="badge">${esc(user.name)} - ${esc(roleText())}</span><button class="btn secondary" onclick="ES27.load(true)">تحديث البيانات</button><button class="btn secondary" onclick="ES27.hardReload()">تحديث البرنامج</button><button class="btn secondary" onclick="history.back()">إغلاق</button></div>
       </div>
       <div id="mainMsg" class="msg"></div>
@@ -273,7 +273,8 @@
   }
 
   function screenCustomers(){
-    return `<section class="customerAccountsHero"><div><span>حسابات العملاء</span><h2>كشف الحساب والتحصيل</h2><p>ضياء ورحمة وريفان يمكنهم فتح كشف العميل وتسجيل التحصيل. إضافة المديونية والتسويات متاحة لضياء فقط.</p></div><div class="customerAccountsRoles"><b>تحصيل: ضياء / رحمة / ريفان</b><b>تسويات: ضياء فقط</b></div></section><div class="card"><div class="toolbar"><div><h2>العملاء</h2><div class="muted">ابحث بالاسم أو رقم الهاتف ثم افتح الحساب.</div></div><input id="custSearch" class="searchInput" placeholder="بحث عن عميل" oninput="ES27.filterCustomers()"></div><div id="custTable">${customersTable(state.data.customers)}</div></div><div id="customerAccountPanel">${customerAccountPanel()}</div>`;
+    const drawer=state.customerAccountSelected ? `<div class="customerAccountDrawerBackdrop" onclick="ES27.closeCustomerAccount()" aria-hidden="true"></div><aside id="customerAccountPanel" class="customerAccountDrawer" role="dialog" aria-modal="true" aria-label="كشف حساب العميل"><div class="customerAccountDrawerBar"><strong>حساب العميل</strong><button class="btn small secondary" onclick="ES27.closeCustomerAccount()" aria-label="إغلاق كشف الحساب">إغلاق ×</button></div>${customerAccountPanel()}</aside>` : '';
+    return `<section class="customerAccountsHero"><div><span>حسابات العملاء</span><h2>كشف الحساب والتحصيل</h2><p>ضياء ورحمة وريفان يمكنهم فتح كشف العميل وتسجيل التحصيل. إضافة المديونية والتسويات متاحة لضياء فقط.</p></div><div class="customerAccountsRoles"><b>تحصيل: ضياء / رحمة / ريفان</b><b>تسويات: ضياء فقط</b></div></section><div class="card"><div class="toolbar"><div><h2>العملاء</h2><div class="muted">ابحث بالاسم أو رقم الهاتف ثم افتح الحساب؛ سيظهر الكشف بجانب القائمة مباشرة.</div></div><input id="custSearch" class="searchInput" placeholder="بحث عن عميل" oninput="ES27.filterCustomers()"></div><div id="custTable">${customersTable(state.data.customers)}</div></div>${drawer}`;
   }
   function customerAccountToken(name){ return encodeURIComponent(String(name||'')).replace(/'/g,'%27'); }
   function customersTable(rows){ return table(rows||[],['العميل','الهاتف','النوع/المسؤول','المديونية','الحساب'],c=>{ const name=customerMainName(c); const selected=nkey(state.customerAccountSelected)===nkey(name); return [esc(name),esc(c.phone||c.mobile||''),esc(c.type||c.manager||''),`<span class="customerDebtBadge ${customerDebtClass(c)}">${esc(customerDebtText(c))}</span>`,`<button class="btn small ${selected?'':'secondary'}" onclick="ES27.openCustomerAccount('${customerAccountToken(name)}')">${selected?'الحساب مفتوح':'فتح الحساب'}</button>`]; }); }
@@ -765,12 +766,13 @@
   window.ES27 = {
     go(t){ if(!allowedScreens().includes(t)) return deny('هذه الشاشة غير متاحة لصلاحية المستخدم الحالي.'); state.active = t; shell(); },
     load,
-    hardReload(){ const url = location.pathname + '?v=es40-v1915-customer-accounts-' + Date.now(); location.href = url; },
+    hardReload(){ const url = location.pathname + '?v=es41-v1916-customer-account-drawer-' + Date.now(); location.href = url; },
     quickSearch(q){ q=nkey(q); if(!q) return; const found = templates().find(r=>nkey(templateName(r)).includes(q)) || materials().find(r=>nkey(materialName(r)).includes(q)); if(found) flash('تم العثور على: ' + (templateName(found)||materialName(found))); },
     async saveSupplier(){ if(!canManageAccounting()) return deny(); const s={name:val('supName'),phone:val('supPhone'),opening:num(val('supOpening')),address:val('supAddress')}; if(!s.name) return flash('اكتب اسم المورد',true); try{ const reply=await api('saveEasyStoreSupplier',s); if(!reply||reply.success===false) throw new Error((reply&&reply.message)||'تعذر حفظ المورد'); const i=state.data.suppliers.findIndex(x=>nkey(x.name||x.supplier)===nkey(s.name)); if(i>=0) state.data.suppliers[i]=s; else state.data.suppliers.unshift(s); saveLocal(); shell(); flash('تم حفظ المورد على السيرفر'); }catch(e){ flash('لم يتم حفظ المورد: '+(e.message||e),true); } },
     editSupplier(i){ const s=state.data.suppliers[i]; if(!s) return; set('supName',s.name||s.supplier); set('supPhone',s.phone); set('supOpening',s.opening||s.openingBalance); set('supAddress',s.address); },
     filterCustomers(){ const q=nkey(val('custSearch')); const rows=(state.data.customers||[]).filter(c=>nkey([c.name,c.customerName,c.phone,c.mobile].join(' ')).includes(q)); const box=$('custTable'); if(box) box.innerHTML=customersTable(rows); },
     resetCustomerAccountRequest(){ state.customerAccountRequestId=''; },
+    closeCustomerAccount(){ state.customerAccountSelected=''; state.customerAccount=null; state.customerAccountRequestId=''; render(); },
     async openCustomerAccount(encodedName){
       if(!canFinalize()) return deny('حسابات العملاء عند ضياء / رحمة / ريفان فقط.');
       let name='';
@@ -811,7 +813,7 @@
       const button=$('caSaveBtn');
       if(button){button.disabled=true;button.textContent='جاري الحفظ...';}
       try{
-        const reply=await api('saveCustomerAccountMovementV1915',{customerName:name,operation,amount,paymentMethod:method,refNo,notes,requestId:state.customerAccountRequestId,source:'EasyStore ES40'});
+        const reply=await api('saveCustomerAccountMovementV1915',{customerName:name,operation,amount,paymentMethod:method,refNo,notes,requestId:state.customerAccountRequestId,source:'EasyStore ES41'});
         if(!reply || reply.success===false) throw new Error((reply&&reply.message)||'تعذر حفظ حركة العميل.');
         let account=null;
         try{ account=await api('getCustomerAccountV1915',{customerName:name}); }catch(refreshError){}
@@ -986,7 +988,7 @@
       }catch(e){ flash(e.message||'تعذر اعتماد الفاتورة على السيرفر.',true); }
     },
     toggleLaserCalc(){ const b=$('laserCalcBox'); if(b) b.classList.toggle('hidden'); },
-    async saveDeptLineAndOpenSales(){ const order=encodeURIComponent(val('dlOrder')); const customer=encodeURIComponent(val('dlCustomer')); const saved=await this.saveDeptLine(); if(saved) location.href='?screen=sales&orderId='+order+'&customer='+customer+'&v=es40-v1915-customer-accounts'; },
+    async saveDeptLineAndOpenSales(){ const order=encodeURIComponent(val('dlOrder')); const customer=encodeURIComponent(val('dlCustomer')); const saved=await this.saveDeptLine(); if(saved) location.href='?screen=sales&orderId='+order+'&customer='+customer+'&v=es41-v1916-customer-account-drawer'; },
     async saveDeptLine(){ this.calcDept(); const tpl=selectedDeptTemplate(); const itemDept=tpl?matDept(tpl):val('dlItemDept'); const shared=($('dlSharedLine')&&$('dlSharedLine').checked)||isSharedDeptName(itemDept); const unitSale=num(val('dlSale')); const qty=num(val('dlQty'))||1; const quote=state.laserQuote||{}; const p={lineId:'DLINE-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,6),orderId:val('dlOrder'),customerName:val('dlCustomer'),department:userDept(),itemDepartment:itemDept||userDept(),sharedLine:shared?'نعم':'لا',billingStatus:'مسجل - قيد مراجعة القسم',closeStatus:'قيد مراجعة القسم',approvalStatus:'قيد مراجعة القسم',catalogItemId:tpl?(tpl.id||tpl.ID||tpl.catalogItemId||''):'',templateId:tpl?(tpl.id||tpl.ID||''):'',materialName:quote.materialName||(tpl?(tpl.materialName||tpl['الخامة']||''):''),itemName:val('dlItem'),qty:qty,systemSale:num(val('dlSystemSale')),systemSalePrice:num(val('dlSystemSale')),sale:unitSale,salePrice:unitSale,unitSalePrice:unitSale,lineTotal:unitSale*qty,diff:num(val('dlDiff')),laserDetailsJson:Object.keys(quote).length?JSON.stringify(quote):'',consumedAreaTotal:num(quote.consumedAreaTotal),wastePercent:num(quote.wastePercent),notes:val('dlNotes'),user:user.name,date:new Date().toISOString()}; if(!p.customerName||!p.orderId||!p.itemName){ flash('اسم العميل ورقم الأوردر والصنف مطلوبين.',true); return false; } if(shared){ const dup=(state.data.deptLines||[]).find(x=>isSharedLineRecord(x)&&sameDeptInvoiceContext(x,p.orderId,p.customerName)&&nkey(rowItem(x))===nkey(p.itemName)&&isUnbilledDeptLine(x)); if(dup){ flash('البند المشترك مسجل بالفعل بواسطة '+rowDept(dup)+' وسيظهر تلقائيًا عند القسم الآخر. لا تسجله مرتين.',true); return false; } } try{ const reply=await api('saveAccountingDeptLine',p); if(!reply||reply.success===false) throw new Error((reply&&reply.message)||'تعذر حفظ مسودة القسم'); if(reply.lineId){p.id=reply.lineId;p.ID=reply.lineId;} state.data.deptLines.unshift(p); if(p.diff) state.data.wasteLines.unshift({department:p.department,orderId:p.orderId,reason:'فرق سعر عن السيستم',amount:p.diff,paid:0}); saveLocal(); state.laserQuote=null; set('dlItemSel',''); set('dlItem',''); set('dlItemDept',''); set('dlSystemSale',''); set('dlSale',''); set('dlDiff',''); set('dlNotes',''); set('dlQty','1'); refreshDeptContextUi(); flash(shared?'تم حفظ بند مشترك في مسودة القسم وسيظهر عند القسم الآخر':'تم حفظ البند في مسودة فاتورة القسم. يمكنك إضافة بند جديد ثم الاعتماد.'); return true; }catch(e){ flash('لم يتم حفظ مسودة القسم: '+(e.message||e),true); return false; } },
     async aiLaser(){
       const material=val('aiMat'), w=num(val('aiW')), h=num(val('aiH')), q=num(val('aiQty'))||1, waste=num(val('aiWaste')), customerUnitSale=num(val('aiUnitSale'));
@@ -1126,6 +1128,9 @@
   window.addEventListener('pagehide', closeFloatingPanels);
   window.addEventListener('blur', function(){ setTimeout(closeFloatingPanels, 80); });
   window.addEventListener('pageshow', function(){ setTimeout(closeFloatingPanels, 60); });
+  window.addEventListener('keydown', function(ev){
+    if(ev && ev.key==='Escape' && state.active==='customers' && state.customerAccountSelected) window.ES27.closeCustomerAccount();
+  });
 
   window.ES = window.ES27;
   window.addEventListener('error', e => { console.error(e.error || e.message); msg('تم منع خطأ في EasyStore: ' + (e.message || ''), true); });

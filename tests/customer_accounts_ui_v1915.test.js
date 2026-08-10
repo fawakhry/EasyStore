@@ -76,10 +76,15 @@ function createApp(role) {
   const finalApp = createApp('final');
   assert.match(finalApp.screen.innerHTML, /حسابات العملاء/);
   assert.match(finalApp.screen.innerHTML, /فتح الحساب/);
+  assert.doesNotMatch(finalApp.screen.innerHTML, /customerAccountDrawer/);
   await finalApp.context.ES27.openCustomerAccount(encodeURIComponent('عميل اختبار'));
+  assert.match(finalApp.screen.innerHTML, /class="customerAccountDrawer"/);
+  assert.match(finalApp.screen.innerHTML, /إغلاق ×/);
   assert.match(finalApp.screen.innerHTML, /كشف حساب العميل/);
   assert.match(finalApp.screen.innerHTML, /تحصيل من العميل/);
   assert.doesNotMatch(finalApp.screen.innerHTML, /value="opening_debt"/);
+  finalApp.context.ES27.closeCustomerAccount();
+  assert.doesNotMatch(finalApp.screen.innerHTML, /customerAccountDrawer/);
 
   const adminApp = createApp('admin');
   await adminApp.context.ES27.openCustomerAccount(encodeURIComponent('عميل اختبار'));
