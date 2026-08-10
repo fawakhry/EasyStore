@@ -32,7 +32,7 @@ const SHEET_NAME_ACC_FINAL_INVOICES = "حسابات - الفواتير النه�
 const SHEET_NAME_ACC_WASTE = "حسابات - هوالك الأقسام";
 const SHEET_NAME_ACC_STOCK_MOVES = "حسابات - حركة المخزون";
 const SHEET_NAME_ACC_DEPT_DAILY_PURCHASES = "حسابات - مشتريات الأقسام اليومية";
-const MATBAGY_ACCOUNTING_VERSION = "V1917_DEPT_DAILY_PURCHASES";
+const MATBAGY_ACCOUNTING_VERSION = "V1919_IMMEDIATE_DEPT_PURCHASE_STOCK";
 const DEFAULT_PASSWORD = "";
 function employeeDefaultPassword_() {
   try { return normalize_(PropertiesService.getScriptProperties().getProperty("EMPLOYEE_DEFAULT_PASSWORD")); } catch (err) { return ""; }
@@ -2724,10 +2724,11 @@ function accStockMovesHeaders_() {
 
 
 /************************************************************
- * V1917 - Daily department purchases for Gaber / Wael
- * - Department users submit purchases as pending drafts.
- * - Diaa alone approves a complete employee/day batch.
- * - Inventory and supplier ledger change only after approval.
+ * V1917 / V1919 - Daily department purchases for Gaber / Wael
+ * - Department users submit purchases as pending financial drafts.
+ * - Inventory increases immediately so department sales are not blocked.
+ * - Diaa approval posts the official purchase and supplier ledger only.
+ * - Rejection reverses the provisional stock if it was not consumed.
  ************************************************************/
 function deptDailyPurchaseTodayV1917_() {
   let tz = "Africa/Cairo";
@@ -2800,9 +2801,79 @@ function deptDailyPurchaseRowsV1917_(sheet) {
       approvedAt: row["وقت الاعتماد"] || "",
       approvedBy: normalize_(row["اعتمد بواسطة"]),
       officialInvoiceNo: normalize_(row["رقم فاتورة الشراء الرسمية"]),
-      approvalKey: normalize_(row["مفتاح الاعتماد"])
+      approvalKey: normalize_(row["مفتاح الاعتماد"]),
+      stockStatus: normalize_(row["حالة المخزون"]),
+      stockAppliedAt: row["وقت إضافة المخزون"] || "",
+      stockAppliedQty: parseMoney_(row["كمية أضيفت للمخزون"]),
+      stockAfter: parseMoney_(row["رصيد المخزون بعد الإضافة"]),
+      stockReversedAt: row["وقت عكس المخزون"] || "",
+      stockReversalReason: normalize_(row["سبب عكس المخزون"])
     };
   }).reverse();
+}
+
+function deptDailyPurchaseStockAppliedV1919_(row) {
+  const key = searchKey_(row && row.stockStatus || "");
+  return !!(row && parseMoney_(row.stockAppliedQty) > 0 && key.indexOf("عكس") === -1 && key.indexOf("ملغي") === -1);
+}
+
+function deptDailyPurchaseMaterialRowV1919_(sheet, materialName, department) {
+  if (!sheet || !materialName) return 0;
+  const h = headersMap_(sheet);
+  const colName = firstCol_(h, ["اسم الخامة", "الخامة"], 0);
+  const colDept = firstCol_(h, ["القسم"], 0);
+  if (!colName) return 0;
+  const wantedName = accountingMaterialKey_(materialName);
+  const wantedDept = normalize_(department);
+  const data = sheet.getDataRange().getValues();
+  let sharedRow = 0;
+  for (let i = 1; i < data.length; i++) {
+    if (accountingMaterialKey_(valueAt_(data[i], colName)) !== wantedName) continue;
+    const rowDept = colDept ? normalize_(valueAt_(data[i], colDept)) : "";
+    if (wantedDept && rowDept === wantedDept) return i + 1;
+    if (!sharedRow && (!rowDept || rowDept === "مشترك" || rowDept === "عام")) sharedRow = i + 1;
+    if (!wantedDept && !sharedRow) sharedRow = i + 1;
+  }
+  return sharedRow;
+}
+
+function deptDailyPurchaseAdjustStockV1919_(materialName, delta, ctx) {
+  ctx = ctx || {};
+  const sheets = ensureAccountingSheets_();
+  const rowNumber = deptDailyPurchaseMaterialRowV1919_(sheets.materials, materialName, ctx.department || "");
+  if (!rowNumber) return { ok:false, message:"الخامة غير مسجلة لهذا القسم في المخزون: " + materialName };
+  const h = headersMap_(sheets.materials);
+  const colStock = firstCol_(h, ["رصيد المخزن"], 0);
+  const colUpdate = firstCol_(h, ["آخر تحديث"], 0);
+  if (!colStock) return { ok:false, message:"عمود رصيد المخزن غير موجود." };
+  const before = parseMoney_(sheets.materials.getRange(rowNumber, colStock).getValue());
+  const after = before + parseMoney_(delta);
+  if (after < -0.000001) return { ok:false, insufficientStock:true, before:before, message:"الخامة تم استهلاكها بعد تسجيل الشراء، لذلك لا يمكن رفض البند أو عكس المخزون. اعتمد الفاتورة ثم نفّذ تسوية أو مرتجع." };
+  const moveRowsBefore = sheets.stockMoves.getLastRow();
+  try {
+    sheets.materials.getRange(rowNumber, colStock).setValue(Math.max(0, after));
+    if (colUpdate) sheets.materials.getRange(rowNumber, colUpdate).setValue(new Date());
+    appendByHeaders_(sheets.stockMoves, {
+      "ID":"STK-"+Utilities.getUuid().slice(0,8),
+      "وقت الحركة":new Date(),
+      "نوع الحركة":delta >= 0 ? "إضافة فورية من مشتريات القسم" : "عكس مشتريات قسم مرفوضة",
+      "رقم الأوردر":normalize_(ctx.purchaseId),
+      "القسم":normalize_(ctx.department),
+      "اسم البند":"مشتريات " + normalize_(ctx.employee || "القسم"),
+      "الخامة":materialName,
+      "كمية واردة":delta >= 0 ? delta : 0,
+      "كمية منصرفة":delta < 0 ? Math.abs(delta) : 0,
+      "رصيد قبل الحركة":before,
+      "رصيد بعد الحركة":Math.max(0, after),
+      "مسجل بواسطة":normalize_(ctx.username || ctx.employee),
+      "ملاحظات":normalize_(ctx.notes || ("مشتريات قسم " + (ctx.purchaseId || "")))
+    });
+    return { ok:true, before:before, after:Math.max(0, after), rowNumber:rowNumber };
+  } catch (err) {
+    try { sheets.materials.getRange(rowNumber, colStock).setValue(before); } catch (rollbackErr) {}
+    try { if (sheets.stockMoves.getLastRow() > moveRowsBefore) sheets.stockMoves.deleteRows(moveRowsBefore + 1, sheets.stockMoves.getLastRow() - moveRowsBefore); } catch (rollbackMoveErr) {}
+    return { ok:false, message:"تعذر تحديث المخزون: " + (err && err.message ? err.message : err) };
+  }
 }
 
 function deptDailyPurchasePublicV1917_(row) {
@@ -2866,10 +2937,11 @@ function saveDeptDailyPurchaseV1917_(e) {
     const id = "DPP-" + Utilities.getUuid().slice(0, 8).toUpperCase();
     const workDate = deptDailyPurchaseTodayV1917_();
     const employee = normalize_(auth.user.username || auth.user.name || "");
+    const createdAt = new Date();
     const values = {
       "ID": id,
       "مفتاح الطلب": requestId,
-      "وقت التسجيل": new Date(),
+      "وقت التسجيل": createdAt,
       "تاريخ العمل": workDate,
       "الموظف": employee,
       "القسم": auth.department,
@@ -2883,14 +2955,42 @@ function saveDeptDailyPurchaseV1917_(e) {
       "المدفوع": paid,
       "المتبقي": remain,
       "ملاحظات": normalize_(e.parameter.notes),
-      "الحالة": "قيد مراجعة ضياء"
+      "الحالة": "قيد مراجعة ضياء",
+      "حالة المخزون": "جاري الإضافة"
     };
+    const appendedRow = sheets.dailyPurchases.getLastRow() + 1;
     appendByHeaders_(sheets.dailyPurchases, values);
+    const stockResult = deptDailyPurchaseAdjustStockV1919_(material, qty, {
+      purchaseId:id,
+      department:auth.department,
+      employee:employee,
+      username:employee,
+      notes:"زيادة فورية حتى يستطيع القسم تسجيل المبيعات"
+    });
+    if (!stockResult.ok) {
+      try { sheets.dailyPurchases.deleteRow(appendedRow); } catch (deleteErr) {}
+      return { success:false, message:stockResult.message || "تعذر زيادة المخزون؛ لم يتم حفظ بند المشتريات.", version:MATBAGY_ACCOUNTING_VERSION };
+    }
+    const stockAppliedAt = new Date();
+    try {
+      updateByHeaders_(sheets.dailyPurchases, appendedRow, {
+        "حالة المخزون":"مضاف فورًا",
+        "وقت إضافة المخزون":stockAppliedAt,
+        "كمية أضيفت للمخزون":qty,
+        "رصيد المخزون بعد الإضافة":stockResult.after
+      }, true);
+    } catch (updateErr) {
+      deptDailyPurchaseAdjustStockV1919_(material, -qty, { purchaseId:id, department:auth.department, employee:employee, username:employee, notes:"تراجع تلقائي لعدم اكتمال حفظ مشتريات القسم" });
+      try { sheets.dailyPurchases.deleteRow(appendedRow); } catch (deleteErr) {}
+      return { success:false, message:"تعذر تثبيت تسجيل المشتريات؛ تم التراجع عن زيادة المخزون.", version:MATBAGY_ACCOUNTING_VERSION };
+    }
     try { es16Audit_(employee, "تسجيل مشتريات يومية", "مشتريات قسم", id, "", total, auth.department + " | " + material); } catch (auditErr) {}
     return {
       success: true,
-      purchase: deptDailyPurchasePublicV1917_({ id:id, requestId:requestId, createdAt:new Date(), workDate:workDate, employee:employee, department:auth.department, supplier:supplier, receiptNo:values["رقم فاتورة المورد"], material:material, qty:qty, unit:unit, total:total, paymentType:paymentType, paid:paid, remain:remain, notes:values["ملاحظات"], status:values["الحالة"], approvedAt:"", approvedBy:"", officialInvoiceNo:"" }),
-      message: "تم تسجيل المشتريات وإرسالها لمراجعة ضياء دون تغيير المخزون.",
+      purchase: deptDailyPurchasePublicV1917_({ id:id, requestId:requestId, createdAt:createdAt, workDate:workDate, employee:employee, department:auth.department, supplier:supplier, receiptNo:values["رقم فاتورة المورد"], material:material, qty:qty, unit:unit, total:total, paymentType:paymentType, paid:paid, remain:remain, notes:values["ملاحظات"], status:values["الحالة"], approvedAt:"", approvedBy:"", officialInvoiceNo:"", stockStatus:"مضاف فورًا", stockAppliedAt:stockAppliedAt, stockAppliedQty:qty, stockAfter:stockResult.after, stockReversedAt:"", stockReversalReason:"" }),
+      stockBefore: stockResult.before,
+      stockAfter: stockResult.after,
+      message: "تم تسجيل الشراء وزيادة مخزون القسم فورًا. الفاتورة المالية وحساب المورد ينتظران مراجعة ضياء.",
       version: MATBAGY_ACCOUNTING_VERSION
     };
   } finally {
@@ -2922,8 +3022,29 @@ function approveDeptDailyPurchasesV1917_(e) {
   pending.forEach(function (row) {
     const officialInvoiceNo = "DPP-" + workDate.replace(/-/g, "") + "-" + row.id.replace(/[^A-Za-z0-9]/g, "").slice(-8);
     const receiptNote = row.receiptNo ? (" | فاتورة المورد: " + row.receiptNo) : "";
+    if (!deptDailyPurchaseStockAppliedV1919_(row)) {
+      const legacyStock = deptDailyPurchaseAdjustStockV1919_(row.material, row.qty, { purchaseId:row.id, department:row.department, employee:row.employee, username:auth.user.username, notes:"ترحيل مخزون بند قديم عند الاعتماد" });
+      if (!legacyStock.ok) {
+        failed.push({ id:row.id, material:row.material, message:legacyStock.message || "تعذر إضافة المخزون للبند القديم" });
+        return;
+      }
+      try {
+        updateByHeaders_(sheets.dailyPurchases, row.rowNumber, { "حالة المخزون":"مضاف فورًا", "وقت إضافة المخزون":new Date(), "كمية أضيفت للمخزون":row.qty, "رصيد المخزون بعد الإضافة":legacyStock.after }, true);
+        row.stockStatus = "مضاف فورًا";
+        row.stockAppliedQty = row.qty;
+        row.stockAfter = legacyStock.after;
+      } catch (legacyUpdateErr) {
+        deptDailyPurchaseAdjustStockV1919_(row.material, -row.qty, { purchaseId:row.id, department:row.department, employee:row.employee, username:auth.user.username, notes:"تراجع تلقائي عن ترحيل بند قديم" });
+        failed.push({ id:row.id, material:row.material, message:"تعذر تثبيت حالة مخزون البند القديم" });
+        return;
+      }
+    }
     const childEvent = { parameter: Object.assign({}, e.parameter, {
       requestId: "DPP-APPROVE-" + row.id,
+      sourceDailyPurchaseId: row.id,
+      stockAlreadyAppliedV1919: "1",
+      stockAfter: row.stockAfter,
+      stockBefore: Math.max(0, parseMoney_(row.stockAfter) - parseMoney_(row.stockAppliedQty)),
       no: officialInvoiceNo,
       invoiceNo: officialInvoiceNo,
       department: row.department,
@@ -2945,7 +3066,7 @@ function approveDeptDailyPurchasesV1917_(e) {
         return;
       }
       updateByHeaders_(sheets.dailyPurchases, row.rowNumber, {
-        "الحالة": "معتمد ومضاف للمخزون",
+        "الحالة": "معتمد ماليًا",
         "وقت الاعتماد": new Date(),
         "اعتمد بواسطة": auth.user.username,
         "رقم فاتورة الشراء الرسمية": officialInvoiceNo,
@@ -2965,7 +3086,7 @@ function approveDeptDailyPurchasesV1917_(e) {
     approvedCount: approvedCount,
     approvedTotal: approvedTotal,
     failed: failed,
-    message: failed.length ? ("تم اعتماد " + approvedCount + " بند وتعذر " + failed.length + " بند. راجع البنود المتبقية.") : ("تم اعتماد مشتريات " + employee + " ليوم " + workDate + " وإضافتها للمخزون والمشتريات الرسمية."),
+    message: failed.length ? ("تم اعتماد " + approvedCount + " بند وتعذر " + failed.length + " بند. راجع البنود المتبقية.") : ("تم اعتماد مشتريات " + employee + " ليوم " + workDate + " ماليًا دون تكرار زيادة المخزون."),
     version: MATBAGY_ACCOUNTING_VERSION
   };
 }
@@ -2983,19 +3104,29 @@ function rejectDeptDailyPurchaseV1917_(e) {
     const row = deptDailyPurchaseRowsV1917_(sheet).find(function (item) { return item.id === id; });
     if (!row) return { success: false, message: "بند المشتريات غير موجود." };
     const statusKey = searchKey_(row.status);
-    if (statusKey.indexOf("معتمد") !== -1) return { success: false, message: "لا يمكن رفض بند تم اعتماده وإضافته للمخزون." };
+    if (statusKey.indexOf("معتمد") !== -1) return { success: false, message: "لا يمكن رفض بند تم اعتماده ماليًا." };
     if (statusKey.indexOf("مرفوض") !== -1) return { success: true, duplicatePrevented: true, message: "البند مرفوض بالفعل.", version: MATBAGY_ACCOUNTING_VERSION };
     const reason = normalize_(e.parameter.reason || "مرفوض بعد مراجعة ضياء");
-    updateByHeaders_(sheet, row.rowNumber, { "الحالة":"مرفوض", "وقت الاعتماد":new Date(), "اعتمد بواسطة":auth.user.username, "ملاحظات":row.notes ? (row.notes + " | سبب الرفض: " + reason) : ("سبب الرفض: " + reason) }, true);
+    let stockResult = { ok:true, before:row.stockAfter, after:row.stockAfter };
+    if (deptDailyPurchaseStockAppliedV1919_(row)) {
+      stockResult = deptDailyPurchaseAdjustStockV1919_(row.material, -row.stockAppliedQty, { purchaseId:row.id, department:row.department, employee:row.employee, username:auth.user.username, notes:"رفض ضياء: " + reason });
+      if (!stockResult.ok) return { success:false, message:stockResult.message || "تعذر عكس المخزون؛ لم يتم رفض البند.", version:MATBAGY_ACCOUNTING_VERSION };
+    }
+    try {
+      updateByHeaders_(sheet, row.rowNumber, { "الحالة":"مرفوض", "وقت الاعتماد":new Date(), "اعتمد بواسطة":auth.user.username, "حالة المخزون":"تم عكس المخزون", "وقت عكس المخزون":new Date(), "سبب عكس المخزون":reason, "ملاحظات":row.notes ? (row.notes + " | سبب الرفض: " + reason) : ("سبب الرفض: " + reason) }, true);
+    } catch (updateErr) {
+      if (deptDailyPurchaseStockAppliedV1919_(row)) deptDailyPurchaseAdjustStockV1919_(row.material, row.stockAppliedQty, { purchaseId:row.id, department:row.department, employee:row.employee, username:auth.user.username, notes:"تراجع تلقائي عن فشل حفظ قرار الرفض" });
+      return { success:false, message:"تعذر حفظ قرار الرفض؛ تم إبقاء المخزون كما كان.", version:MATBAGY_ACCOUNTING_VERSION };
+    }
     try { es16Audit_(auth.user.username, "رفض مشتريات يومية", "مشتريات قسم", id, row.total, "مرفوض", reason); } catch (auditErr) {}
-    return { success: true, message: "تم رفض البند دون تغيير المخزون أو حساب المورد.", version: MATBAGY_ACCOUNTING_VERSION };
+    return { success: true, stockBefore:stockResult.before, stockAfter:stockResult.after, message: "تم رفض البند وعكس الكمية من المخزون دون تسجيل حركة على حساب المورد.", version: MATBAGY_ACCOUNTING_VERSION };
   } finally {
     try { lock.releaseLock(); } catch (err) {}
   }
 }
 
 function accDeptDailyPurchasesHeadersV1917_() {
-  return ["ID", "مفتاح الطلب", "وقت التسجيل", "تاريخ العمل", "الموظف", "القسم", "المورد", "رقم فاتورة المورد", "الخامة", "الكمية", "سعر الوحدة", "الإجمالي", "نوع الدفع", "المدفوع", "المتبقي", "ملاحظات", "الحالة", "وقت الاعتماد", "اعتمد بواسطة", "رقم فاتورة الشراء الرسمية", "مفتاح الاعتماد"];
+  return ["ID", "مفتاح الطلب", "وقت التسجيل", "تاريخ العمل", "الموظف", "القسم", "المورد", "رقم فاتورة المورد", "الخامة", "الكمية", "سعر الوحدة", "الإجمالي", "نوع الدفع", "المدفوع", "المتبقي", "ملاحظات", "الحالة", "وقت الاعتماد", "اعتمد بواسطة", "رقم فاتورة الشراء الرسمية", "مفتاح الاعتماد", "حالة المخزون", "وقت إضافة المخزون", "كمية أضيفت للمخزون", "رصيد المخزون بعد الإضافة", "وقت عكس المخزون", "سبب عكس المخزون"];
 }
 
 function ensureAccountingSheets_() {
@@ -3010,6 +3141,7 @@ function ensureAccountingSheets_() {
   ensureHeaderIfAnyMissing_(deptLines, ["تفاصيل المكونات", "تفاصيل حاسبة الليزر", "مساحة مستهلكة", "نسبة الهالك", "مخزون مخصوم؟", "وقت خصم المخزون"]);
   ensureHeaderIfAnyMissing_(finalInvoices, ["مفتاح العملية", "حالة العكس المالي", "وقت العكس المالي"]);
   ensureHeaderIfAnyMissing_(stockMoves, ["كمية واردة", "كمية منصرفة"]);
+  ensureHeaderIfAnyMissing_(dailyPurchases, ["حالة المخزون", "وقت إضافة المخزون", "كمية أضيفت للمخزون", "رصيد المخزون بعد الإضافة", "وقت عكس المخزون", "سبب عكس المخزون"]);
   seedAccountingTemplates_(templates);
   return { materials: materials, templates: templates, deptLines: deptLines, finalInvoices: finalInvoices, waste: waste, stockMoves: stockMoves, dailyPurchases: dailyPurchases };
 }
@@ -8611,6 +8743,19 @@ function accountingIncreaseMaterialStockV1913_(materialName, qty, ctx) {
     return { ok: false, message: "تعذر تحديث المخزون، ولم يتم اعتماد حركة الشراء: " + (err.message || err) };
   }
 }
+function accountingPurchaseStockAlreadyAppliedV1919_(e) {
+  const p = e && e.parameter || {};
+  if (normalize_(p.stockAlreadyAppliedV1919) !== "1") return false;
+  const sourceId = normalize_(p.sourceDailyPurchaseId);
+  const requestId = normalize_(p.requestId || p.idempotencyKey || p.clientRequestId);
+  if (!sourceId || requestId !== "DPP-APPROVE-" + sourceId) return false;
+  try {
+    const row = deptDailyPurchaseRowsV1917_(ensureAccountingSheets_().dailyPurchases).find(function (item) { return item.id === sourceId; });
+    return !!(row && deptDailyPurchaseIsPendingV1917_(row.status) && deptDailyPurchaseStockAppliedV1919_(row));
+  } catch (err) {
+    return false;
+  }
+}
 function saveEasyStoreSaleV2_(e) {
   const auth = accountingAuthorize_(e);
   if (!auth.ok) return { success:false, message: auth.message };
@@ -8657,6 +8802,7 @@ function saveEasyStorePurchase_(e) {
   const supplier = normalize_(e.parameter.supplier);
   const invoiceNo = normalize_(e.parameter.invoiceNo || e.parameter.no);
   const materialName = normalize_(e.parameter.materialName || e.parameter.material);
+  const stockAlreadyApplied = accountingPurchaseStockAlreadyAppliedV1919_(e);
   if (!invoiceNo || !supplier || !materialName || qty <= 0 || unit < 0) return { success:false, message:"رقم الفاتورة والمورد والخامة وكمية صحيحة مطلوبة." };
   const purchaseHeaders = headersMap_(sheet);
   const purchaseNoCol = firstCol_(purchaseHeaders, ["رقم الفاتورة"], 0);
@@ -8670,14 +8816,16 @@ function saveEasyStorePurchase_(e) {
   if (!accountingFindMaterialRow_(ensureAccountingSheets_().materials, materialName, "")) return { success:false, message:"الخامة غير مسجلة في المخزون: "+materialName };
   const purchaseRow = sheet.getLastRow() + 1;
   appendByHeaders_(sheet, {"ID":"PUR-"+Utilities.getUuid().slice(0,8), "وقت التسجيل":new Date(), "رقم الفاتورة":invoiceNo, "القسم":normalize_(e.parameter.department || auth.department || "إدارة"), "المورد":supplier, "نوع الدفع":normalize_(e.parameter.paymentType), "تاريخ الاستحقاق":normalize_(e.parameter.dueDate), "الخامة":materialName, "الكمية":qty, "سعر الوحدة":unit, "الإجمالي":total, "المدفوع":paid, "المتبقي":remain, "بنود الأقسام":normalize_(e.parameter.lineIds), "مسجل بواسطة":auth.user.username, "ملاحظات":normalize_(e.parameter.notes)});
-  const stockResult = accountingIncreaseMaterialStockV1913_(materialName, qty, { department:normalize_(e.parameter.department || auth.department || "إدارة"), username:auth.user.username, invoiceNo:invoiceNo });
+  const stockResult = stockAlreadyApplied
+    ? { ok:true, before:parseMoney_(e.parameter.stockBefore), after:parseMoney_(e.parameter.stockAfter), skipped:true }
+    : accountingIncreaseMaterialStockV1913_(materialName, qty, { department:normalize_(e.parameter.department || auth.department || "إدارة"), username:auth.user.username, invoiceNo:invoiceNo });
   if (!stockResult.ok) {
     try { if (sheet.getLastRow() >= purchaseRow) sheet.deleteRow(purchaseRow); } catch (rollbackPurchaseErr) {}
     return { success:false, message:stockResult.message };
   }
   if (supplier && total > 0) savePartyLedgerTransactionV1858_({ parameter:{ username:e.parameter.username, token:e.parameter.token, partyType:"supplier", partyName:supplier, operation:"purchase_invoice", amount:total, paymentMethod:normalize_(e.parameter.paymentType), refNo:invoiceNo, notes:"فاتورة مشتريات" } });
   if (supplier && paid > 0) savePartyLedgerTransactionV1858_({ parameter:{ username:e.parameter.username, token:e.parameter.token, partyType:"supplier", partyName:supplier, operation:"payment_paid", amount:paid, paymentMethod:normalize_(e.parameter.paymentType), refNo:invoiceNo, notes:"مدفوع من فاتورة المشتريات" } });
-  const response = { success:true, invoiceNo:invoiceNo, stockBefore:stockResult.before, stockAfter:stockResult.after, message:"تم حفظ فاتورة الشراء وتحديث حساب المورد والمخزون.", version:MATBAGY_ACCOUNTING_VERSION };
+  const response = { success:true, invoiceNo:invoiceNo, stockBefore:stockResult.before, stockAfter:stockResult.after, stockUpdateSkipped:stockAlreadyApplied, message:stockAlreadyApplied?"تم حفظ فاتورة الشراء وتحديث حساب المورد دون تكرار زيادة المخزون.":"تم حفظ فاتورة الشراء وتحديث حساب المورد والمخزون.", version:MATBAGY_ACCOUNTING_VERSION };
   accountingSaveIdempotentV1913_("PURCHASE", requestKey, response);
   return response;
   } finally { try { lock.releaseLock(); } catch (err) {} }

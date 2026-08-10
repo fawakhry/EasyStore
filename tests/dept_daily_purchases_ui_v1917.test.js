@@ -32,8 +32,8 @@ function createApp(role, screenName) {
     ],
     suppliers: [{ name: 'مورد اختبار' }],
     dailyPurchases: [
-      { id: 'DPP-1', workDate: '2026-08-10', employee: 'جابر', department: 'ليزر', supplier: 'مورد ليزر', material: 'خشب MDF', qty: 2, unit: 50, total: 100, paymentType: 'نقدي', status: 'قيد مراجعة ضياء' },
-      { id: 'DPP-2', workDate: '2026-08-10', employee: 'وائل', department: 'طباعة', supplier: 'مورد طباعة', material: 'رول طباعة', qty: 1, unit: 80, total: 80, paymentType: 'آجل', status: 'قيد مراجعة ضياء' }
+      { id: 'DPP-1', workDate: '2026-08-10', employee: 'جابر', department: 'ليزر', supplier: 'مورد ليزر', material: 'خشب MDF', qty: 2, unit: 50, total: 100, paymentType: 'نقدي', status: 'قيد مراجعة ضياء', stockStatus: 'مضاف فورًا' },
+      { id: 'DPP-2', workDate: '2026-08-10', employee: 'وائل', department: 'طباعة', supplier: 'مورد طباعة', material: 'رول طباعة', qty: 1, unit: 80, total: 80, paymentType: 'آجل', status: 'قيد مراجعة ضياء', stockStatus: 'مضاف فورًا' }
     ]
   };
   const storage = makeStorage({
@@ -71,8 +71,9 @@ function createApp(role, screenName) {
 const gaber = createApp('laser', 'deptPurchases');
 assert.match(gaber.app.html, /مشتريات اليوم/);
 assert.match(gaber.screen.innerHTML, /مشتريات جابر اليوم/);
-assert.match(gaber.screen.innerHTML, /تسجيل وإرسال لضياء/);
-assert.match(gaber.screen.innerHTML, /لن يزيد المخزون/);
+assert.match(gaber.screen.innerHTML, /تسجيل وزيادة المخزون الآن/);
+assert.match(gaber.screen.innerHTML, /رصيد مخزون قسمك يزيد فورًا/);
+assert.match(gaber.screen.innerHTML, /مضاف فورًا/);
 assert.match(gaber.screen.innerHTML, /خشب MDF/);
 assert.doesNotMatch(gaber.screen.innerHTML, /رول طباعة/);
 assert.doesNotMatch(gaber.screen.innerHTML, /اعتماد مشتريات اليوم/);
@@ -89,9 +90,10 @@ assert.match(admin.screen.innerHTML, /اعتماد مشتريات اليوم/);
 assert.match(admin.screen.innerHTML, /جابر/);
 assert.match(admin.screen.innerHTML, /وائل/);
 assert.match(admin.screen.innerHTML, /رفض/);
-assert.match(admin.screen.innerHTML, /لن تدخل المشتريات الرسمية أو المخزون إلا بعد اعتمادك/);
+assert.match(admin.screen.innerHTML, /المخزون مضاف فور التسجيل/);
+assert.match(admin.screen.innerHTML, /رفض وعكس المخزون/);
 
 const finalUser = createApp('final', 'deptPurchases');
-assert.doesNotMatch(finalUser.screen.innerHTML, /تسجيل وإرسال لضياء/);
+assert.doesNotMatch(finalUser.screen.innerHTML, /تسجيل وزيادة المخزون الآن/);
 
-console.log('daily department purchases V1917 UI tests passed');
+console.log('daily department purchases V1919 immediate-stock UI tests passed');
