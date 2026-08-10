@@ -31,7 +31,7 @@ const SHEET_NAME_ACC_DEPT_LINES = "حسابات - فواتير الأقسام";
 const SHEET_NAME_ACC_FINAL_INVOICES = "حسابات - الفواتير النهائية";
 const SHEET_NAME_ACC_WASTE = "حسابات - هوالك الأقسام";
 const SHEET_NAME_ACC_STOCK_MOVES = "حسابات - حركة المخزون";
-const MATBAGY_ACCOUNTING_VERSION = "V1913_SECURITY_INTEGRITY";
+const MATBAGY_ACCOUNTING_VERSION = "V1914_LEGACY_DEBT_RECONCILE";
 const DEFAULT_PASSWORD = "";
 function employeeDefaultPassword_() {
   try { return normalize_(PropertiesService.getScriptProperties().getProperty("EMPLOYEE_DEFAULT_PASSWORD")); } catch (err) { return ""; }
@@ -159,6 +159,7 @@ function doGet(e) {
     else if (action === "fillMissingPhones") result = runAdminMaintenance_(e, action, fillMissingOrderPhonesNow);
     else if (action === "fixDebtColumns") result = runAdminMaintenance_(e, action, fixDebtColumnsNow);
     else if (action === "debugCustomerDebt") result = runAdminMaintenance_(e, action, debugCustomerDebt_);
+    else if (action === "reconcileLegacyCustomerDebtsV1914") result = runAdminMaintenance_(e, action, reconcileLegacyCustomerDebtsV1914_);
 
     else if (action === "getCustomerPortalAccountsV1859") result = getCustomerPortalAccountsV1859_(e);
     else if (action === "createInvoiceReviewMessageV1859" || action === "sendInvoiceReviewLink") result = createInvoiceReviewMessageV1859_(e);
@@ -9070,6 +9071,116 @@ function reopenAccountingFinalInvoice_(e) {
     appendActivityLog_({ orderId: orderId, customer: customerName, action: "إرجاع فاتورة للمراجعة", oldStatus: "تم التقفيل", newStatus: "تحت مراجعة ضياء", by: auth.user.username, details: "فاتورة: " + invoiceNo + " | بنود مفتوحة: " + reopened });
     SpreadsheetApp.flush();
     return { success: true, message: "تم إرجاع الفاتورة " + invoiceNo + " للمراجعة وفتح " + reopened + " بند للتقفيل من جديد." + ledgerWarning, invoiceNo: invoiceNo, reopened: reopened, version: MATBAGY_ACCOUNTING_VERSION };
+  } finally {
+    try { lock.releaseLock(); } catch (err) {}
+  }
+}
+
+/**
+ * V1914 - Backfill final invoices created before the customer ledger was unified.
+ * Only invoices with no ledger rows for the same customer/reference are added.
+ * This makes the operation safe to run repeatedly without duplicating debt.
+ */
+function reconcileLegacyCustomerDebtsV1914_(e) {
+  if (normalize_(e.parameter.confirm) !== "RECONCILE_LEGACY_DEBTS") {
+    return { success: false, message: "تأكيد ترحيل المديونيات غير صحيح. لم يتم تغيير أي بيانات." };
+  }
+  const auth = accountingAuthorize_(e);
+  if (!auth.ok) return { success: false, message: auth.message };
+  if (auth.mode !== "full") return { success: false, message: "ترحيل المديونيات القديمة متاح لضياء فقط." };
+
+  const lock = LockService.getScriptLock();
+  lock.waitLock(30000);
+  try {
+    const finalSheet = ensureAccountingSheets_().finalInvoices;
+    if (!finalSheet || finalSheet.getLastRow() < 2) {
+      return { success: true, message: "لا توجد فواتير نهائية قديمة للترحيل.", addedInvoices: 0, skipped: 0, version: MATBAGY_ACCOUNTING_VERSION };
+    }
+
+    const finalHeaders = headersMap_(finalSheet);
+    const colInvoice = firstCol_(finalHeaders, ["رقم الفاتورة", "invoiceNo", "no"], 0);
+    const colOrder = firstCol_(finalHeaders, ["رقم الأوردر", "orderId"], 0);
+    const colCustomer = firstCol_(finalHeaders, ["اسم العميل", "العميل", "customerName", "customer"], 0);
+    const colTotal = firstCol_(finalHeaders, ["الإجمالي النهائي", "الإجمالي", "finalTotal", "total"], 0);
+    const colPaid = firstCol_(finalHeaders, ["المدفوع", "paid"], 0);
+    const colRemaining = firstCol_(finalHeaders, ["الباقي", "المتبقي", "remaining", "remain"], 0);
+    const colStatus = firstCol_(finalHeaders, ["الحالة", "status"], 0);
+    if (!colInvoice || !colCustomer) return { success: false, message: "أعمدة رقم الفاتورة واسم العميل غير موجودة في شيت الفواتير النهائية." };
+
+    const ledgerSheet = accountsEnsureLedgerSheetV1858_();
+    const ledgerRows = accSheetRows_(ledgerSheet);
+    const existingRefs = {};
+    ledgerRows.forEach(function(row) {
+      const partyType = normalizeKey_(row.partyType || row["نوع الطرف"] || "customer");
+      const partyName = normalize_(row.partyName || row["اسم الطرف"] || "");
+      const refNo = normalize_(row.refNo || row["رقم المرجع"] || "");
+      if (!partyName || !refNo || (partyType !== "customer" && partyType.indexOf("عميل") === -1)) return;
+      existingRefs[searchKey_(partyName) + "|" + normalizeKey_(refNo)] = true;
+    });
+
+    const finalRows = finalSheet.getRange(2, 1, finalSheet.getLastRow() - 1, finalSheet.getLastColumn()).getValues();
+    const maxRows = Math.min(Math.max(parseInt(e.parameter.limit || "500", 10) || 500, 1), 1000);
+    const touchedCustomers = {};
+    let addedInvoices = 0;
+    let skipped = 0;
+    let invalid = 0;
+    let processed = 0;
+
+    for (let i = 0; i < finalRows.length && processed < maxRows; i++) {
+      const row = finalRows[i];
+      const invoiceNo = normalize_(valueAt_(row, colInvoice));
+      const orderId = colOrder ? normalize_(valueAt_(row, colOrder)) : "";
+      const customerName = normalize_(valueAt_(row, colCustomer));
+      const status = colStatus ? searchKey_(valueAt_(row, colStatus)) : "";
+      const paid = colPaid ? parseMoney_(valueAt_(row, colPaid)) : 0;
+      const remainingCell = colRemaining ? valueAt_(row, colRemaining) : "";
+      let remaining = parseMoney_(remainingCell);
+      let total = colTotal ? parseMoney_(valueAt_(row, colTotal)) : 0;
+      if (!total && (paid || remaining)) total = paid + remaining;
+      if ((remainingCell === "" || remainingCell === null || remainingCell === undefined) && total) remaining = Math.max(0, total - paid);
+      if (!invoiceNo || !customerName || total <= 0) { invalid++; continue; }
+      if (/مراجعه|مراجعة|ملغي|الغاء|إلغاء|cancel|reopen/.test(status)) { skipped++; continue; }
+      processed++;
+      if (remaining <= 0) { skipped++; continue; }
+
+      const refKey = searchKey_(customerName) + "|" + normalizeKey_(invoiceNo);
+      if (existingRefs[refKey]) {
+        skipped++;
+        touchedCustomers[searchKey_(customerName)] = customerName;
+        continue;
+      }
+
+      const invoiceResult = savePartyLedgerTransactionV1858_({ parameter: {
+        username: e.parameter.username,
+        token: e.parameter.token,
+        partyType: "customer",
+        partyName: customerName,
+        operation: "opening_debt",
+        amount: remaining,
+        refNo: invoiceNo,
+        notes: "ترحيل باقي فاتورة نهائية قديمة رقم " + invoiceNo + (orderId ? " للأوردر " + orderId : "")
+      } });
+      if (!invoiceResult || invoiceResult.success === false) throw new Error((invoiceResult && invoiceResult.message) || "تعذر ترحيل الفاتورة " + invoiceNo);
+      existingRefs[refKey] = true;
+      addedInvoices++;
+      touchedCustomers[searchKey_(customerName)] = customerName;
+    }
+
+    Object.keys(touchedCustomers).forEach(function(customerKey) {
+      const name = touchedCustomers[customerKey];
+      accountsUpdateMasterBalanceV1858_("customer", name, accountsCurrentBalanceV1858_("customer", name, ""), auth);
+    });
+    appendActivityLog_({ action: "ترحيل مديونيات الفواتير القديمة", by: auth.user.username, details: "فواتير: " + addedInvoices + " | متخطى: " + skipped + " | غير صالح: " + invalid });
+    SpreadsheetApp.flush();
+    return {
+      success: true,
+      message: "تم ترحيل باقي " + addedInvoices + " فاتورة قديمة إلى حسابات العملاء، مع منع أي تكرار.",
+      addedInvoices: addedInvoices,
+      skipped: skipped,
+      invalid: invalid,
+      processed: processed,
+      version: MATBAGY_ACCOUNTING_VERSION
+    };
   } finally {
     try { lock.releaseLock(); } catch (err) {}
   }
