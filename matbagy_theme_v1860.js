@@ -1,9 +1,7 @@
-/* EasyStore theme controller - V1893 safe: no version rewriting */
+/* EasyStore theme controller - presentation only; application version is owned by config/app. */
 (function(){
   'use strict';
   window.EASYSTORE_CACHE_KILLER_THEME_LOCK = true;
-  window.EASYSTORE_VERSION = 'ES33 V1896 Debt + Catalog Hard Lock';
-  window.EASYSTORE_MATBAGY_VERSION = 'ES33 V1896 Debt + Catalog Hard Lock';
   var KEY_THEME='matbagy_ui_theme_v1860';
   var KEY_MODE='matbagy_ui_mode_v1860';
   var THEMES=[['green','مطبعجي'],['blue','أزرق'],['gold','ذهبي'],['purple','بنفسجي'],['slate','رمادي']];
@@ -37,7 +35,6 @@
     else{document.body.appendChild(makeSwitcher(true));}
     apply();
   }
-  function polishVersion(){ try{window.EASYSTORE_VERSION='ES33 V1896 Debt + Catalog Hard Lock';window.EASYSTORE_MATBAGY_VERSION='ES33 V1896 Debt + Catalog Hard Lock';}catch(e){} }
   function groupDangerButtons(){
     document.querySelectorAll('button,.btn,.es16-btn').forEach(function(b){
       var t=(b.textContent||'').trim();
@@ -46,9 +43,9 @@
       if(/واتساب|إرسال|ارسال/.test(t)) b.classList.add('action-whatsapp');
     });
   }
-  document.addEventListener('DOMContentLoaded',function(){mount();polishVersion();groupDangerButtons();});
-  setTimeout(function(){mount();polishVersion();groupDangerButtons();},400);
-  setTimeout(function(){mount();polishVersion();groupDangerButtons();},1800);
+  document.addEventListener('DOMContentLoaded',function(){mount();groupDangerButtons();});
+  setTimeout(function(){mount();groupDangerButtons();},400);
+  setTimeout(function(){mount();groupDangerButtons();},1800);
   /* V1879: no repeated visual interval */
   if(window.matchMedia){try{window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change',apply);}catch(e){}}
 })();

@@ -1,7 +1,7 @@
 (function(){
   'use strict';
 
-  const VERSION = 'ES37 V1912 Final Pending Search';
+  const VERSION = 'ES38 V1913 Security + Data Integrity';
   window.EASYSTORE_MATBAGY_VERSION = VERSION;
 
   const app = document.getElementById('app');
@@ -21,32 +21,42 @@
     const hp = handoff.params || {};
     const hu = handoff.user || {};
     return {
-      name: qs.get('name') || qs.get('username') || hp.name || hp.username || hu.name || hu.username || 'ضياء',
-      username: qs.get('username') || qs.get('name') || hp.username || hp.name || hu.username || hu.name || 'ضياء',
-      token: qs.get('token') || hp.token || hu.token || '',
-      mode: qs.get('mode') || qs.get('roleMode') || hp.mode || hp.roleMode || hu.mode || '',
-      department: qs.get('department') || hp.department || hu.department || ''
+      name: hp.name || hp.username || hu.name || hu.username || 'موظف',
+      username: hp.username || hp.name || hu.username || hu.name || 'employee',
+      token: hp.token || hu.token || '',
+      mode: hp.mode || hp.roleMode || hu.mode || hu.roleMode || '',
+      department: hp.department || hu.department || ''
     };
   }
 
   const user = readSso();
   const roleKey = () => nkey([user.name,user.username,user.mode,user.department].join(' '));
   const isAdmin = () => /ضياء|diaa|admin|full|kitchen|اداره|إدارة/.test(roleKey());
-  const isLaser = () => /جابر|gaber|jaber|laser|ليزر/.test(roleKey()) || qs.get('laserAi') === '1' || qs.get('mode') === 'laser' || qs.get('department') === 'ليزر';
-  const isPrint = () => !isLaser() && (/وائل|wael|print|طباع/.test(roleKey()) || qs.get('mode') === 'print' || qs.get('department') === 'طباعة');
+  const isLaser = () => /جابر|gaber|jaber|laser|ليزر/.test(roleKey());
+  const isPrint = () => !isLaser() && /وائل|wael|print|طباع/.test(roleKey());
   const isFinal = () => /رحمه|رحمة|ريفان|ريڤان|rahma|revan|rivan|final/.test(roleKey());
   const roleText = () => isAdmin() ? 'ضياء / مطبخ الحسابات' : isLaser() ? 'جابر / الليزر' : isPrint() ? 'وائل / الطباعة' : isFinal() ? 'رحمة أو ريفان / تقفيل فواتير' : 'موظف';
   const userDept = () => isLaser() ? 'ليزر' : isPrint() ? 'طباعة' : (user.department || '');
+  function allowedScreens(){
+    if(isAdmin()) return ['dashboard','suppliers','customers','items','purchase','sales','final','stock','kitchen','reports','health'];
+    if(isPrint() || isLaser()) return ['dept','waste','stock'];
+    if(isFinal()) return ['sales','final','customers','deptView'];
+    return ['sales'];
+  }
+  function canManageAccounting(){ return isAdmin(); }
+  function canFinalize(){ return isAdmin() || isFinal(); }
+  function canUseDepartment(){ return isPrint() || isLaser(); }
+  function deny(message){ flash(message || 'ليس لديك صلاحية لتنفيذ هذه العملية.', true); return false; }
 
 
   function initialScreen(){
     const s = String(qs.get('screen') || qs.get('tab') || qs.get('view') || '').toLowerCase();
-    if(/final/.test(s)) return 'final';
-    if(/dept/.test(s)) return 'dept';
-    if(/sales|sale|invoice|فاتورة/.test(s)) return 'sales';
-    if(/kitchen|raw|materials/.test(s)) return 'kitchen';
-    if(qs.get('laserAi') === '1' || qs.get('mode') === 'laser') return 'dept';
-    return 'dashboard';
+    let requested = '';
+    if(/final/.test(s)) requested = 'final';
+    else if(/dept/.test(s)) requested = 'dept';
+    else if(/sales|sale|invoice|فاتورة/.test(s)) requested = 'sales';
+    else if(/kitchen|raw|materials/.test(s)) requested = 'kitchen';
+    return allowedScreens().includes(requested) ? requested : allowedScreens()[0];
   }
 
   const STORE_KEY = 'EASYSTORE_CLEAN_V1880_DATA';
@@ -241,6 +251,7 @@
 
   function render(){
     const sc = $('screen'); if(!sc) return;
+    if(!allowedScreens().includes(state.active)) state.active = allowedScreens()[0];
     const m = {dashboard:screenDashboard,suppliers:screenSuppliers,customers:screenCustomers,items:screenItems,purchase:screenPurchase,sales:screenSales,stock:screenStock,kitchen:screenKitchen,reports:screenReports,health:screenHealth,dept:screenDept,waste:screenWaste,final:screenFinal,deptView:screenDeptView};
     sc.innerHTML = (m[state.active] || screenDashboard)();
     document.querySelectorAll('.tab').forEach(b=>b.classList.toggle('active', nkey(b.textContent).includes(nkey(tabLabel(state.active)))));
@@ -700,7 +711,7 @@
     state.loading = true;
     if(!silent) msg('جاري تحميل البيانات...');
     try{
-      const r = await api('getAccounting');
+      const r = await api('getAccounting',{requestedRole:isAdmin()?'admin':isFinal()?'final':isLaser()?'laser':isPrint()?'print':'employee',requestedDepartment:userDept()});
       if(!r || r.success === false) throw new Error(r && r.message || 'تعذر تحميل البيانات');
       let customerRows = [];
       let supplierRows = [];
@@ -726,11 +737,11 @@
   }
 
   window.ES27 = {
-    go(t){ state.active = t; shell(); },
+    go(t){ if(!allowedScreens().includes(t)) return deny('هذه الشاشة غير متاحة لصلاحية المستخدم الحالي.'); state.active = t; shell(); },
     load,
-    hardReload(){ const url = location.pathname + '?v=es37-v1912-final-pending-search-' + Date.now() + '&name=' + encodeURIComponent(user.name) + '&username=' + encodeURIComponent(user.username) + '&token=' + encodeURIComponent(user.token || ''); location.href = url; },
+    hardReload(){ const url = location.pathname + '?v=es38-v1913-security-integrity-' + Date.now(); location.href = url; },
     quickSearch(q){ q=nkey(q); if(!q) return; const found = templates().find(r=>nkey(templateName(r)).includes(q)) || materials().find(r=>nkey(materialName(r)).includes(q)); if(found) flash('تم العثور على: ' + (templateName(found)||materialName(found))); },
-    saveSupplier(){ const s={name:val('supName'),phone:val('supPhone'),opening:num(val('supOpening')),address:val('supAddress')}; if(!s.name) return flash('اكتب اسم المورد',true); const i=state.data.suppliers.findIndex(x=>nkey(x.name||x.supplier)===nkey(s.name)); if(i>=0) state.data.suppliers[i]=s; else state.data.suppliers.unshift(s); saveLocal(); api('saveEasyStoreSupplier',s).catch(()=>{}); shell(); flash('تم حفظ المورد'); },
+    async saveSupplier(){ if(!canManageAccounting()) return deny(); const s={name:val('supName'),phone:val('supPhone'),opening:num(val('supOpening')),address:val('supAddress')}; if(!s.name) return flash('اكتب اسم المورد',true); try{ const reply=await api('saveEasyStoreSupplier',s); if(!reply||reply.success===false) throw new Error((reply&&reply.message)||'تعذر حفظ المورد'); const i=state.data.suppliers.findIndex(x=>nkey(x.name||x.supplier)===nkey(s.name)); if(i>=0) state.data.suppliers[i]=s; else state.data.suppliers.unshift(s); saveLocal(); shell(); flash('تم حفظ المورد على السيرفر'); }catch(e){ flash('لم يتم حفظ المورد: '+(e.message||e),true); } },
     editSupplier(i){ const s=state.data.suppliers[i]; if(!s) return; set('supName',s.name||s.supplier); set('supPhone',s.phone); set('supOpening',s.opening||s.openingBalance); set('supAddress',s.address); },
     filterCustomers(){ const q=nkey(val('custSearch')); const rows=(state.data.customers||[]).filter(c=>nkey([c.name,c.customerName,c.phone,c.mobile].join(' ')).includes(q)); const box=$('custTable'); if(box) box.innerHTML=customersTable(rows); },
     unlockCustomerDropdown(){ state.customerDropdownLocked=false; },
@@ -790,15 +801,16 @@
     async copySaleText(){ closeFloatingPanels(); const t=this.invoicePlainText(); try{ await navigator.clipboard.writeText(t); flash('تم نسخ نص الفاتورة'); }catch(e){ prompt('انسخ نص الفاتورة',t); } },
     openSaleWhatsApp(){ closeFloatingPanels(); const t=this.invoicePlainText(); window.open('https://wa.me/?text='+encodeURIComponent(t),'_blank'); },
     downloadSaleImage(){ closeFloatingPanels(); const canvas=document.createElement('canvas'); canvas.width=1200; canvas.height=900; const ctx=canvas.getContext('2d'); ctx.fillStyle='#fff'; ctx.fillRect(0,0,1200,900); ctx.fillStyle='#0f766e'; ctx.fillRect(0,0,1200,120); ctx.fillStyle='#fff'; ctx.font='bold 44px Arial'; ctx.textAlign='right'; ctx.fillText('فاتورة مطبعجي',1120,75); ctx.fillStyle='#111827'; ctx.font='28px Arial'; const lines=this.invoicePlainText().split('\n'); let y=170; lines.forEach(l=>{ ctx.fillText(l,1120,y); y+=42; }); const a=document.createElement('a'); a.download='matbagy-sale-'+(val('saNo')||Date.now())+'.png'; a.href=canvas.toDataURL('image/png'); a.click(); },
-    saveItem(){ const p={department:val('itDept'),itemName:val('itName'),category:val('itType')||'صنف بيع',size:val('itSize'),salePrice:num(val('itSale')),fixedCost:num(val('itCost')),computedUnitCost:num(val('itCost')),active:'نعم',recordType:'template'}; if(!p.itemName) return flash('اكتب اسم الصنف',true); const res=upsertByNameDept(state.data.templates,p,templateName,matDept); saveLocal(); api('saveAccountingTemplate',Object.assign({upsert:'1'},p)).then(r=>{ if(r&&r.success===false) return flash(r.message||'تعذر مزامنة الصنف',true); load(true); }).catch(e=>flash('تم الحفظ محليًا وتعذرت مزامنة الصنف: '+(e.message||''),true)); shell(); flash(res.updated?'الصنف موجود وتم تحديثه في الكتالوج':'تم حفظ الصنف في الكتالوج'); },
+    saveItem(){ if(!canManageAccounting()) return deny(); const p={department:val('itDept'),itemName:val('itName'),category:val('itType')||'صنف بيع',size:val('itSize'),salePrice:num(val('itSale')),fixedCost:num(val('itCost')),computedUnitCost:num(val('itCost')),active:'نعم',recordType:'template'}; if(!p.itemName) return flash('اكتب اسم الصنف',true); const res=upsertByNameDept(state.data.templates,p,templateName,matDept); saveLocal(); api('saveAccountingTemplate',Object.assign({upsert:'1'},p)).then(r=>{ if(r&&r.success===false) return flash(r.message||'تعذر مزامنة الصنف',true); load(true); }).catch(e=>flash('تم الحفظ محليًا وتعذرت مزامنة الصنف: '+(e.message||''),true)); shell(); flash(res.updated?'الصنف موجود وتم تحديثه في الكتالوج':'تم حفظ الصنف في الكتالوج'); },
     editItem(i){ const r=productTemplates()[i]; if(!r) return; set('itDept',matDept(r)); set('itName',templateName(r)); set('itType',r.category||matType(r)); set('itSize',r.size); set('itSale',matSale(r)); set('itCost',matCost(r)); },
     clearItemForm(){ ['itName','itSize','itSale','itCost'].forEach(id=>set(id,'')); },
-    archiveItem(i){ const r=productTemplates()[i]; if(!r || !confirm('إيقاف الصنف ' + templateName(r) + '؟')) return; r.active='لا'; r['مفعل']='لا'; saveLocal(); api('archiveAccountingTemplate',{itemName:templateName(r),department:matDept(r)}).catch(()=>{}); shell(); },
+    archiveItem(i){ if(!canManageAccounting()) return deny(); const r=productTemplates()[i]; if(!r || !confirm('إيقاف الصنف ' + templateName(r) + '؟')) return; r.active='لا'; r['مفعل']='لا'; saveLocal(); api('archiveAccountingTemplate',{itemName:templateName(r),department:matDept(r)}).catch(()=>{}); shell(); },
     calcPurchase(){ const total=num(val('puQty'))*num(val('puUnit')); set('puTotal',total.toFixed(2)); set('puRemain',Math.max(0,total-num(val('puPaid'))).toFixed(2)); },
-    savePurchase(){ this.calcPurchase(); const p={no:val('puNo'),supplier:val('puSupplier'),paymentType:val('puPay'),dueDate:val('puDue'),material:val('puMat'),qty:num(val('puQty')),unit:num(val('puUnit')),paid:num(val('puPaid')),total:num(val('puTotal')),remain:num(val('puRemain')),notes:val('puNotes'),date:new Date().toISOString()}; state.data.purchases.unshift(p); state.data.stockMoves.unshift({date:now(),materialName:p.material,inQty:p.qty,outQty:0,balance:'',source:'فاتورة شراء '+p.no}); saveLocal(); api('saveEasyStorePurchaseV2',p).catch(()=>{}); shell(); flash('تم حفظ فاتورة الشراء'); },
+    async savePurchase(){ if(!canManageAccounting()) return deny(); this.calcPurchase(); const p={no:val('puNo'),supplier:val('puSupplier'),paymentType:val('puPay'),dueDate:val('puDue'),material:val('puMat'),qty:num(val('puQty')),unit:num(val('puUnit')),paid:num(val('puPaid')),total:num(val('puTotal')),remain:num(val('puRemain')),notes:val('puNotes'),date:new Date().toISOString()}; if(!p.no||!p.supplier||!p.material||p.qty<=0||p.unit<0) return flash('رقم الفاتورة والمورد والخامة وكمية صحيحة مطلوبة.',true); try{ const reply=await api('saveEasyStorePurchaseV2',p); if(!reply||reply.success===false) throw new Error((reply&&reply.message)||'تعذر حفظ فاتورة الشراء'); state.data.purchases.unshift(p); state.data.stockMoves.unshift({date:now(),materialName:p.material,inQty:p.qty,outQty:0,balance:'',source:'فاتورة شراء '+p.no}); saveLocal(); shell(); flash('تم حفظ فاتورة الشراء على السيرفر'); }catch(e){ flash('لم يتم حفظ فاتورة الشراء: '+(e.message||e),true); } },
     applySaleItem(){ const r=selectedSaleTemplate(); if(!r) return; set('saUnit',matSale(r)); this.calcSale(); },
     calcSale(){ updateSaleTotalsFromPulled(); },
     async saveSale(){
+      if(!canFinalize()) return deny();
       this.calcSale();
       const r=selectedSaleTemplate();
       const lineIds=salePulledLineIds();
@@ -842,12 +854,18 @@
     },
     printSale(){ closeFloatingPanels(); const w=window.open('','_blank'); if(!w) return alert('اسمح بفتح نافذة الطباعة.'); w.document.write(this.invoiceHtml()); w.document.close(); },
     kitchenMode(mode){ const b=$('kitchenBox'); if(b) b.innerHTML = mode==='recipe' ? recipeForm() : rawForm(); },
-    saveRaw(){
+    async saveRaw(){
+      if(!canManageAccounting()) return deny();
       const p={department:val('rawDept'),materialName:val('rawName'),materialKind:materialKindLabel(val('rawKind')),materialClass:val('rawClass'),operationExpense:val('rawClass')==='مصروف تشغيل'?'نعم':'لا',operatingBand:val('rawOperatingBand'),operatingCalcMethod:val('rawOpMethod'),operatingUnitCost:num(val('rawOpCost')),unitCost:num(val('rawCost')),salePrice:num(val('rawSale')),stockQty:num(val('rawStock')),minStock:num(val('rawMin')),width:num(val('rawW')),height:num(val('rawH')),notes:val('rawNotes'),active:val('rawClass')==='متوقفة'?'لا':'نعم',recordType:'material'};
       if(!p.materialName) return flash('اكتب اسم الخامة',true);
-      const res=upsertByNameDept(state.data.materials,p,materialName,matDept);
-      recalcTemplatesLocal();
-      saveLocal(); api('saveAccountingMaterial',Object.assign({upsert:'1'},p)).catch(()=>{}); api('recalcAccountingMaterialsCascade',{}).catch(()=>{}); state.active='kitchen'; shell(); flash(res.updated?'الخامة موجودة وتم تحديثها وإعادة حساب الأصناف المرتبطة':'تم حفظ الخامة');
+      try{
+        const reply=await api('saveAccountingMaterial',Object.assign({upsert:'1'},p));
+        if(!reply||reply.success===false) throw new Error((reply&&reply.message)||'تعذر حفظ الخامة');
+        const res=upsertByNameDept(state.data.materials,p,materialName,matDept);
+        recalcTemplatesLocal(); saveLocal();
+        api('recalcAccountingMaterialsCascade',{}).catch(()=>{});
+        state.active='kitchen'; shell(); flash(res.updated?'تم تحديث الخامة على السيرفر وإعادة حساب الأصناف المرتبطة':'تم حفظ الخامة على السيرفر');
+      }catch(e){ flash('لم يتم حفظ الخامة: '+(e.message||e),true); }
     },
     editRaw(i){ state.active='kitchen'; shell(); setTimeout(()=>{ const r=materialRows()[i]; if(!r) return; set('rawDept',matDept(r)); set('rawName',materialName(r)); set('rawClass',r.materialClass||r['تصنيف الخامة']||'خامة إنتاج'); set('rawKind',materialKindLabel(matType(r))); set('rawCost',matCost(r)); set('rawSale',matSale(r)); set('rawStock',matStock(r)); set('rawMin',matMin(r)); set('rawW',r.width||r.rawWidth||r['عرض']||''); set('rawH',r.height||r.rawHeight||r['طول']||''); set('rawOperatingBand',r.operatingBand||r['بند التشغيل']||'إنتاج مباشر'); set('rawOpMethod',r.operatingCalcMethod||r['طريقة توزيع التشغيل']||'لا يوزع'); set('rawOpCost',r.operatingUnitCost||r['قيمة التشغيل']||''); set('rawNotes',r.notes||r['ملاحظات']||''); flash('تم تحميل الخامة للتعديل'); },0); },
     clearRawForm(){ ['rawName','rawCost','rawSale','rawStock','rawMin','rawW','rawH','rawOpCost','rawNotes'].forEach(id=>set(id,'')); set('rawClass','خامة إنتاج'); set('rawKind','خامة عامة'); },
@@ -858,8 +876,8 @@
     clearComps(){ state.recipeComps=[]; const c=$('compList'); if(c) c.innerHTML=compTable(); this.calcRecipe(); },
     clearRecipeForm(){ state.recipeComps=[]; ['recName','recSize','recSale','recCost','recProfit','compQty','compAiPieces','compManualPieces','compWaste','compCost'].forEach(id=>set(id,'')); set('compQty','1'); const c=$('compList'); if(c) c.innerHTML=compTable(); },
     calcRecipe(){ const current = val('compMat') && !state.recipeComps.length ? num(val('compCost')) : 0; const cost=state.recipeComps.reduce((s,c)=>s+num(c.cost),0) + current; set('recCost',cost.toFixed(2)); const g=gp(cost,num(val('recSale'))); set('recProfit',g.profit.toFixed(2)); return cost; },
-    saveRecipe(){ if(val('compMat') && !state.recipeComps.length) this.addComp(); const cost=this.calcRecipe(); const p={department:val('recDept'),itemName:val('recName'),size:val('recSize'),salePrice:num(val('recSale')),fixedCost:cost,computedUnitCost:cost,calculatedUnitCost:cost,componentsJson:JSON.stringify(state.recipeComps),category:'صنف بمكونات',recordType:'template',active:'نعم'}; if(!p.itemName) return flash('اكتب اسم الصنف',true); const res=upsertByNameDept(state.data.templates,p,templateName,matDept); saveLocal(); api('saveAccountingTemplate',Object.assign({upsert:'1'},p)).then(r=>{ if(r&&r.success===false) return flash(r.message||'تعذر مزامنة الصنف',true); load(true); }).catch(e=>flash('تم الحفظ محليًا وتعذرت مزامنة الصنف: '+(e.message||''),true)); state.active='kitchen'; shell(); flash(res.updated?'الصنف موجود وتم تحديثه في الكتالوج':'تم حفظ الصنف بمكوناته في الكتالوج'); },
-    recalcCascade(){ recalcTemplatesLocal(); saveLocal(); render(); flash('تم تحديث الأسعار المرتبطة محليًا.'); api('recalcAccountingMaterialsCascade',{}).catch(()=>{}); },
+    saveRecipe(){ if(!canManageAccounting()) return deny(); if(val('compMat') && !state.recipeComps.length) this.addComp(); const cost=this.calcRecipe(); const p={department:val('recDept'),itemName:val('recName'),size:val('recSize'),salePrice:num(val('recSale')),fixedCost:cost,computedUnitCost:cost,calculatedUnitCost:cost,componentsJson:JSON.stringify(state.recipeComps),category:'صنف بمكونات',recordType:'template',active:'نعم'}; if(!p.itemName) return flash('اكتب اسم الصنف',true); const res=upsertByNameDept(state.data.templates,p,templateName,matDept); saveLocal(); api('saveAccountingTemplate',Object.assign({upsert:'1'},p)).then(r=>{ if(r&&r.success===false) return flash(r.message||'تعذر مزامنة الصنف',true); load(true); }).catch(e=>flash('تم الحفظ محليًا وتعذرت مزامنة الصنف: '+(e.message||''),true)); state.active='kitchen'; shell(); flash(res.updated?'الصنف موجود وتم تحديثه في الكتالوج':'تم حفظ الصنف بمكوناته في الكتالوج'); },
+    recalcCascade(){ if(!canManageAccounting()) return deny(); recalcTemplatesLocal(); saveLocal(); render(); flash('تم تحديث الأسعار المرتبطة محليًا.'); api('recalcAccountingMaterialsCascade',{}).catch(()=>{}); },
     applyDeptItem(){ const r=selectedDeptTemplate(); if(!r) return; set('dlItem',templateName(r)); set('dlItemDept',matDept(r)); set('dlSystemSale',matSale(r).toFixed(2)); set('dlSale',matSale(r).toFixed(2)); const sh=$('dlSharedLine'); if(sh){ sh.checked=isSharedDeptName(matDept(r)); sh.disabled=isSharedDeptName(matDept(r)); } this.calcDept(); refreshDeptContextUi(); },
     calcDept(){ const q=num(val('dlQty'))||1, sys=num(val('dlSystemSale')), sale=num(val('dlSale')); set('dlDiff',((sale-sys)*q).toFixed(2)); },
     renderDeptSharedLines(){ const b=$('deptSharedBox'); if(b) b.innerHTML=deptSharedTable(); },
@@ -867,6 +885,7 @@
     refreshDeptContext(){ refreshDeptContextUi(); },
     approveDeptInvoiceLegacy(){ const order=val('dlOrder') || qs.get('orderId') || qs.get('order') || ''; const d=userDept(); if(!order) return flash('رقم الأوردر مطلوب للاعتماد.',true); const rows=deptReviewRows(); if(!rows.length) return flash('لا توجد بنود مسجلة للاعتماد.',true); if(!confirm('اعتماد فاتورة قسم '+d+' للأوردر '+order+'؟')) return; rows.forEach(r=>{ r.approvalStatus='معتمد من القسم'; r.billingStatus='معتمد من القسم'; r.closeStatus='معتمد من القسم'; r['حالة اعتماد القسم']='معتمد من القسم'; r['حالة الفوترة']='معتمد من القسم'; r['حالة التقفيل']='معتمد من القسم'; r.approvedBy=user.name; r.approvedAt=new Date().toISOString(); }); saveLocal(); api('approveAccountingDeptInvoice',{orderId:order,department:d,customerName:val('dlCustomer')}).then(res=>{ if(res&&res.success===false) flash(res.message||'تعذر الاعتماد على السيرفر',true); else flash((res&&res.message)||'تم اعتماد فاتورة القسم.'); }).catch(e=>flash(e.message||'تعذر اعتماد الفاتورة على السيرفر',true)); shell(); },
     async approveDeptInvoice(){
+      if(!canUseDepartment()) return deny();
       const order=val('dlOrder') || qs.get('orderId') || qs.get('order') || '';
       const d=userDept();
       if(!order) return flash('رقم الأوردر مطلوب للاعتماد.',true);
@@ -948,6 +967,7 @@
       }catch(e){ flash(e.message||'تعذر إرجاع الفاتورة للمراجعة.',true); }
     },
     async saveFinal(){
+      if(!canFinalize()) return deny();
       const order=val('fiOrder');
       if(!order) return flash('رقم الأوردر مطلوب لتقفيل الفاتورة.',true);
       const rows=(state.data.deptLines||[]).filter(isUnbilledDeptLine).filter(isDeptApprovedForFinal).filter(r=>String(rowOrderId(r)||'')===String(order||''));
@@ -966,6 +986,13 @@
     refreshFinalDebt(){ const b=$('finalCustomerDebt'); if(b) b.innerHTML=deptCustomerDebtHtml(val('fiCustomer')); },
     health(){ const h=$('healthBox'); if(h) h.innerHTML='جاري الفحص...'; api('getAccounting').then(r=>{ if(h) h.innerHTML = r && r.success!==false ? '✅ الاتصال سليم والبيانات قابلة للتحميل. الإصدار: '+VERSION : '⚠️ الرد غير ناجح: '+esc(r.message); }).catch(e=>{ if(h) h.innerHTML='❌ فشل الاتصال: '+esc(e.message); }); }
   };
+
+  function protectAction(name, allowed){
+    const original=window.ES27[name];
+    if(typeof original!=='function') return;
+    window.ES27[name]=function(){ if(!allowed()) return deny(); return original.apply(this,arguments); };
+  }
+  ['saveDeptLine','saveDeptLineAndOpenSales','saveWaste'].forEach(name=>protectAction(name,canUseDepartment));
 
 
 
