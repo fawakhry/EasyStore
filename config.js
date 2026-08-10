@@ -1,9 +1,9 @@
-// EasyStore / Matbagy Accounting - ES44 V1919 immediate department purchase stock
+// EasyStore / Matbagy Accounting - ES45 V1920 custody and department day close
 window.TREND_API_URL = "https://script.google.com/macros/s/AKfycbwGHOduL0BHvH-o4up9nbk1wYFi54D2KOnW1AFDigpBzyuAOTWzPfpSFPGSyFVj_fmTmg/exec";
 
-window.EASYSTORE_VERSION = 'ES44 V1919 Immediate Department Purchase Stock';
+window.EASYSTORE_VERSION = 'ES45 V1920 Custody & Department Day Close';
 window.EASYSTORE_SESSION_CATALOG_FIX = window.EASYSTORE_VERSION;
-window.EASYSTORE_CACHE_TAG = 'es44-v1919-immediate-department-purchase-stock-20260810';
+window.EASYSTORE_CACHE_TAG = 'es45-v1920-custody-department-day-close-20260810';
 window.EASYSTORE_AUTO_REFRESH = false; // لا يوجد تحديث كل 10 ثواني
 window.EASYSTORE_INITIAL_LOAD_ONCE = true;
 window.EASYSTORE_DISABLE_PHONE_ACTIVATION = true;
@@ -18,3 +18,4 @@ window.EASYSTORE_V1916_CUSTOMER_ACCOUNT_DRAWER = true;
 window.EASYSTORE_V1917_DAILY_DEPARTMENT_PURCHASES = true;
 window.EASYSTORE_V1918_DEPARTMENT_ACCOUNTING_SCOPE = true;
 window.EASYSTORE_V1919_IMMEDIATE_DEPARTMENT_PURCHASE_STOCK = true;
+window.EASYSTORE_V1920_CUSTODY_DEPARTMENT_DAY_CLOSE = true;
