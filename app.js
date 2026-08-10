@@ -1,7 +1,7 @@
 (function(){
   'use strict';
 
-  const VERSION = 'ES43 V1918 Department Accounting Scope';
+  const VERSION = 'ES44 V1919 Immediate Department Purchase Stock';
   window.EASYSTORE_MATBAGY_VERSION = VERSION;
 
   const app = document.getElementById('app');
@@ -298,7 +298,7 @@
   function shell(){
     app.innerHTML = `<div class="wrap">
       <div class="top">
-        <div><h1>💰 إيزي ستور مطبعجي - برنامج الحسابات ES43</h1><p>أصناف، موردين، فواتير شراء ومبيعات، مخزون، تقارير، ومطبخ الحسابات.</p><div class="versionLine">${VERSION} / app.js محمل: ${new Date().toLocaleTimeString('ar-EG')}</div></div>
+        <div><h1>💰 إيزي ستور مطبعجي - برنامج الحسابات ES44</h1><p>أصناف، موردين، فواتير شراء ومبيعات، مخزون، تقارير، ومطبخ الحسابات.</p><div class="versionLine">${VERSION} / app.js محمل: ${new Date().toLocaleTimeString('ar-EG')}</div></div>
         <div class="actions"><span class="badge">${esc(user.name)} - ${esc(roleText())}</span><button class="btn secondary" onclick="ES27.load(true)">تحديث البيانات</button><button class="btn secondary" onclick="ES27.hardReload()">تحديث البرنامج</button><button class="btn secondary" onclick="history.back()">إغلاق</button></div>
       </div>
       <div id="mainMsg" class="msg"></div>
@@ -376,6 +376,8 @@
   function dailyPurchaseStatus(r){ return String((r&&(r.status||r.reviewStatus))||'قيد مراجعة ضياء').trim(); }
   function isDailyPurchasePending(r){ const s=nkey(dailyPurchaseStatus(r)); return !s||/قيد|مراجعه|مراجعة|pending/.test(s); }
   function dailyPurchaseStatusBadge(r){ const s=dailyPurchaseStatus(r); const k=nkey(s); const cls=/مرفوض|رفض|rejected/.test(k)?'rejected':/معتمد|approved/.test(k)?'approved':'pending'; return `<span class="dailyPurchaseStatus ${cls}">${esc(s)}</span>`; }
+  function dailyPurchaseStockStatus(r){ return String((r&&(r.stockStatus||r.inventoryStatus))||(isDailyPurchasePending(r)?'مضاف فورًا':'-')).trim(); }
+  function dailyPurchaseStockBadge(r){ const s=dailyPurchaseStockStatus(r); const k=nkey(s); const cls=/عكس|ملغي/.test(k)?'rejected':/مضاف|معتمد/.test(k)?'approved':'pending'; return `<span class="dailyPurchaseStatus ${cls}">${esc(s)}</span>`; }
   function dailyPurchaseToken(value){ return encodeURIComponent(String(value||'')).replace(/'/g,'%27'); }
   function visibleDailyPurchases(){
     const rows=state.data.dailyPurchases||[];
@@ -392,7 +394,7 @@
   function dailyPurchaseEmployeeTable(){
     const rows=deptDailyPurchaseRows();
     if(!rows.length) return '<div class="empty">لم تسجل مشتريات اليوم بعد.</div>';
-    return table(rows,['الوقت','المورد','فاتورة المورد','الخامة','الكمية','سعر الوحدة','الإجمالي','الدفع','الحالة'],r=>[esc(customerAccountDate(r.createdAt)),esc(r.supplier||''),esc(r.receiptNo||'-'),esc(r.material||r.materialName||''),esc(r.qty),money(r.unit),money(r.total),esc(r.paymentType||'-'),dailyPurchaseStatusBadge(r)]);
+    return table(rows,['الوقت','المورد','فاتورة المورد','الخامة','الكمية','سعر الوحدة','الإجمالي','الدفع','المخزون','المراجعة المالية'],r=>[esc(customerAccountDate(r.createdAt)),esc(r.supplier||''),esc(r.receiptNo||'-'),esc(r.material||r.materialName||''),esc(r.qty),money(r.unit),money(r.total),esc(r.paymentType||'-'),dailyPurchaseStockBadge(r),dailyPurchaseStatusBadge(r)]);
   }
   function dailyPurchasePendingGroups(){
     const groups={};
@@ -411,8 +413,8 @@
     const total=groups.reduce((s,g)=>s+g.total,0);
     const groupHtml=groups.length?`<div class="dailyPurchaseGroups">${groups.map(g=>`<article class="dailyPurchaseGroup"><div><span>${esc(g.date)}</span><h3>${esc(g.employee)} · ${esc(g.department)}</h3><p>${g.rows.length} بند في انتظار المراجعة</p></div><div class="dailyPurchaseGroupTotal"><b>${money(g.total)}</b><button class="btn" onclick="ES27.approveDailyPurchaseBatch('${dailyPurchaseToken(g.employee)}','${esc(g.date)}')">اعتماد مشتريات اليوم</button></div></article>`).join('')}</div>`:'<div class="customerAccountSettled">✓ لا توجد مشتريات أقسام معلقة للمراجعة.</div>';
     const rows=visibleDailyPurchases().filter(r=>isDailyPurchasePending(r)||String(r.workDate||'')===dailyPurchaseTodayKey()).slice(0,150);
-    const reviewTable=rows.length?table(rows,['اليوم','الموظف','القسم','المورد','فاتورة المورد','الخامة','الكمية','السعر','الإجمالي','الدفع','الحالة','قرار'],r=>[esc(r.workDate||''),esc(dailyPurchaseEmployee(r)),esc(r.department||''),esc(r.supplier||''),esc(r.receiptNo||'-'),esc(r.material||r.materialName||''),esc(r.qty),money(r.unit),money(r.total),esc(r.paymentType||'-'),dailyPurchaseStatusBadge(r),isDailyPurchasePending(r)?`<button class="btn small danger" onclick="ES27.rejectDailyPurchase('${dailyPurchaseToken(r.id)}')">رفض</button>`:'-']):'';
-    return `<section class="card dailyPurchaseAdmin"><div class="toolbar"><div><span class="deptEyebrow">مراجعة ضياء آخر اليوم</span><h2>${esc(accountingScopeTitle('مشتريات جابر ووائل اليومية'))}</h2><p class="muted">لن تدخل المشتريات الرسمية أو المخزون إلا بعد اعتمادك.</p></div><div class="dailyPurchaseSummary"><div><span>بنود معلقة</span><b>${pending}</b></div><div><span>إجمالي معلق</span><b>${money(total)}</b></div></div></div>${groupHtml}${reviewTable}</section>`;
+    const reviewTable=rows.length?table(rows,['اليوم','الموظف','القسم','المورد','فاتورة المورد','الخامة','الكمية','السعر','الإجمالي','الدفع','المخزون','المراجعة','قرار'],r=>[esc(r.workDate||''),esc(dailyPurchaseEmployee(r)),esc(r.department||''),esc(r.supplier||''),esc(r.receiptNo||'-'),esc(r.material||r.materialName||''),esc(r.qty),money(r.unit),money(r.total),esc(r.paymentType||'-'),dailyPurchaseStockBadge(r),dailyPurchaseStatusBadge(r),isDailyPurchasePending(r)?`<button class="btn small danger" onclick="ES27.rejectDailyPurchase('${dailyPurchaseToken(r.id)}')">رفض وعكس المخزون</button>`:'-']):'';
+    return `<section class="card dailyPurchaseAdmin"><div class="toolbar"><div><span class="deptEyebrow">مراجعة ضياء آخر اليوم</span><h2>${esc(accountingScopeTitle('مشتريات جابر ووائل اليومية'))}</h2><p class="muted">المخزون مضاف فور التسجيل. اعتمادك يثبت فاتورة المورد فقط دون زيادة ثانية، والرفض يعكس الكمية إذا لم تُستهلك.</p></div><div class="dailyPurchaseSummary"><div><span>بنود معلقة</span><b>${pending}</b></div><div><span>إجمالي معلق</span><b>${money(total)}</b></div></div></div>${groupHtml}${reviewTable}</section>`;
   }
 
   function screenDeptPurchases(){
@@ -422,7 +424,7 @@
     const todayRows=rows.filter(r=>String(r.workDate||'')===today);
     const total=todayRows.reduce((s,r)=>s+num(r.total),0);
     const pending=rows.filter(isDailyPurchasePending).length;
-    return `<div class="deptInvoicePage dailyPurchasePage"><section class="deptInvoiceHero dailyPurchaseHero"><div><span class="deptEyebrow">تسجيل طوال اليوم · اعتماد ضياء آخر اليوم</span><h2>مشتريات ${esc(user.name||user.username)} اليوم</h2><p>سجل كل خامة وقت شرائها. لن يزيد المخزون ولن تتسجل فاتورة رسمية قبل مراجعة ضياء.</p></div><div class="deptHeroBadges"><span>${esc(userDept())}</span><span>${esc(today)}</span><button class="btn small secondary" onclick="ES27.go('dept')">الرجوع لفاتورة القسم</button></div></section><section class="dailyPurchaseSummary deptPurchaseStats"><div><span>بنود اليوم</span><b>${todayRows.length}</b></div><div><span>إجمالي اليوم</span><b>${money(total)}</b></div><div><span>في انتظار ضياء</span><b>${pending}</b></div></section><section class="card dailyPurchaseEditor"><div class="deptSectionTitle"><div><span>＋</span><h3>إضافة مشتريات</h3></div><small>الخامة يجب أن تكون مسجلة في مخزون EasyStore</small></div><div class="grid four"><div class="field"><label>المورد</label><input id="dpSupplier" list="dpSupplierList" placeholder="اسم المورد" oninput="ES27.resetDailyPurchaseRequest()"><datalist id="dpSupplierList">${supplierOptions()}</datalist></div><div class="field"><label>رقم فاتورة / إيصال المورد</label><input id="dpReceipt" placeholder="اختياري" oninput="ES27.resetDailyPurchaseRequest()"></div><div class="field"><label>الخامة / الصنف المشترى</label><select id="dpMaterial" onchange="ES27.resetDailyPurchaseRequest()"><option value="">اختار من المخزون</option>${dailyPurchaseMaterialOptions()}</select></div><div class="field"><label>طريقة الدفع</label><select id="dpPayment" onchange="ES27.calcDailyPurchase();ES27.resetDailyPurchaseRequest()"><option>نقدي</option><option>إنستا باي</option><option>فودافون كاش</option><option>تحويل بنكي</option><option>آجل</option></select></div></div><div class="grid four"><div class="field"><label>الكمية</label><input id="dpQty" type="number" min="0.01" step="0.01" value="1" oninput="ES27.calcDailyPurchase();ES27.resetDailyPurchaseRequest()"></div><div class="field"><label>سعر الوحدة</label><input id="dpUnit" type="number" min="0.01" step="0.01" oninput="ES27.calcDailyPurchase();ES27.resetDailyPurchaseRequest()"></div><div class="field"><label>الإجمالي</label><input id="dpTotal" readonly value="0.00"></div><div class="field"><label>المدفوع الآن</label><input id="dpPaid" readonly value="0.00"></div></div><div class="field"><label>ملاحظات</label><input id="dpNotes" placeholder="تفاصيل الشراء أو سبب الشراء" oninput="ES27.resetDailyPurchaseRequest()"></div><div class="deptInvoiceActions"><button id="dpSaveBtn" class="btn deptSaveBtn" onclick="ES27.saveDailyPurchase()">تسجيل وإرسال لضياء</button><button class="btn secondary" onclick="ES27.load(true)">تحديث مشتريات اليوم</button></div></section><section class="card deptReviewCard"><div class="deptSectionTitle"><div><span>✓</span><h3>مشتريات اليوم والمتأخرات المعلقة</h3></div><small>الحالة تتحدث بعد اعتماد ضياء</small></div>${dailyPurchaseEmployeeTable()}</section></div>`;
+    return `<div class="deptInvoicePage dailyPurchasePage"><section class="deptInvoiceHero dailyPurchaseHero"><div><span class="deptEyebrow">زيادة مخزون فورية · مراجعة ضياء آخر اليوم</span><h2>مشتريات ${esc(user.name||user.username)} اليوم</h2><p>سجل كل خامة وقت شرائها؛ رصيد مخزون قسمك يزيد فورًا لتستطيع عمل فواتير المبيعات، بينما فاتورة المورد تنتظر مراجعة ضياء.</p></div><div class="deptHeroBadges"><span>${esc(userDept())}</span><span>${esc(today)}</span><button class="btn small secondary" onclick="ES27.go('dept')">الرجوع لفاتورة القسم</button></div></section><section class="dailyPurchaseSummary deptPurchaseStats"><div><span>بنود اليوم</span><b>${todayRows.length}</b></div><div><span>إجمالي اليوم</span><b>${money(total)}</b></div><div><span>في انتظار ضياء</span><b>${pending}</b></div></section><section class="card dailyPurchaseEditor"><div class="deptSectionTitle"><div><span>＋</span><h3>إضافة مشتريات وزيادة المخزون</h3></div><small>الخامة يجب أن تكون مسجلة في مخزون EasyStore للقسم</small></div><div class="grid four"><div class="field"><label>المورد</label><input id="dpSupplier" list="dpSupplierList" placeholder="اسم المورد" oninput="ES27.resetDailyPurchaseRequest()"><datalist id="dpSupplierList">${supplierOptions()}</datalist></div><div class="field"><label>رقم فاتورة / إيصال المورد</label><input id="dpReceipt" placeholder="اختياري" oninput="ES27.resetDailyPurchaseRequest()"></div><div class="field"><label>الخامة / الصنف المشترى</label><select id="dpMaterial" onchange="ES27.resetDailyPurchaseRequest()"><option value="">اختار من المخزون</option>${dailyPurchaseMaterialOptions()}</select></div><div class="field"><label>طريقة الدفع</label><select id="dpPayment" onchange="ES27.calcDailyPurchase();ES27.resetDailyPurchaseRequest()"><option>نقدي</option><option>إنستا باي</option><option>فودافون كاش</option><option>تحويل بنكي</option><option>آجل</option></select></div></div><div class="grid four"><div class="field"><label>الكمية</label><input id="dpQty" type="number" min="0.01" step="0.01" value="1" oninput="ES27.calcDailyPurchase();ES27.resetDailyPurchaseRequest()"></div><div class="field"><label>سعر الوحدة</label><input id="dpUnit" type="number" min="0.01" step="0.01" oninput="ES27.calcDailyPurchase();ES27.resetDailyPurchaseRequest()"></div><div class="field"><label>الإجمالي</label><input id="dpTotal" readonly value="0.00"></div><div class="field"><label>المدفوع الآن</label><input id="dpPaid" readonly value="0.00"></div></div><div class="field"><label>ملاحظات</label><input id="dpNotes" placeholder="تفاصيل الشراء أو سبب الشراء" oninput="ES27.resetDailyPurchaseRequest()"></div><div class="deptInvoiceActions"><button id="dpSaveBtn" class="btn deptSaveBtn" onclick="ES27.saveDailyPurchase()">تسجيل وزيادة المخزون الآن</button><button class="btn secondary" onclick="ES27.load(true)">تحديث مشتريات اليوم</button></div></section><section class="card deptReviewCard"><div class="deptSectionTitle"><div><span>✓</span><h3>مشتريات اليوم والمتأخرات المعلقة</h3></div><small>المخزون مضاف؛ المراجعة المالية عند ضياء</small></div>${dailyPurchaseEmployeeTable()}</section></div>`;
   }
 
   function screenPurchase(){
@@ -899,7 +901,7 @@
       state.recipeComps=[]; state.salePulledLines=[]; state.purchaseRequestId='';
       shell(); flash('تم فتح '+accountingScopeLabel()+'.');
     },
-    hardReload(){ const url = location.pathname + '?v=es43-v1918-department-accounting-scope-' + Date.now(); location.href = url; },
+    hardReload(){ const url = location.pathname + '?v=es44-v1919-immediate-department-purchase-stock-' + Date.now(); location.href = url; },
     quickSearch(q){ q=nkey(q); if(!q) return; const found = templates().find(r=>nkey(templateName(r)).includes(q)) || materials().find(r=>nkey(materialName(r)).includes(q)); if(found) flash('تم العثور على: ' + (templateName(found)||materialName(found))); },
     async saveSupplier(){ if(!canManageAccounting()) return deny(); const s={name:val('supName'),phone:val('supPhone'),opening:num(val('supOpening')),address:val('supAddress')}; if(!s.name) return flash('اكتب اسم المورد',true); try{ const reply=await api('saveEasyStoreSupplier',s); if(!reply||reply.success===false) throw new Error((reply&&reply.message)||'تعذر حفظ المورد'); const i=state.data.suppliers.findIndex(x=>nkey(x.name||x.supplier)===nkey(s.name)); if(i>=0) state.data.suppliers[i]=s; else state.data.suppliers.unshift(s); saveLocal(); shell(); flash('تم حفظ المورد على السيرفر'); }catch(e){ flash('لم يتم حفظ المورد: '+(e.message||e),true); } },
     editSupplier(i){ const s=state.data.suppliers[i]; if(!s) return; set('supName',s.name||s.supplier); set('supPhone',s.phone); set('supOpening',s.opening||s.openingBalance); set('supAddress',s.address); },
@@ -946,7 +948,7 @@
       const button=$('caSaveBtn');
       if(button){button.disabled=true;button.textContent='جاري الحفظ...';}
       try{
-        const reply=await api('saveCustomerAccountMovementV1915',{customerName:name,operation,amount,paymentMethod:method,refNo,notes,requestId:state.customerAccountRequestId,source:'EasyStore ES43'});
+        const reply=await api('saveCustomerAccountMovementV1915',{customerName:name,operation,amount,paymentMethod:method,refNo,notes,requestId:state.customerAccountRequestId,source:'EasyStore ES44'});
         if(!reply || reply.success===false) throw new Error((reply&&reply.message)||'تعذر حفظ حركة العميل.');
         let account=null;
         try{ account=await api('getCustomerAccountV1915',{customerName:name}); }catch(refreshError){}
@@ -1037,6 +1039,13 @@
         if(!reply||reply.success===false) throw new Error((reply&&reply.message)||'تعذر تسجيل مشتريات اليوم.');
         state.dailyPurchaseRequestId='';
         if(reply.purchase && !(state.data.dailyPurchases||[]).some(r=>nkey(r.id)===nkey(reply.purchase.id))) state.data.dailyPurchases.unshift(reply.purchase);
+        if(!reply.duplicatePrevented && Number.isFinite(Number(reply.stockAfter))){
+          const wantedName=nkey(p.material), wantedDept=nkey(userDept());
+          const candidates=materialRows().filter(r=>nkey(materialName(r))===wantedName);
+          const materialRow=candidates.find(r=>nkey(matDept(r))===wantedDept)||candidates.find(r=>/مشترك|عام/.test(nkey(matDept(r))));
+          if(materialRow){ materialRow.stockQty=num(reply.stockAfter); materialRow.stock=num(reply.stockAfter); materialRow.balance=num(reply.stockAfter); materialRow['رصيد المخزن']=num(reply.stockAfter); }
+          state.data.stockMoves.unshift({date:now(),department:userDept(),materialName:p.material,inQty:p.qty,outQty:0,balance:num(reply.stockAfter),source:'مشتريات اليوم - مخزون فوري'});
+        }
         saveLocal(); shell(); flash(reply.message||'تم إرسال المشتريات لمراجعة ضياء.');
       }catch(e){ if(button){button.disabled=false;button.textContent='إعادة محاولة التسجيل';} flash(e.message||'تعذر تسجيل مشتريات اليوم.',true); }
     },
@@ -1045,7 +1054,7 @@
       let employee=''; try{employee=decodeURIComponent(String(encodedEmployee||''));}catch(e){employee=String(encodedEmployee||'');}
       const group=dailyPurchasePendingGroups().find(g=>nkey(g.employee)===nkey(employee)&&String(g.date)===String(workDate));
       if(!group||!group.rows.length) return flash('لا توجد مشتريات معلقة لهذه المجموعة.',true);
-      if(!confirm('اعتماد '+group.rows.length+' بند مشتريات لـ '+employee+' بإجمالي '+money(group.total)+'؟\nسيتم تحديث المخزون وحسابات الموردين.')) return;
+      if(!confirm('اعتماد '+group.rows.length+' بند مشتريات لـ '+employee+' بإجمالي '+money(group.total)+'؟\nالمخزون مضاف بالفعل ولن يزيد مرة ثانية؛ سيتم تثبيت فواتير الموردين فقط.')) return;
       try{
         const reply=await api('approveDeptDailyPurchasesV1917',{employee,workDate,requestId:'DPP-BATCH-'+workDate+'-'+nkey(employee)});
         if(!reply||reply.success===false) throw new Error((reply&&reply.message)||'تعذر اعتماد مشتريات اليوم.');
@@ -1055,7 +1064,7 @@
     async rejectDailyPurchase(encodedId){
       if(!isAdmin()) return deny('رفض مشتريات الأقسام عند ضياء فقط.');
       let id=''; try{id=decodeURIComponent(String(encodedId||''));}catch(e){id=String(encodedId||'');}
-      if(!id||!confirm('رفض بند المشتريات هذا؟ لن يتغير المخزون أو حساب المورد.')) return;
+      if(!id||!confirm('رفض بند المشتريات هذا؟\nسيتم عكس الكمية من المخزون. إذا كان القسم استهلكها فلن يسمح النظام بالرفض.')) return;
       try{ const reply=await api('rejectDeptDailyPurchaseV1917',{id,reason:'مرفوض من ضياء بعد المراجعة'}); if(!reply||reply.success===false) throw new Error((reply&&reply.message)||'تعذر رفض البند.'); await load(true); flash(reply.message||'تم رفض البند.'); }catch(e){ flash(e.message||'تعذر رفض البند.',true); }
     },
     calcPurchase(){ const total=num(val('puQty'))*num(val('puUnit')); set('puTotal',total.toFixed(2)); set('puRemain',Math.max(0,total-num(val('puPaid'))).toFixed(2)); },
@@ -1157,7 +1166,7 @@
       }catch(e){ flash(e.message||'تعذر اعتماد الفاتورة على السيرفر.',true); }
     },
     toggleLaserCalc(){ const b=$('laserCalcBox'); if(b) b.classList.toggle('hidden'); },
-    async saveDeptLineAndOpenSales(){ const order=encodeURIComponent(val('dlOrder')); const customer=encodeURIComponent(val('dlCustomer')); const saved=await this.saveDeptLine(); if(saved) location.href='?screen=sales&orderId='+order+'&customer='+customer+'&v=es43-v1918-department-accounting-scope'; },
+    async saveDeptLineAndOpenSales(){ const order=encodeURIComponent(val('dlOrder')); const customer=encodeURIComponent(val('dlCustomer')); const saved=await this.saveDeptLine(); if(saved) location.href='?screen=sales&orderId='+order+'&customer='+customer+'&v=es44-v1919-immediate-department-purchase-stock'; },
     async saveDeptLine(){ this.calcDept(); const tpl=selectedDeptTemplate(); const itemDept=tpl?matDept(tpl):val('dlItemDept'); const shared=($('dlSharedLine')&&$('dlSharedLine').checked)||isSharedDeptName(itemDept); const unitSale=num(val('dlSale')); const qty=num(val('dlQty'))||1; const quote=state.laserQuote||{}; const p={lineId:'DLINE-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,6),orderId:val('dlOrder'),customerName:val('dlCustomer'),department:userDept(),itemDepartment:itemDept||userDept(),sharedLine:shared?'نعم':'لا',billingStatus:'مسجل - قيد مراجعة القسم',closeStatus:'قيد مراجعة القسم',approvalStatus:'قيد مراجعة القسم',catalogItemId:tpl?(tpl.id||tpl.ID||tpl.catalogItemId||''):'',templateId:tpl?(tpl.id||tpl.ID||''):'',materialName:quote.materialName||(tpl?(tpl.materialName||tpl['الخامة']||''):''),itemName:val('dlItem'),qty:qty,systemSale:num(val('dlSystemSale')),systemSalePrice:num(val('dlSystemSale')),sale:unitSale,salePrice:unitSale,unitSalePrice:unitSale,lineTotal:unitSale*qty,diff:num(val('dlDiff')),laserDetailsJson:Object.keys(quote).length?JSON.stringify(quote):'',consumedAreaTotal:num(quote.consumedAreaTotal),wastePercent:num(quote.wastePercent),notes:val('dlNotes'),user:user.name,date:new Date().toISOString()}; if(!p.customerName||!p.orderId||!p.itemName){ flash('اسم العميل ورقم الأوردر والصنف مطلوبين.',true); return false; } if(shared){ const dup=(state.data.deptLines||[]).find(x=>isSharedLineRecord(x)&&sameDeptInvoiceContext(x,p.orderId,p.customerName)&&nkey(rowItem(x))===nkey(p.itemName)&&isUnbilledDeptLine(x)); if(dup){ flash('البند المشترك مسجل بالفعل بواسطة '+rowDept(dup)+' وسيظهر تلقائيًا عند القسم الآخر. لا تسجله مرتين.',true); return false; } } try{ const reply=await api('saveAccountingDeptLine',p); if(!reply||reply.success===false) throw new Error((reply&&reply.message)||'تعذر حفظ مسودة القسم'); if(reply.lineId){p.id=reply.lineId;p.ID=reply.lineId;} state.data.deptLines.unshift(p); if(p.diff) state.data.wasteLines.unshift({department:p.department,orderId:p.orderId,reason:'فرق سعر عن السيستم',amount:p.diff,paid:0}); saveLocal(); state.laserQuote=null; set('dlItemSel',''); set('dlItem',''); set('dlItemDept',''); set('dlSystemSale',''); set('dlSale',''); set('dlDiff',''); set('dlNotes',''); set('dlQty','1'); refreshDeptContextUi(); flash(shared?'تم حفظ بند مشترك في مسودة القسم وسيظهر عند القسم الآخر':'تم حفظ البند في مسودة فاتورة القسم. يمكنك إضافة بند جديد ثم الاعتماد.'); return true; }catch(e){ flash('لم يتم حفظ مسودة القسم: '+(e.message||e),true); return false; } },
     async aiLaser(){
       const material=val('aiMat'), w=num(val('aiW')), h=num(val('aiH')), q=num(val('aiQty'))||1, waste=num(val('aiWaste')), customerUnitSale=num(val('aiUnitSale'));

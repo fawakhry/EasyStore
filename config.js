@@ -1,9 +1,9 @@
-// EasyStore / Matbagy Accounting - ES43 V1918 department accounting scope
+// EasyStore / Matbagy Accounting - ES44 V1919 immediate department purchase stock
 window.TREND_API_URL = "https://script.google.com/macros/s/AKfycbwGHOduL0BHvH-o4up9nbk1wYFi54D2KOnW1AFDigpBzyuAOTWzPfpSFPGSyFVj_fmTmg/exec";
 
-window.EASYSTORE_VERSION = 'ES43 V1918 Department Accounting Scope';
+window.EASYSTORE_VERSION = 'ES44 V1919 Immediate Department Purchase Stock';
 window.EASYSTORE_SESSION_CATALOG_FIX = window.EASYSTORE_VERSION;
-window.EASYSTORE_CACHE_TAG = 'es43-v1918-department-accounting-scope-20260810';
+window.EASYSTORE_CACHE_TAG = 'es44-v1919-immediate-department-purchase-stock-20260810';
 window.EASYSTORE_AUTO_REFRESH = false; // لا يوجد تحديث كل 10 ثواني
 window.EASYSTORE_INITIAL_LOAD_ONCE = true;
 window.EASYSTORE_DISABLE_PHONE_ACTIVATION = true;
@@ -17,3 +17,4 @@ window.EASYSTORE_V1915_CUSTOMER_ACCOUNTS = true;
 window.EASYSTORE_V1916_CUSTOMER_ACCOUNT_DRAWER = true;
 window.EASYSTORE_V1917_DAILY_DEPARTMENT_PURCHASES = true;
 window.EASYSTORE_V1918_DEPARTMENT_ACCOUNTING_SCOPE = true;
+window.EASYSTORE_V1919_IMMEDIATE_DEPARTMENT_PURCHASE_STOCK = true;
