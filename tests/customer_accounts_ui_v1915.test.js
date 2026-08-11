@@ -11,6 +11,12 @@ function makeStorage(initial) {
     removeItem: key => { delete values[key]; }
   };
 }
+function scopedDataKey(user) {
+  const raw=String(user.token||'');let hash=2166136261;
+  for(let i=0;i<raw.length;i++){hash^=raw.charCodeAt(i);hash=Math.imul(hash,16777619);}
+  const name=String(user.username||user.name||'employee').toLowerCase().replace(/[إأآا]/g,'ا').replace(/[ى]/g,'ي').replace(/[ةه]/g,'ه').replace(/[ؤ]/g,'و').replace(/[ئ]/g,'ي').trim().replace(/\s+/g,'_');
+  return 'EASYSTORE_CLEAN_V1880_DATA_'+name+'_'+(hash>>>0).toString(36);
+}
 
 function createApp(role) {
   const screen = { innerHTML: '' };
@@ -24,10 +30,9 @@ function createApp(role) {
     ? { username: 'ضياء', name: 'ضياء', mode: 'full', token: 'token' }
     : { username: 'رحمة', name: 'رحمة', mode: 'final', token: 'token' };
   const customer = { name: 'عميل اختبار', phone: '01000000000', type: 'جملة', debt: 30, currentBalance: 30 };
-  const storage = makeStorage({
-    MATBAGY_EMPLOYEE_SSO: JSON.stringify({ user }),
-    EASYSTORE_CLEAN_V1880_DATA: JSON.stringify({ customers: [customer] })
-  });
+  const initialStorage={MATBAGY_EMPLOYEE_SSO:JSON.stringify({user})};
+  initialStorage[scopedDataKey(user)]=JSON.stringify({customers:[customer]});
+  const storage = makeStorage(initialStorage);
   const body = {
     appendChild(element) {
       element.parentNode = body;

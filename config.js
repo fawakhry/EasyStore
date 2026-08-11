@@ -1,10 +1,10 @@
-// EasyStore / Matbagy Accounting - ES45 V1920 custody and department day close
+// EasyStore / Matbagy Accounting - ES46 V1921 semi-automatic accounting
 window.TREND_API_URL = "https://script.google.com/macros/s/AKfycbwGHOduL0BHvH-o4up9nbk1wYFi54D2KOnW1AFDigpBzyuAOTWzPfpSFPGSyFVj_fmTmg/exec";
 
-window.EASYSTORE_VERSION = 'ES45 V1920 Custody & Department Day Close';
+window.EASYSTORE_VERSION = 'ES46 V1921 Semi-Automatic Accounting';
 window.EASYSTORE_SESSION_CATALOG_FIX = window.EASYSTORE_VERSION;
-window.EASYSTORE_CACHE_TAG = 'es45-v1920-custody-department-day-close-20260810';
-window.EASYSTORE_AUTO_REFRESH = false; // لا يوجد تحديث كل 10 ثواني
+window.EASYSTORE_CACHE_TAG = 'es46-v1921-semi-automatic-accounting-20260811a';
+window.EASYSTORE_AUTO_REFRESH = 'safe-3-minutes-when-clean';
 window.EASYSTORE_INITIAL_LOAD_ONCE = true;
 window.EASYSTORE_DISABLE_PHONE_ACTIVATION = true;
 window.EASYSTORE_FULL_ACCOUNTING = true;
@@ -19,3 +19,4 @@ window.EASYSTORE_V1917_DAILY_DEPARTMENT_PURCHASES = true;
 window.EASYSTORE_V1918_DEPARTMENT_ACCOUNTING_SCOPE = true;
 window.EASYSTORE_V1919_IMMEDIATE_DEPARTMENT_PURCHASE_STOCK = true;
 window.EASYSTORE_V1920_CUSTODY_DEPARTMENT_DAY_CLOSE = true;
+window.EASYSTORE_V1921_SEMI_AUTOMATIC_ACCOUNTING = true;

@@ -1,7 +1,7 @@
 (function(){
   'use strict';
 
-  const VERSION = 'ES45 V1920 Custody & Department Day Close';
+  const VERSION = 'ES46 V1921 Semi-Automatic Accounting';
   window.EASYSTORE_MATBAGY_VERSION = VERSION;
 
   const app = document.getElementById('app');
@@ -22,11 +22,11 @@
     const hp = handoff.params || {};
     const hu = handoff.user || {};
     return {
-      name: hp.name || hp.username || hu.name || hu.username || 'موظف',
-      username: hp.username || hp.name || hu.username || hu.name || 'employee',
-      token: hp.token || hu.token || '',
-      mode: hp.mode || hp.roleMode || hu.mode || hu.roleMode || '',
-      department: hp.department || hu.department || ''
+      name: hp.name || hp.username || hu.name || hu.username || qs.get('name') || qs.get('username') || 'موظف',
+      username: hp.username || hp.name || hu.username || hu.name || qs.get('username') || qs.get('name') || 'employee',
+      token: hp.token || hu.token || qs.get('token') || '',
+      mode: hp.mode || hp.roleMode || hu.mode || hu.roleMode || qs.get('mode') || qs.get('roleMode') || '',
+      department: hp.department || hu.department || qs.get('department') || ''
     };
   }
 
@@ -87,11 +87,17 @@
     },
     recipeComps: [], salePulledLines: [], saleSelectedCustomer: null, saleCustomerContext: null, customerSearchTimer: null, customerSearchSeq: 0, customerDropdownLocked: false,
     laserQuote: null, saleRequestId: '', finalRequestId: '', purchaseRequestId: '', dailyPurchaseRequestId: '',
-    customerAccount: null, customerAccountSelected: '', customerAccountRequestId: '', dailyReport: null, dailyReportDate: '', dailyReportDepartment: 'ليزر'
+    customerAccount: null, customerAccountSelected: '', customerAccountRequestId: '', dailyReport: null, dailyReportDate: '', dailyReportDepartment: 'ليزر',
+    automationPreview: null, lastLoadedAt: 0, formDirty: false
   };
 
-  function saveLocal(){ localStorage.setItem(STORE_KEY, JSON.stringify(state.data)); }
-  function loadLocal(){ try{ return JSON.parse(localStorage.getItem(STORE_KEY) || '{}'); }catch(e){ return {}; } }
+  function sessionCacheKey(){
+    const raw=String(user.token||'');let hash=2166136261;
+    for(let i=0;i<raw.length;i++){hash^=raw.charCodeAt(i);hash=Math.imul(hash,16777619);}
+    return STORE_KEY+'_'+nkey(user.username||user.name||'employee').replace(/\s+/g,'_')+'_'+(raw?(hash>>>0).toString(36):'no_session');
+  }
+  function saveLocal(){ try{ if(user.token) localStorage.setItem(sessionCacheKey(), JSON.stringify(state.data)); }catch(e){} }
+  function loadLocal(){ try{ return user.token ? JSON.parse(localStorage.getItem(sessionCacheKey()) || '{}') : {}; }catch(e){ return {}; } }
   function mergeData(d){
     const local = loadLocal();
     state.data = Object.assign({materials:[],templates:[],suppliers:[],purchases:[],dailyPurchases:[],sales:[],customers:[],stockMoves:[],wasteLines:[],deptLines:[],finalInvoices:[],custodyEntries:[],custodySummary:[],departmentDayCloses:[],unclassifiedRows:[],summary:{}}, local, d || {});
@@ -301,7 +307,7 @@
   function shell(){
     app.innerHTML = `<div class="wrap">
       <div class="top">
-        <div><h1>💰 إيزي ستور مطبعجي - برنامج الحسابات ES44</h1><p>أصناف، موردين، فواتير شراء ومبيعات، مخزون، تقارير، ومطبخ الحسابات.</p><div class="versionLine">${VERSION} / app.js محمل: ${new Date().toLocaleTimeString('ar-EG')}</div></div>
+        <div><h1>💰 إيزي ستور مطبعجي - برنامج الحسابات ES46</h1><p>أصناف، موردين، فواتير شراء ومبيعات، مخزون، تقارير، ومطبخ الحسابات.</p><div class="versionLine">${VERSION} / app.js محمل: ${new Date().toLocaleTimeString('ar-EG')}</div></div>
         <div class="actions"><span class="badge">${esc(user.name)} - ${esc(roleText())}</span><button class="btn secondary" onclick="ES27.load(true)">تحديث البيانات</button><button class="btn secondary" onclick="ES27.hardReload()">تحديث البرنامج</button><button class="btn secondary" onclick="history.back()">إغلاق</button></div>
       </div>
       <div id="mainMsg" class="msg"></div>
@@ -329,9 +335,11 @@
   function screenDashboard(){
     const sales = accountingScopeSalesTotal();
     const purchases = scopedPurchases().reduce((s,r)=>s+num(r.total||r.amount),0);
+    const actualCost = scopedBilledDeptLines().reduce((s,r)=>s+lineCostTotal(r),0);
+    const waste = scopedWasteLines().reduce((s,r)=>s+num(r.amount||r.wasteAmount||r.remain),0);
     const lows = scopedMaterials().filter(m=>activeRow(m)&&matMin(m)>0&&matStock(m)<=matMin(m));
     const salesLabel=state.accountingScope==='all'?'مبيعات مسجلة':'مبيعات القسم المقفولة';
-    return `<div class="card"><div class="toolbar"><h2>${esc(accountingScopeTitle('لوحة الحسابات'))}</h2><input class="searchInput" placeholder="بحث سريع" oninput="ES27.quickSearch(this.value)"></div><div class="grid four"><div class="kpi"><b>${money(sales)}</b><span>${salesLabel}</span></div><div class="kpi"><b>${money(purchases)}</b><span>مشتريات مسجلة</span></div><div class="kpi"><b>${money(sales-purchases)}</b><span>صافي تقديري</span></div><div class="kpi"><b>${lows.length}</b><span>خامات تحت الحد</span></div></div><div class="quickbar"><button class="btn" onclick="ES27.go('items')">الأصناف</button><button class="btn" onclick="ES27.go('purchase')">فاتورة شراء</button><button class="btn" onclick="ES27.go('sales')">فاتورة مبيعات</button><button class="btn" onclick="ES27.go('kitchen')">مطبخ الحسابات</button><button class="btn secondary" onclick="ES27.load(true)">تحديث الآن</button></div></div>${lows.length?'<div class="card"><h3>تنبيهات النواقص</h3>'+table(lows,['الخامة','الرصيد','حد النقص','القسم'],r=>[esc(materialName(r)),esc(matStock(r)),esc(matMin(r)),esc(matDept(r))])+'</div>':''}`;
+    return `<div class="card"><div class="toolbar"><h2>${esc(accountingScopeTitle('لوحة الحسابات'))}</h2><input class="searchInput" placeholder="بحث سريع" oninput="ES27.quickSearch(this.value)"></div><div class="grid four"><div class="kpi"><b>${money(sales)}</b><span>${salesLabel}</span></div><div class="kpi"><b>${money(actualCost)}</b><span>تكلفة الشغل الفعلية</span></div><div class="kpi"><b>${money(sales-actualCost-waste)}</b><span>الربح الفعلي</span></div><div class="kpi"><b>${lows.length}</b><span>خامات تحت الحد</span></div></div><div class="hint">مشتريات الفترة: ${money(purchases)} — للمتابعة فقط ولا تُخصم مرة ثانية من الربح.</div><div class="quickbar"><button class="btn" onclick="ES27.go('items')">الأصناف</button><button class="btn" onclick="ES27.go('purchase')">فاتورة شراء</button><button class="btn" onclick="ES27.go('sales')">فاتورة مبيعات</button><button class="btn" onclick="ES27.go('dailyClose')">مركز متابعة اليوم</button><button class="btn secondary" onclick="ES27.load(true)">تحديث الآن</button></div></div>${isAdmin()?automationCenterHtml():''}${lows.length?'<div class="card"><h3>تنبيهات النواقص</h3>'+table(lows,['الخامة','الرصيد','حد النقص','القسم'],r=>[esc(materialName(r)),esc(matStock(r)),esc(matMin(r)),esc(matDept(r))])+'</div>':''}`;
   }
 
   function screenSuppliers(){
@@ -750,11 +758,12 @@
     const qCustomer = esc(qs.get('customer') || qs.get('customerName') || '');
     return `<div class="card"><h2>فاتورة مبيعات موحدة</h2>
       <div class="hint">وائل وجابر يسجلوا بنود كل قسم، والبند المشترك يظهر للطرف الآخر. ضياء/رحمه/ريفان من هنا يسحبوا فاتورتي القسمين ويقفلوهم كفاتورة واحدة للعميل.</div>
-      <div class="grid four">
+      <div class="grid five">
         <div class="field"><label>رقم الفاتورة</label><input id="saNo" value="SAL-${Date.now().toString().slice(-6)}"></div>
         <div class="field customerField"><label>العميل</label><input id="saCustomer" value="${qCustomer}" autocomplete="off" onfocus="ES27.focusSaleCustomer()" oninput="ES27.searchSaleCustomers(this.value)" onkeydown="ES27.unlockCustomerDropdown()"><div id="saCustomerDrop" class="customerDrop hidden"></div></div>
         <div class="field"><label>رقم الأوردر</label><input id="saOrder" value="${qOrder}" oninput="ES27.refreshSaleCustomerContext()"></div>
         <div class="field"><label>نوع الدفع</label><select id="saPay"><option>نقدي</option><option>آجل</option><option>جزئي</option></select></div>
+        <div class="field"><label>القسم المالي</label><select id="saDept">${accountingDeptOptions(accountingScopeDepartment()||'ليزر',false)}</select></div>
       </div>
       <div id="saleCustomerContext" class="saleCustomerContext">اختار العميل لتحميل فاتورته الحالية وبنود وائل وجابر.</div>
       <div class="grid six">
@@ -789,6 +798,18 @@
     if(!r) return '<div class="empty">اختر التاريخ والقسم واضغط «عرض التقرير».</div>';
     return `<div class="dailyReportReady"><div class="grid four"><div class="kpi"><b>${money(r.sales)}</b><span>مبيعات اليوم</span></div><div class="kpi"><b>${money(r.actualJobCost)}</b><span>تكلفة الشغل الفعلية</span></div><div class="kpi"><b>${money(r.netWaste)}</b><span>صافي الهوالك</span></div><div class="kpi profitKpi"><b>${money(r.profit)}</b><span>الربح الفعلي</span></div></div><div class="grid four"><div class="kpi"><b>${money(r.purchases)}</b><span>مشتريات اليوم (معلومة)</span></div><div class="kpi"><b>${money(r.cash)}</b><span>نقدي</span></div><div class="kpi"><b>${money(r.instapay)}</b><span>إنستا باي</span></div><div class="kpi"><b>${money(r.credit)}</b><span>آجل</span></div></div><div class="grid four"><div class="kpi"><b>${money(r.receipts)}</b><span>القبض</span></div><div class="kpi"><b>${money(r.payments)}</b><span>الدفع</span></div><div class="kpi"><b>${money(r.custodyHanded)}</b><span>العهد المسلمة</span></div><div class="kpi"><b>${money(r.custodyBalance)}</b><span>رصيد العهد قبل التقفيل</span></div></div>${r.unclassifiedSales||r.unclassifiedPurchases?`<div class="warn">بيانات غير مصنفة تظهر في «كل الأقسام» فقط: مبيعات ${money(r.unclassifiedSales)} / مشتريات ${money(r.unclassifiedPurchases)}. افتح شاشة «تصنيف القديم» لإدخالها في تقرير القسم.</div>`:''}</div>`;
   }
+  function automationCenterHtml(){
+    const p=state.automationPreview;
+    if(!p) return `<section class="card"><div class="toolbar"><div><h3>مركز متابعة اليوم</h3><p class="muted">يجمع المشتريات المعلقة، الفواتير غير المقفولة، العهد، والتصنيف في مكان واحد.</p></div><button class="btn secondary" onclick="ES27.loadAutomationPreview()">فحص اليوم</button></div></section>`;
+    const pending=(p.pendingPurchases||[]).length,lines=(p.openDeptLines||[]).length,custody=(p.openCustodies||[]).length,unclassified=(p.unclassified||[]).length;
+    return `<section class="card automationCenter"><div class="toolbar"><div><h3>مركز متابعة اليوم · ${esc(p.workDate||'')}</h3><p class="muted">تحديث آمن شبه تلقائي؛ القرارات المالية الحساسة تظل بموافقة ضياء.</p></div><span class="pill ${p.ready?'':'warn'}">${p.ready?'جاهز للتقفيل':'يحتاج مراجعة'}</span></div><div class="grid four"><div class="kpi"><b>${pending}</b><span>مشتريات معلقة</span></div><div class="kpi"><b>${lines}</b><span>بنود تحتاج اعتماد/تقفيل</span></div><div class="kpi"><b>${custody}</b><span>عهد مفتوحة</span></div><div class="kpi"><b>${unclassified}</b><span>سجلات غير مصنفة</span></div></div>${(p.blockers||[]).length?`<div class="warn">${p.blockers.map(esc).join(' — ')}</div>`:`<div class="hint">لا توجد موانع محاسبية. يمكن تنفيذ التقفيل الكامل بموافقة واحدة.</div>`}<div class="actions"><button class="btn" onclick="ES27.go('dailyClose')">فتح متابعة وتقفيل اليوم</button>${unclassified?'<button class="btn secondary" onclick="ES27.go(\'legacy\')">مراجعة التصنيف</button>':''}<button class="btn secondary" onclick="ES27.loadAutomationPreview()">إعادة الفحص</button></div></section>`;
+  }
+  function automationPreviewHtml(){
+    const p=state.automationPreview;
+    if(!p)return '<div class="empty">جاري تجهيز مراجعة اليوم...</div>';
+    const closed=p.closedDepartments||[],blocks=p.blockers||[];
+    return `<div class="automationReview"><div class="grid four"><div class="kpi"><b>${(p.pendingPurchases||[]).length}</b><span>مشتريات تنتظر قرارك</span></div><div class="kpi"><b>${(p.openDeptLines||[]).length}</b><span>بنود لم تدخل فاتورة نهائية</span></div><div class="kpi"><b>${(p.custodySettlementRequired||[]).length}</b><span>عهد تحتاج تأكيد مبلغ</span></div><div class="kpi"><b>${(p.unclassified||[]).length}</b><span>سجلات غير مصنفة</span></div></div><div class="softBox"><b>حالة التقفيل:</b> ليزر ${closed.includes('ليزر')?'✅':'⏳'} · طباعة ${closed.includes('طباعة')?'✅':'⏳'} · الإجمالي ${closed.includes('كل الأقسام')?'✅':'⏳'}</div>${blocks.length?`<div class="warn"><b>التقفيل متوقف بأمان:</b> ${blocks.map(esc).join(' — ')}</div>`:`<div class="hint">سيغلق النظام العهد المتوازنة، ثم الليزر والطباعة، ثم الإجمالي.</div>`}<div class="actions"><button class="btn secondary" onclick="ES27.loadAutomationPreview()">فحص الآن</button><button class="btn" ${blocks.length?'disabled':''} onclick="ES27.runDayAutomation()">تقفيل اليوم كله بموافقة واحدة</button></div>${(p.lowStock||[]).length?`<div class="warn">تنبيه مخزون: ${(p.lowStock||[]).length} خامة وصلت إلى حد النقص أو أقل.</div>`:''}</div>`;
+  }
   function custodyAdminTable(){
     const rows=state.data.custodySummary||[];
     if(!rows.length) return '<div class="empty">لا توجد عهد أو مشتريات أقسام لهذا اليوم.</div>';
@@ -801,13 +822,14 @@
   function screenDailyClose(){
     if(!isAdmin()) return '<div class="card"><h2>تقفيل الأقسام والعهد عند ضياء فقط.</h2></div>';
     const date=state.dailyReportDate||dailyPurchaseTodayKey(),dept=state.dailyReportDepartment||'ليزر';
-    return `<section class="deptInvoiceHero"><div><span class="deptEyebrow">دورة نهاية اليوم</span><h2>العهدة وتقفيل الأقسام</h2><p>اقفل عهد جابر ووائل، ثم الليزر والطباعة، وبعدهما التقفيل الإجمالي للمكان.</p></div></section><section class="card"><h3>تسليم عهدة مشتريات</h3><div class="grid five"><div class="field"><label>الموظف</label><select id="cuEmployee" onchange="set('cuDept',this.value==='جابر'?'ليزر':'طباعة')"><option>جابر</option><option>وائل</option></select></div><div class="field"><label>القسم</label><select id="cuDept">${accountingDeptOptions('ليزر',false)}</select></div><div class="field"><label>المبلغ</label><input id="cuAmount" type="number" min="0"></div><div class="field"><label>طريقة التسليم</label><select id="cuMethod"><option>نقدي</option><option>إنستا باي</option></select></div><div class="field"><label>التاريخ</label><input id="cuDate" type="date" value="${esc(date)}"></div></div><div class="field"><label>ملاحظات</label><input id="cuNotes"></div><button class="btn" onclick="ES27.saveCustody()">تسليم العهدة وتسجيلها بالخزنة</button>${custodyAdminTable()}</section><section class="card"><div class="toolbar"><div><h3>التقرير اليومي الجاهز</h3><p class="muted">المشتريات للمتابعة فقط؛ الربح = المبيعات − تكلفة الشغل الفعلية − صافي الهوالك.</p></div><div class="actions"><input id="dcDate" type="date" value="${esc(date)}"><select id="dcDept"><option ${dept==='ليزر'?'selected':''}>ليزر</option><option ${dept==='طباعة'?'selected':''}>طباعة</option><option ${dept==='كل الأقسام'?'selected':''}>كل الأقسام</option></select><button class="btn secondary" onclick="ES27.loadDailyReport()">عرض التقرير</button><button class="btn" onclick="ES27.closeDepartmentDay()">حفظ التقفيل</button></div></div><div id="dailyReportBox">${dailyCloseReportHtml()}</div><div class="hint">التقفيل الإجمالي لن يعمل قبل حفظ تقفيل الليزر والطباعة لنفس اليوم.</div></section><section class="card"><h3>تصحيح مشتريات معتمدة بدون حذف</h3><p class="muted">عكس الحركة يرجع المخزون وحساب المورد والخزنة أو العهدة، ويحتفظ بسجل المراجعة.</p>${purchaseReversalTable()}</section>`;
+    return `<section class="deptInvoiceHero"><div><span class="deptEyebrow">دورة نهاية اليوم</span><h2>مركز متابعة اليوم والتقفيل الذكي</h2><p>النظام يجمع كل النواقص، ويقفل العهد المتوازنة والأقسام والإجمالي بالترتيب بعد موافقة واحدة منك.</p></div></section><section class="card"><div class="toolbar"><div><h3>المراجعة الآلية قبل التقفيل</h3><p class="muted">لن يعتمد النظام مشتريات معلقة أو فاتورة عميل أو تسوية عهدة بها مبلغ من نفسه.</p></div><input id="autoCloseDate" type="date" value="${esc(date)}" onchange="ES27.loadAutomationPreview(this.value)"></div>${automationPreviewHtml()}</section><section class="card"><h3>تسليم عهدة مشتريات</h3><div class="grid five"><div class="field"><label>الموظف</label><select id="cuEmployee" onchange="set('cuDept',this.value==='جابر'?'ليزر':'طباعة')"><option>جابر</option><option>وائل</option></select></div><div class="field"><label>القسم</label><select id="cuDept">${accountingDeptOptions('ليزر',false)}</select></div><div class="field"><label>المبلغ</label><input id="cuAmount" type="number" min="0"></div><div class="field"><label>طريقة التسليم</label><select id="cuMethod"><option>نقدي</option><option>إنستا باي</option></select></div><div class="field"><label>التاريخ</label><input id="cuDate" type="date" value="${esc(date)}"></div></div><div class="field"><label>ملاحظات</label><input id="cuNotes"></div><button class="btn" onclick="ES27.saveCustody()">تسليم العهدة وتسجيلها بالخزنة</button>${custodyAdminTable()}</section><section class="card"><div class="toolbar"><div><h3>التقرير اليومي الجاهز</h3><p class="muted">المشتريات للمتابعة فقط؛ الربح = المبيعات − تكلفة الشغل الفعلية − صافي الهوالك.</p></div><div class="actions"><input id="dcDate" type="date" value="${esc(date)}"><select id="dcDept"><option ${dept==='ليزر'?'selected':''}>ليزر</option><option ${dept==='طباعة'?'selected':''}>طباعة</option><option ${dept==='كل الأقسام'?'selected':''}>كل الأقسام</option></select><button class="btn secondary" onclick="ES27.loadDailyReport()">عرض التقرير</button><button class="btn" onclick="ES27.closeDepartmentDay()">حفظ تقفيل منفصل</button></div></div><div id="dailyReportBox">${dailyCloseReportHtml()}</div></section><section class="card"><h3>تصحيح مشتريات معتمدة بدون حذف</h3><p class="muted">عكس الحركة يرجع المخزون وحساب المورد والخزنة أو العهدة، ويحتفظ بسجل المراجعة.</p>${purchaseReversalTable()}</section>`;
   }
   function legacyEntityLabel(v){return ({purchase:'فاتورة شراء',sale:'فاتورة بيع',deptLine:'بند قسم',finalInvoice:'فاتورة نهائية'})[v]||v;}
   function screenLegacy(){
     if(!isAdmin()) return '<div class="card"><h2>تصنيف البيانات القديمة عند ضياء فقط.</h2></div>';
     const rows=state.data.unclassifiedRows||[];
-    return `<section class="card"><div class="toolbar"><div><h2>تصنيف الفواتير والبيانات القديمة</h2><p class="muted">السجل غير المصنف يظهر في كل الأقسام فقط، ولا يدخل تقرير الليزر أو الطباعة حتى تصنفه مرة واحدة.</p></div><b>${rows.length} سجل غير مصنف</b></div>${table(rows,['النوع','المرجع','التاريخ','الطرف','القيمة','القسم'],(r,i)=>[esc(legacyEntityLabel(r.entity)),esc(r.label||'-'),esc(r.date||'-'),esc(r.party||'-'),money(r.amount),`<div class="tableActions"><select id="legacyDept${i}"><option>ليزر</option><option>طباعة</option></select><button class="btn small" onclick="ES27.classifyLegacy(${i})">حفظ التصنيف</button></div>`])}</section>`;
+    const suggested=rows.filter(r=>r.suggestionConfidence==='high'&&r.suggestedDepartment).length;
+    return `<section class="card"><div class="toolbar"><div><h2>تصنيف الفواتير والبيانات القديمة</h2><p class="muted">النظام يقترح القسم عندما تكون الدلالة واضحة، وضياء يعتمد الاقتراحات بموافقة واحدة. الحالات الملتبسة تظل للاختيار اليدوي.</p></div><div class="actions"><b>${rows.length} سجل غير مصنف</b><button class="btn" ${suggested?'':'disabled'} onclick="ES27.applySuggestedLegacy()">اعتماد الاقتراحات الواضحة (${suggested})</button></div></div>${table(rows,['النوع','المرجع','التاريخ','الطرف','القيمة','اقتراح النظام','القسم'],(r,i)=>[esc(legacyEntityLabel(r.entity)),esc(r.label||'-'),esc(r.date||'-'),esc(r.party||'-'),money(r.amount),r.suggestedDepartment?`<span class="pill">${esc(r.suggestedDepartment)}</span><small>${esc(r.suggestionReason||'')}</small>`:'يحتاج قرارك',`<div class="tableActions"><select id="legacyDept${i}"><option ${r.suggestedDepartment==='ليزر'?'selected':''}>ليزر</option><option ${r.suggestedDepartment==='طباعة'?'selected':''}>طباعة</option></select><button class="btn small" onclick="ES27.classifyLegacy(${i})">حفظ</button></div>`])}</section>`;
   }
 
   function screenReports(){
@@ -821,7 +843,7 @@
     departmentDetails+=`<div class="card"><h3>${esc(accountingScopeTitle('مصروفات التشغيل المسجلة'))}</h3><p class="muted">تظهر للمراجعة، وتدخل الربح من خلال تكلفة بند الشغل الفعلية دون خصم مزدوج.</p>${table(operatingExpenseRows(),['البند','القسم','باند التشغيل','طريقة التوزيع','القيمة'],r=>[esc(materialName(r)),esc(matDept(r)),esc(r.operatingBand||r['بند التشغيل']||''),esc(r.operatingCalcMethod||r['طريقة توزيع التشغيل']||''),money(r.operatingUnitCost||r['قيمة التشغيل']||r.unitCost)])}</div>`;
     return `<div class="card"><div class="toolbar"><div><h2>${esc(accountingScopeTitle('التقارير والأرباح الفعلية'))}</h2><p class="muted">الربح محسوب من تكلفة الخامات والتشغيل المستهلكة فعلًا في بنود الشغل، وليس من إجمالي مشتريات اليوم.</p></div><button class="btn" onclick="ES27.go('dailyClose')">فتح التقرير اليومي والتقفيل</button></div><div class="grid four"><div class="kpi"><b>${money(sales)}</b><span>${salesLabel}</span></div><div class="kpi"><b>${money(actualCost)}</b><span>تكلفة الشغل الفعلية</span></div><div class="kpi"><b>${money(waste)}</b><span>هوالك</span></div><div class="kpi"><b>${money(sales-actualCost-waste)}</b><span>الربح الفعلي</span></div></div><div class="hint">مشتريات الفترة: ${money(purchases)} — تظهر للمتابعة ولا تُخصم مرة ثانية من الربح.</div></div>${departmentDetails}`;
   }
-  function screenHealth(){ return `<div class="card"><h2>فحص النظام</h2><button class="btn" onclick="ES27.health()">فحص الآن</button><div id="healthBox" class="hint">اضغط فحص الآن.</div></div>`; }
+  function screenHealth(){ return `<div class="card"><h2>فحص النظام المالي</h2><p class="muted">يفحص الاتصال، مفاتيح منع التكرار، حالة مهام اليوم، والصلاحيات بدون إنشاء أي حركة مالية.</p><button class="btn" onclick="ES27.health()">تشغيل الفحص الشامل</button><div id="healthBox" class="hint">اضغط تشغيل الفحص الشامل.</div></div>`; }
 
   function isSharedDeptName(dept){ return /مشترك|shared|عام/.test(nkey(dept)); }
   function selectedDeptTemplate(){ return visibleTemplates()[num(val('dlItemSel'))] || null; }
@@ -881,9 +903,9 @@
         <div class="deptSectionTitle"><div><span>2</span><h3>التسعير والتسجيل</h3></div><small>سعر الوحدة × الكمية = إجمالي البند</small></div>
         <div class="grid six deptPriceGrid"><div class="field"><label>الكمية</label><input id="dlQty" type="number" min="1" value="1" oninput="ES27.calcDept()"></div><div class="field"><label>سعر السيستم</label><input id="dlSystemSale" readonly></div><div class="field"><label>سعر الوحدة بالفاتورة</label><input id="dlSale" type="number" min="0" oninput="ES27.calcDept()"></div><div class="field"><label>فرق السعر للهوالك</label><input id="dlDiff" readonly></div><div class="field checkboxField"><label>بند مشترك</label><label class="checkLine"><input id="dlSharedLine" type="checkbox"> يظهر عند القسم الآخر</label></div><div class="field"><label>ملاحظات</label><input id="dlNotes" placeholder="تفاصيل التنفيذ أو المقاس"></div></div>
         ${isLaser()?'<div class="actions"><button class="btn secondary" onclick="ES27.toggleLaserCalc()">حاسبة الليزر / حساب شغلانة</button></div><div id="laserCalcBox" class="card softBox">'+laserBox()+'</div>':''}
-        <div class="deptInvoiceActions"><button class="btn deptSaveBtn" onclick="ES27.saveDeptLine()">＋ تسجيل البند في المسودة</button><button class="btn secondary" onclick="ES27.refreshDeptContext()">تحديث المراجعة</button><button class="btn deptApproveBtn" onclick="ES27.approveDeptInvoice()">✓ اعتماد فاتورة القسم</button></div><div id="deptMsg"></div>
+        <div class="deptInvoiceActions"><button class="btn deptSaveBtn" onclick="ES27.saveDeptLine()">＋ تسجيل البند وإرساله للمراجعة</button><button class="btn secondary" onclick="ES27.refreshDeptContext()">تحديث المراجعة</button></div><div id="deptMsg"></div>
       </section>
-      <section class="card deptReviewCard"><div class="deptSectionTitle"><div><span>3</span><h3>مراجعة الفاتورة قبل الاعتماد</h3></div><small>البنود المعتمدة فقط تنتقل للفاتورة النهائية</small></div><div id="deptApprovalBox">${deptApprovalTable()}</div></section>
+      <section class="card deptReviewCard"><div class="deptSectionTitle"><div><span>3</span><h3>البنود المرسلة للمراجعة</h3></div><small>ضياء أو رحمة أو ريفان يعتمدونها قبل الفاتورة النهائية</small></div><div id="deptApprovalBox">${deptApprovalTable()}</div></section>
       <section class="card deptSharedCard"><h3>البنود المشتركة من القسم الآخر</h3><div id="deptSharedBox">${deptSharedTable()}</div></section>
     </div>`;
   }
@@ -916,8 +938,14 @@
       if(!r || r.success === false) throw new Error(r && r.message || 'تعذر تحميل البيانات');
       let customerRows = [];
       let supplierRows = [];
-      try{ const cr=await api('getEasyStoreCustomers',{limit:1000}); if(cr&&cr.success) customerRows=cr.customers||[]; }catch(e){}
-      try{ const sr=await api('getEasyStoreSuppliers',{}); if(sr&&sr.success) supplierRows=sr.suppliers||sr.rows||[]; }catch(e){}
+      const extras=await Promise.all([
+        api('getEasyStoreCustomers',{limit:1000}).catch(()=>({})),
+        api('getEasyStoreSuppliers',{}).catch(()=>({})),
+        isAdmin()?api('previewAccountingAutomationV1921',{workDate:dailyPurchaseTodayKey()}).catch(()=>({})):Promise.resolve({})
+      ]);
+      if(extras[0]&&extras[0].success)customerRows=extras[0].customers||[];
+      if(extras[1]&&extras[1].success)supplierRows=extras[1].suppliers||extras[1].rows||[];
+      if(extras[2]&&extras[2].success)state.automationPreview=extras[2].preview||null;
       mergeData(normalizeIncomingData({
         materials: r.materials || r.rawMaterials || [],
         templates: r.templates || r.items || [],
@@ -936,14 +964,14 @@
         finalInvoices: r.finalInvoices || [],
         summary: r.summary || {}
       }));
-      saveLocal(); render(); if(state.active==='sales' && (qs.get('pullLines') || qs.get('autoLoadCustomer') || qs.get('customer'))){ setTimeout(()=>{ try{ ES27.loadSaleCustomerFromInput(true); }catch(e){ try{ ES27.pullDeptCandidates(); }catch(x){} } },160); } msg('تم التحديث من الشيتات: ' + now());
+      saveLocal(); state.lastLoadedAt=Date.now(); state.formDirty=false; render(); if(state.active==='sales' && (qs.get('pullLines') || qs.get('autoLoadCustomer') || qs.get('customer'))){ setTimeout(()=>{ try{ ES27.loadSaleCustomerFromInput(true); }catch(e){ try{ ES27.pullDeptCandidates(); }catch(x){} } },160); } msg('تم التحديث من الشيتات: ' + now());
     }catch(e){
       mergeData(); render(); msg('تنبيه: يعمل بنسخة محلية مؤقتة - ' + e.message, true);
     }finally{ state.loading = false; }
   }
 
   window.ES27 = {
-    go(t){ if(!allowedScreens().includes(t)) return deny('هذه الشاشة غير متاحة لصلاحية المستخدم الحالي.'); state.active = t; shell(); if(t==='dailyClose'&&!state.dailyReport) this.loadDailyReport(); },
+    go(t){ if(!allowedScreens().includes(t)) return deny('هذه الشاشة غير متاحة لصلاحية المستخدم الحالي.'); state.active = t; shell(); if(t==='dailyClose'){this.loadAutomationPreview();if(!state.dailyReport)this.loadDailyReport();} },
     load,
     setAccountingScope(scope){
       if(!isAdmin()) return deny('اختيار حسابات القسم متاح لضياء فقط.');
@@ -953,7 +981,18 @@
       state.recipeComps=[]; state.salePulledLines=[]; state.purchaseRequestId='';
       shell(); flash('تم فتح '+accountingScopeLabel()+'.');
     },
-    hardReload(){ const url = location.pathname + '?v=es45-v1920-custody-department-day-close-' + Date.now(); location.href = url; },
+    hardReload(){ const url = location.pathname + '?v=es46-v1921-semi-automatic-accounting-' + Date.now(); location.href = url; },
+    async loadAutomationPreview(workDate){
+      if(!isAdmin())return deny();workDate=workDate||val('autoCloseDate')||state.dailyReportDate||dailyPurchaseTodayKey();
+      try{const reply=await api('previewAccountingAutomationV1921',{workDate});if(!reply||reply.success===false)throw new Error((reply&&reply.message)||'تعذر فحص اليوم.');state.automationPreview=reply.preview||null;if(state.active==='dailyClose'||state.active==='dashboard')render();}catch(e){flash(e.message||'تعذر فحص اليوم.',true);}
+    },
+    async runDayAutomation(){
+      if(!isAdmin())return deny();const workDate=val('autoCloseDate')||(state.automationPreview&&state.automationPreview.workDate)||dailyPurchaseTodayKey();const p=state.automationPreview;
+      if(p&&(p.blockers||[]).length)return flash('أكمل البنود الظاهرة في المراجعة أولًا.',true);
+      if(!confirm('تنفيذ تقفيل اليوم كله ليوم '+workDate+'؟\nسيتم تقفيل العهد المتوازنة فقط، ثم الليزر والطباعة، ثم الإجمالي.'))return;
+      flash('جاري تنفيذ التقفيل الآمن بالترتيب...');
+      try{const reply=await api('runAccountingDayAutomationV1921',{workDate,confirm:'RUN_SAFE_DAY_CLOSE'});if(!reply||reply.success===false)throw new Error((reply&&reply.message)||'تعذر إكمال التقفيل.');state.automationPreview=reply.preview||state.automationPreview;await load(true);flash(reply.message||'تم تقفيل اليوم كاملًا.');}catch(e){await this.loadAutomationPreview(workDate);flash(e.message||'توقف التقفيل بأمان.',true);}
+    },
     async saveCustody(){
       if(!isAdmin()) return deny('تسليم العهدة عند ضياء فقط.');
       const employee=val('cuEmployee'),department=val('cuDept'),amount=num(val('cuAmount')),workDate=val('cuDate')||dailyPurchaseTodayKey(),paymentMethod=val('cuMethod')||'نقدي',notes=val('cuNotes');
@@ -975,12 +1014,17 @@
     async closeDepartmentDay(){
       if(!isAdmin())return deny();const workDate=val('dcDate')||state.dailyReportDate||dailyPurchaseTodayKey(),department=val('dcDept')||state.dailyReportDepartment||'ليزر';
       if(!confirm('حفظ تقفيل '+department+' ليوم '+workDate+'؟'))return;
-      try{const reply=await api('closeDepartmentDayV1920',{workDate,department,requestId:'DAY-'+workDate+'-'+nkey(department),notes:'تقفيل من EasyStore ES45'});if(!reply||reply.success===false)throw new Error((reply&&reply.message)||'تعذر حفظ التقفيل.');state.dailyReport=reply.report||state.dailyReport;await load(true);flash(reply.message||'تم حفظ التقفيل.');}catch(e){flash(e.message||'تعذر حفظ التقفيل.',true);}
+      try{const reply=await api('closeDepartmentDayV1920',{workDate,department,requestId:'DAY-'+workDate+'-'+nkey(department),notes:'تقفيل من EasyStore ES46'});if(!reply||reply.success===false)throw new Error((reply&&reply.message)||'تعذر حفظ التقفيل.');state.dailyReport=reply.report||state.dailyReport;await load(true);flash(reply.message||'تم حفظ التقفيل.');}catch(e){flash(e.message||'تعذر حفظ التقفيل.',true);}
     },
     async classifyLegacy(index){
       if(!isAdmin())return deny();const row=(state.data.unclassifiedRows||[])[index],department=val('legacyDept'+index);if(!row)return flash('السجل غير موجود.',true);
       if(!confirm('تصنيف '+(row.label||'السجل')+' ضمن قسم '+department+'؟ لا يمكن تغييره من هذه الشاشة بعد الحفظ.'))return;
       try{const reply=await api('classifyLegacyAccountingRowV1920',{entity:row.entity,rowNumber:row.rowNumber,department});if(!reply||reply.success===false)throw new Error((reply&&reply.message)||'تعذر التصنيف.');await load(true);flash(reply.message||'تم التصنيف.');}catch(e){flash(e.message||'تعذر التصنيف.',true);}
+    },
+    async applySuggestedLegacy(){
+      if(!isAdmin())return deny();const count=(state.data.unclassifiedRows||[]).filter(r=>r.suggestionConfidence==='high'&&r.suggestedDepartment).length;if(!count)return flash('لا توجد اقتراحات واضحة جديدة.');
+      if(!confirm('اعتماد '+count+' تصنيفًا اقترحها النظام بثقة عالية؟\nالحالات غير الواضحة ستبقى دون تغيير لمراجعتك.'))return;
+      try{const reply=await api('applySuggestedLegacyClassificationsV1921',{confirm:'APPLY_HIGH_CONFIDENCE'});if(!reply||reply.success===false)throw new Error((reply&&reply.message)||'تعذر اعتماد الاقتراحات.');await load(true);flash(reply.message||'تم اعتماد الاقتراحات الواضحة.');}catch(e){flash(e.message||'تعذر اعتماد الاقتراحات.',true);}
     },
     async reversePurchase(encodedId,encodedInvoice){
       if(!isAdmin())return deny('عكس المشتريات عند ضياء فقط.');let id='',invoiceNo='';try{id=decodeURIComponent(String(encodedId||''));invoiceNo=decodeURIComponent(String(encodedInvoice||''));}catch(e){id=String(encodedId||'');invoiceNo=String(encodedInvoice||'');}
@@ -1034,7 +1078,7 @@
       const button=$('caSaveBtn');
       if(button){button.disabled=true;button.textContent='جاري الحفظ...';}
       try{
-        const reply=await api('saveCustomerAccountMovementV1915',{customerName:name,operation,amount,paymentMethod:method,refNo,notes,requestId:state.customerAccountRequestId,source:'EasyStore ES44'});
+        const reply=await api('saveCustomerAccountMovementV1915',{customerName:name,operation,amount,paymentMethod:method,refNo,notes,requestId:state.customerAccountRequestId,source:'EasyStore ES46'});
         if(!reply || reply.success===false) throw new Error((reply&&reply.message)||'تعذر حفظ حركة العميل.');
         let account=null;
         try{ account=await api('getCustomerAccountV1915',{customerName:name}); }catch(refreshError){}
@@ -1155,7 +1199,7 @@
     },
     calcPurchase(){ const total=num(val('puQty'))*num(val('puUnit')); set('puTotal',total.toFixed(2)); set('puRemain',Math.max(0,total-num(val('puPaid'))).toFixed(2)); },
     refreshPurchaseMaterials(){ const select=$('puMat'); if(select) select.innerHTML='<option value="">اختار الخامة</option>'+purchaseMaterialOptions(val('puDept')); state.purchaseRequestId=''; },
-    async savePurchase(){ if(!canManageAccounting()) return deny(); this.calcPurchase(); if(!state.purchaseRequestId) state.purchaseRequestId='PUR-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,10); const p={requestId:state.purchaseRequestId,department:val('puDept')||accountingScopeDepartment(),no:val('puNo'),supplier:val('puSupplier'),paymentType:val('puPay'),dueDate:val('puDue'),material:val('puMat'),qty:num(val('puQty')),unit:num(val('puUnit')),paid:num(val('puPaid')),total:num(val('puTotal')),remain:num(val('puRemain')),notes:val('puNotes'),date:new Date().toISOString()}; if(!p.department) return flash('اختار قسم الليزر أو الطباعة أولًا.',true); if(!p.no||!p.supplier||!p.material||p.qty<=0||p.unit<0) return flash('رقم الفاتورة والمورد والخامة وكمية صحيحة مطلوبة.',true); try{ const reply=await api('saveEasyStorePurchaseV2',p); if(!reply||reply.success===false) throw new Error((reply&&reply.message)||'تعذر حفظ فاتورة الشراء'); state.purchaseRequestId=''; state.data.purchases.unshift(p); state.data.stockMoves.unshift({date:now(),department:p.department,materialName:p.material,inQty:p.qty,outQty:0,balance:reply.stockAfter,source:'فاتورة شراء '+p.no}); saveLocal(); shell(); flash('تم حفظ فاتورة الشراء على قسم '+p.department+' وتحديث المخزون'); }catch(e){ flash('لم يتم حفظ فاتورة الشراء: '+(e.message||e),true); } },
+    async savePurchase(){ if(!canManageAccounting()) return deny(); this.calcPurchase(); if(!state.purchaseRequestId) state.purchaseRequestId='PUR-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,10); const p={requestId:state.purchaseRequestId,department:val('puDept')||accountingScopeDepartment(),no:val('puNo'),supplier:val('puSupplier'),paymentType:val('puPay'),dueDate:val('puDue'),material:val('puMat'),qty:num(val('puQty')),unit:num(val('puUnit')),paid:num(val('puPaid')),total:num(val('puTotal')),remain:num(val('puRemain')),notes:val('puNotes'),date:new Date().toISOString()}; if(!p.department) return flash('اختار قسم الليزر أو الطباعة أولًا.',true); if(!p.no||!p.supplier||!p.material||p.qty<=0||p.unit<0) return flash('رقم الفاتورة والمورد والخامة وكمية صحيحة مطلوبة.',true); try{ const reply=await api('saveEasyStorePurchaseV2',p); if(!reply||reply.success===false) throw new Error((reply&&reply.message)||'تعذر حفظ فاتورة الشراء'); if(reply.financeWarning)return flash((reply.message||reply.financeWarning)+' اضغط حفظ مرة أخرى بنفس البيانات لإكمال الإصلاح التلقائي دون تكرار المخزون.',true); state.purchaseRequestId=''; state.data.purchases.unshift(p); state.data.stockMoves.unshift({date:now(),department:p.department,materialName:p.material,inQty:p.qty,outQty:0,balance:reply.stockAfter,source:'فاتورة شراء '+p.no}); saveLocal(); shell(); flash(reply.message||('تم حفظ فاتورة الشراء على قسم '+p.department+' وتحديث المخزون')); }catch(e){ flash('لم يتم حفظ فاتورة الشراء: '+(e.message||e),true); } },
     applySaleItem(){ const r=selectedSaleTemplate(); if(!r) return; set('saUnit',matSale(r)); this.calcSale(); },
     calcSale(){ updateSaleTotalsFromPulled(); },
     async saveSale(){
@@ -1175,13 +1219,14 @@
       if(lineIds.length && pulledOrders.length>1) return flash('لا يمكن تقفيل أكتر من أوردر في نفس الفاتورة. اختار رقم أوردر واحد ثم اسحب البنود.',true);
       if(!lineIds.length && !manualDescription && !manualAmount) return flash('أضف بند يدوي أو اسحب بنود وائل/جابر أولًا.',true);
       if(/^DRAFT/i.test(val('saNo')) || !val('saNo')) set('saNo', officialSaleNo());
-      const p={no:val('saNo'),customer:val('saCustomer'),customerPhone:customerMainPhone(state.saleSelectedCustomer||{}),orderId:val('saOrder'),paymentType:val('saPay'),item:desc || manualDescription || 'فاتورة مبيعات موحدة',qty:manualQty||pulledRows.length||1,unit:manualUnit,discount:num(val('saDiscount')),paid:num(val('saPaid')),total:num(val('saTotal')),remain:num(val('saRemain')),notes:val('saNotes'),lineIds:JSON.stringify(lineIds),date:new Date().toISOString()};
+      const p={no:val('saNo'),customer:val('saCustomer'),customerPhone:customerMainPhone(state.saleSelectedCustomer||{}),orderId:val('saOrder'),paymentType:val('saPay'),department:val('saDept'),item:desc || manualDescription || 'فاتورة مبيعات موحدة',qty:manualQty||pulledRows.length||1,unit:manualUnit,discount:num(val('saDiscount')),paid:num(val('saPaid')),total:num(val('saTotal')),remain:num(val('saRemain')),notes:val('saNotes'),lineIds:JSON.stringify(lineIds),date:new Date().toISOString()};
       if(!state.saleRequestId) state.saleRequestId='SALE-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,10);
       p.requestId=state.saleRequestId;
       flash('جاري حفظ الفاتورة على السيرفر...');
       try{
+        let serverReply=null;
         if(lineIds.length){
-          const res=await api('saveAccountingFinalInvoice',{orderId:p.orderId,customerName:p.customer,paymentType:p.paymentType,paid:p.paid,discount:p.discount,lineIds:JSON.stringify(lineIds),manualDescription:manualDescription||'',manualAmount:manualAmount||0,notes:p.notes,status:p.remain>0?'عليها باقي':'مدفوعة',requestId:p.requestId});
+          const res=serverReply=await api('saveAccountingFinalInvoice',{orderId:p.orderId,customerName:p.customer,paymentType:p.paymentType,department:p.department,paid:p.paid,discount:p.discount,lineIds:JSON.stringify(lineIds),manualDescription:manualDescription||'',manualAmount:manualAmount||0,notes:p.notes,status:p.remain>0?'عليها باقي':'مدفوعة',requestId:p.requestId});
           if(!res || res.success===false) throw new Error((res&&res.message)||'تعذر تقفيل الفاتورة على السيرفر.');
           p.no=res.invoiceNo||p.no;
           p.invoiceNo=p.no;
@@ -1191,14 +1236,15 @@
           set('saNo',p.no); set('saTotal',p.total.toFixed(2)); set('saPaid',p.paid); set('saRemain',p.remain.toFixed(2));
           state.data.finalInvoices.unshift({invoiceNo:p.no,no:p.no,orderId:p.orderId,customer:p.customer,customerName:p.customer,total:p.total,finalTotal:p.total,paid:p.paid,remain:p.remain,remaining:p.remain,lineCount:res.lineCount,item:p.item,date:new Date().toISOString()});
         } else {
-          const res=await api('saveEasyStoreSaleV2',p);
+          const res=serverReply=await api('saveEasyStoreSaleV2',p);
           if(!res || res.success===false) throw new Error((res&&res.message)||'تعذر حفظ فاتورة البيع على السيرفر.');
         }
+        if(serverReply&&(serverReply.financeWarning||serverReply.ledgerWarning))return flash((serverReply.message||serverReply.financeWarning||serverReply.ledgerWarning)+' اضغط حفظ مرة أخرى بنفس الفاتورة لإكمال الإصلاح التلقائي دون تكرارها.',true);
         state.data.sales.unshift(p);
         if(!lineIds.length && p.item) state.data.stockMoves.unshift({date:now(),materialName:p.item,inQty:0,outQty:p.qty,balance:'',source:'فاتورة بيع '+p.no});
         pulledRows.forEach(x=>{ x.closeStatus='تم التقفيل'; x.invoiceNo=p.no; x['حالة التقفيل']='تم التقفيل'; x['رقم الفاتورة النهائية']=p.no; });
         saveLocal();
-        state.salePulledLines=[]; state.saleSelectedCustomer=null; state.saleRequestId=''; shell(); flash('تم حفظ الفاتورة الرسمية رقم '+p.no+' وربطها ببنود وائل/جابر.');
+        state.salePulledLines=[]; state.saleSelectedCustomer=null; state.saleRequestId=''; shell(); flash((serverReply&&serverReply.message)||('تم حفظ الفاتورة الرسمية رقم '+p.no+' وربطها ببنود وائل/جابر.'));
       }catch(e){
         flash('لم يتم حفظ الفاتورة: '+(e.message||e),true);
       }
@@ -1234,9 +1280,9 @@
     renderDeptSharedLines(){ const b=$('deptSharedBox'); if(b) b.innerHTML=deptSharedTable(); },
     renderDeptApproval(){ const b=$('deptApprovalBox'); if(b) b.innerHTML=deptApprovalTable(); const stats=$('deptInvoiceStats'); if(stats) stats.innerHTML=deptInvoiceStatsHtml(); },
     refreshDeptContext(){ refreshDeptContextUi(); },
-    approveDeptInvoiceLegacy(){ const order=val('dlOrder') || qs.get('orderId') || qs.get('order') || ''; const d=userDept(); if(!order) return flash('رقم الأوردر مطلوب للاعتماد.',true); const rows=deptReviewRows(); if(!rows.length) return flash('لا توجد بنود مسجلة للاعتماد.',true); if(!confirm('اعتماد فاتورة قسم '+d+' للأوردر '+order+'؟')) return; rows.forEach(r=>{ r.approvalStatus='معتمد من القسم'; r.billingStatus='معتمد من القسم'; r.closeStatus='معتمد من القسم'; r['حالة اعتماد القسم']='معتمد من القسم'; r['حالة الفوترة']='معتمد من القسم'; r['حالة التقفيل']='معتمد من القسم'; r.approvedBy=user.name; r.approvedAt=new Date().toISOString(); }); saveLocal(); api('approveAccountingDeptInvoice',{orderId:order,department:d,customerName:val('dlCustomer')}).then(res=>{ if(res&&res.success===false) flash(res.message||'تعذر الاعتماد على السيرفر',true); else flash((res&&res.message)||'تم اعتماد فاتورة القسم.'); }).catch(e=>flash(e.message||'تعذر اعتماد الفاتورة على السيرفر',true)); shell(); },
+    approveDeptInvoiceLegacy(){ return this.approveDeptInvoice(); },
     async approveDeptInvoice(){
-      if(!canUseDepartment()) return deny();
+      if(!canFinalize()) return deny('اعتماد فاتورة القسم متاح لضياء أو رحمة أو ريفان فقط.');
       const order=val('dlOrder') || qs.get('orderId') || qs.get('order') || '';
       const d=userDept();
       if(!order) return flash('رقم الأوردر مطلوب للاعتماد.',true);
@@ -1252,7 +1298,7 @@
       }catch(e){ flash(e.message||'تعذر اعتماد الفاتورة على السيرفر.',true); }
     },
     toggleLaserCalc(){ const b=$('laserCalcBox'); if(b) b.classList.toggle('hidden'); },
-    async saveDeptLineAndOpenSales(){ const order=encodeURIComponent(val('dlOrder')); const customer=encodeURIComponent(val('dlCustomer')); const saved=await this.saveDeptLine(); if(saved) location.href='?screen=sales&orderId='+order+'&customer='+customer+'&v=es44-v1919-immediate-department-purchase-stock'; },
+    async saveDeptLineAndOpenSales(){ const order=encodeURIComponent(val('dlOrder')); const customer=encodeURIComponent(val('dlCustomer')); const saved=await this.saveDeptLine(); if(saved) location.href='?screen=sales&orderId='+order+'&customer='+customer+'&v=es46-v1921-semi-automatic-accounting'; },
     async saveDeptLine(){ this.calcDept(); const tpl=selectedDeptTemplate(); const itemDept=tpl?matDept(tpl):val('dlItemDept'); const shared=($('dlSharedLine')&&$('dlSharedLine').checked)||isSharedDeptName(itemDept); const unitSale=num(val('dlSale')); const qty=num(val('dlQty'))||1; const quote=state.laserQuote||{}; const p={lineId:'DLINE-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,6),orderId:val('dlOrder'),customerName:val('dlCustomer'),department:userDept(),itemDepartment:itemDept||userDept(),sharedLine:shared?'نعم':'لا',billingStatus:'مسجل - قيد مراجعة القسم',closeStatus:'قيد مراجعة القسم',approvalStatus:'قيد مراجعة القسم',catalogItemId:tpl?(tpl.id||tpl.ID||tpl.catalogItemId||''):'',templateId:tpl?(tpl.id||tpl.ID||''):'',materialName:quote.materialName||(tpl?(tpl.materialName||tpl['الخامة']||''):''),itemName:val('dlItem'),qty:qty,systemSale:num(val('dlSystemSale')),systemSalePrice:num(val('dlSystemSale')),sale:unitSale,salePrice:unitSale,unitSalePrice:unitSale,lineTotal:unitSale*qty,diff:num(val('dlDiff')),laserDetailsJson:Object.keys(quote).length?JSON.stringify(quote):'',consumedAreaTotal:num(quote.consumedAreaTotal),wastePercent:num(quote.wastePercent),notes:val('dlNotes'),user:user.name,date:new Date().toISOString()}; if(!p.customerName||!p.orderId||!p.itemName){ flash('اسم العميل ورقم الأوردر والصنف مطلوبين.',true); return false; } if(shared){ const dup=(state.data.deptLines||[]).find(x=>isSharedLineRecord(x)&&sameDeptInvoiceContext(x,p.orderId,p.customerName)&&nkey(rowItem(x))===nkey(p.itemName)&&isUnbilledDeptLine(x)); if(dup){ flash('البند المشترك مسجل بالفعل بواسطة '+rowDept(dup)+' وسيظهر تلقائيًا عند القسم الآخر. لا تسجله مرتين.',true); return false; } } try{ const reply=await api('saveAccountingDeptLine',p); if(!reply||reply.success===false) throw new Error((reply&&reply.message)||'تعذر حفظ مسودة القسم'); if(reply.lineId){p.id=reply.lineId;p.ID=reply.lineId;} state.data.deptLines.unshift(p); if(p.diff) state.data.wasteLines.unshift({department:p.department,orderId:p.orderId,reason:'فرق سعر عن السيستم',amount:p.diff,paid:0}); saveLocal(); state.laserQuote=null; set('dlItemSel',''); set('dlItem',''); set('dlItemDept',''); set('dlSystemSale',''); set('dlSale',''); set('dlDiff',''); set('dlNotes',''); set('dlQty','1'); refreshDeptContextUi(); flash(shared?'تم حفظ بند مشترك في مسودة القسم وسيظهر عند القسم الآخر':'تم حفظ البند في مسودة فاتورة القسم. يمكنك إضافة بند جديد ثم الاعتماد.'); return true; }catch(e){ flash('لم يتم حفظ مسودة القسم: '+(e.message||e),true); return false; } },
     async aiLaser(){
       const material=val('aiMat'), w=num(val('aiW')), h=num(val('aiH')), q=num(val('aiQty'))||1, waste=num(val('aiWaste')), customerUnitSale=num(val('aiUnitSale'));
@@ -1286,7 +1332,7 @@
     },
     pickPendingFinal(order, customer){ set('fiOrder',order||''); set('fiCustomer',customer||''); this.refreshFinalDebt(); this.collectDeptLines(); },
     async approvePendingFinal(order, customer){
-      if(!isAdmin()) return flash('اعتماد فاتورة القسم من شاشة التقفيل متاح لضياء فقط.',true);
+      if(!canFinalize()) return flash('اعتماد فاتورة القسم من شاشة التقفيل متاح لضياء أو رحمة أو ريفان فقط.',true);
       const rows=(state.data.deptLines||[]).filter(isUnbilledDeptLine).filter(r=>String(rowOrderId(r)||'')===String(order||'') && (!customer || customerMatchesRow(r,{name:customer,customerName:customer})));
       const deps=Array.from(new Set(rows.filter(r=>!isDeptApprovedForFinal(r)).map(rowDept).filter(Boolean)));
       if(!rows.length) return flash('لا توجد بنود لهذا الأوردر.',true);
@@ -1336,6 +1382,7 @@
       try{
         const res=await api('reopenAccountingFinalInvoice',{invoiceNo:no,orderId:finalInvoiceOrder(inv),reason:'مراجعة ضياء'});
         if(!res || res.success===false) throw new Error((res&&res.message)||'تعذر إرجاع الفاتورة للمراجعة.');
+        if(res.ledgerWarning) return flash((res.message||res.ledgerWarning)+' اضغط إرجاع للمراجعة مرة أخرى لإكمال العكس المالي الناقص دون تكراره.',true);
         inv.status='تحت مراجعة ضياء'; inv['الحالة']='تحت مراجعة ضياء';
         (state.data.deptLines||[]).forEach(r=>{ if(rowFinalInvoice(r)===no){ r.closeStatus='معتمد من القسم'; r.billingStatus='معتمد من القسم'; r.invoiceNo=''; r['حالة التقفيل']='معتمد من القسم'; r['حالة الفوترة']='معتمد من القسم'; r['رقم الفاتورة النهائية']=''; } });
         saveLocal(); shell(); flash(res.message||'تم إرجاع الفاتورة للمراجعة.');
@@ -1354,6 +1401,7 @@
       try{
         const res=await api('saveAccountingFinalInvoice',p);
         if(!res || res.success===false) throw new Error((res&&res.message)||'تعذر تقفيل الفاتورة على السيرفر.');
+        if(res.financeWarning||res.ledgerWarning) return flash((res.message||res.financeWarning||res.ledgerWarning)+' اضغط تقفيل مرة أخرى بنفس البيانات لإكمال الإصلاح التلقائي دون تكرار الفاتورة أو القبض.',true);
         const saved=Object.assign({},p,{no:res.invoiceNo,invoiceNo:res.invoiceNo,subtotal:res.subtotal,finalTotal:res.finalTotal,total:res.finalTotal,remaining:res.remaining,remain:res.remaining,trustedByServer:!!res.trustedByServer});
         state.data.finalInvoices.unshift(saved);
         rows.forEach(r=>{ r.closeStatus='تم التقفيل'; r.billingStatus='تم السحب للفاتورة النهائية'; r.invoiceNo=res.invoiceNo; r['حالة التقفيل']='تم التقفيل'; r['حالة الفوترة']='تم السحب للفاتورة النهائية'; r['رقم الفاتورة النهائية']=res.invoiceNo; });
@@ -1361,7 +1409,7 @@
       }catch(e){ flash(e.message||'تعذر تقفيل الفاتورة على السيرفر.',true); }
     },
     refreshFinalDebt(){ const b=$('finalCustomerDebt'); if(b) b.innerHTML=deptCustomerDebtHtml(val('fiCustomer')); },
-    health(){ const h=$('healthBox'); if(h) h.innerHTML='جاري الفحص...'; api('getAccounting').then(r=>{ if(h) h.innerHTML = r && r.success!==false ? '✅ الاتصال سليم والبيانات قابلة للتحميل. الإصدار: '+VERSION : '⚠️ الرد غير ناجح: '+esc(r.message); }).catch(e=>{ if(h) h.innerHTML='❌ فشل الاتصال: '+esc(e.message); }); }
+    health(){ const h=$('healthBox'); if(h) h.innerHTML='جاري فحص الاتصال والحسابات ومنع التكرار...'; api('easyStoreSystemHealth').then(r=>{ if(!h)return;if(!r||r.success===false){h.innerHTML='⚠️ الرد غير ناجح: '+esc(r&&r.message);return;}const checks=r.checks||{},preview=checks.automationPreview||{},ledger=(checks.duplicateLedgerRequests||[]).length,cash=(checks.duplicateCashboxRequests||[]).length;h.innerHTML=`<div class="${r.healthy?'hint':'warn'}"><b>${r.healthy?'✅':'⚠️'} ${esc(r.message||'تم الفحص')}</b><br>الإصدار: ${esc(r.version||VERSION)}<br>تكرار قيود الحساب: ${ledger} · تكرار الخزنة: ${cash}<br>مشتريات معلقة: ${(preview.pendingPurchases||[]).length} · بنود لم تقفل: ${(preview.openDeptLines||[]).length} · عهد مفتوحة: ${(preview.openCustodies||[]).length} · غير مصنف: ${(preview.unclassified||[]).length}</div>`; }).catch(e=>{ if(h) h.innerHTML='❌ فشل الاتصال: '+esc(e.message); }); }
   };
 
   function protectAction(name, allowed){
@@ -1395,12 +1443,24 @@
   window.addEventListener('keydown', function(ev){
     if(ev && ev.key==='Escape' && state.active==='customers' && state.customerAccountSelected) window.ES27.closeCustomerAccount();
   });
+  document.addEventListener('input',function(ev){
+    const target=ev.target;
+    if(target&&target.matches&&target.matches('input:not([readonly]), textarea, select')) state.formDirty=true;
+  },true);
+  function safeAutoRefresh(){
+    if(document.hidden||state.loading||state.formDirty||!state.lastLoadedAt||Date.now()-state.lastLoadedAt<180000)return;
+    load(true);
+  }
+  document.addEventListener('visibilitychange',function(){if(!document.hidden)safeAutoRefresh();});
+  window.addEventListener('focus',safeAutoRefresh);
+  if(typeof setInterval==='function') setInterval(safeAutoRefresh,180000);
 
   window.ES = window.ES27;
   window.addEventListener('error', e => { console.error(e.error || e.message); msg('تم منع خطأ في EasyStore: ' + (e.message || ''), true); });
+  try{localStorage.removeItem(STORE_KEY);}catch(e){} // إلغاء الكاش القديم غير المرتبط بجلسة موظف
   mergeData();
   shell();
-  setTimeout(()=>load(true), 350); // تحميل أولي مرة واحدة فقط - بدون polling
+  setTimeout(()=>load(true), 350); // تحميل أولي ثم تحديث آمن كل 3 دقائق عند عدم وجود نموذج مفتوح بتعديلات
 })();
 
 
