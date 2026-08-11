@@ -30,26 +30,10 @@ function createApp(role) {
     ? { username: 'ضياء', name: 'ضياء', mode: 'full', token: 'token' }
     : { username: 'رحمة', name: 'رحمة', mode: 'final', token: 'token' };
   const customer = { name: 'عميل اختبار', phone: '01000000000', type: 'جملة', debt: 30, currentBalance: 30 };
-  const initialStorage={MATBAGY_EMPLOYEE_SSO:JSON.stringify({user})};
+  const initialStorage={EASYSTORE_SESSION_V1922:JSON.stringify({user})};
   initialStorage[scopedDataKey(user)]=JSON.stringify({customers:[customer]});
   const storage = makeStorage(initialStorage);
-  const body = {
-    appendChild(element) {
-      element.parentNode = body;
-      const url = new URL(element.src);
-      const callback = url.searchParams.get('callback');
-      const action = url.searchParams.get('action');
-      assert.strictEqual(action, 'getCustomerAccountV1915');
-      context[callback]({
-        success: true,
-        customer,
-        balance: 30,
-        permissions: { canCollect: true, canAdjust: role === 'admin' },
-        transactions: [{ createdAt: '2026-08-10T10:00:00.000Z', operation: 'invoice', amount: 30, balanceBefore: 0, balanceAfter: 30, createdBy: 'ضياء' }]
-      });
-    },
-    removeChild(element) { element.parentNode = null; }
-  };
+  const body = { appendChild() {}, removeChild() {} };
   const document = {
     body,
     getElementById: id => id === 'app' ? app : id === 'screen' ? screen : null,
@@ -60,7 +44,8 @@ function createApp(role) {
   const context = {
     console,
     document,
-    localStorage: storage,
+    localStorage: makeStorage({}),
+    sessionStorage: storage,
     location: { search: '?screen=customers', pathname: '/EasyStore/' },
     history: { back() {} },
     URL,
@@ -69,7 +54,13 @@ function createApp(role) {
     setTimeout: () => 1,
     clearTimeout() {},
     addEventListener() {},
-    TREND_API_URL: 'https://example.test/exec'
+    TREND_API_URL: 'https://example.test/exec',
+    AbortController,
+    fetch: async (_url, options) => {
+      const payload=JSON.parse(options.body);
+      assert.strictEqual(payload.action,'getCustomerAccountV1915');
+      return {ok:true,status:200,text:async()=>JSON.stringify({success:true,customer,balance:30,permissions:{canCollect:true,canAdjust:role==='admin'},transactions:[{createdAt:'2026-08-10T10:00:00.000Z',operation:'invoice',amount:30,balanceBefore:0,balanceAfter:30,createdBy:'ضياء'}]})};
+    }
   };
   context.window = context;
   vm.createContext(context);

@@ -13,7 +13,7 @@ vm.createContext(context);
 vm.runInContext(code, context);
 
 assert.strictEqual(context.MATBAGY_ACCOUNTING_VERSION, undefined, 'top-level const is intentionally not exported by vm');
-assert.match(code, /V1921_SEMI_AUTOMATIC_ACCOUNTING/);
+assert.match(code, /V1922_UNIFIED_SAFE_BUILD/);
 
 [
   'savePurchaseCustodyV1920', 'closePurchaseCustodyV1920', 'getDailyDepartmentReportV1920',
@@ -65,7 +65,7 @@ assert.match(app, /lineCostTotal\(r\)[\s\S]*totalCost/);
 assert.match(app, /عكس الحركة/);
 assert.match(app, /التقارير والأرباح/);
 assert.match(app, /paymentType:val\('fiPayment'\)/);
-assert.match(config, /ES46 V1921/);
-assert.match(index, /es46-v1921-semi-automatic-accounting/);
+assert.match(config, /ES47 V1922/);
+assert.match(index, /es47-v1922-unified-safe-build/);
 
 console.log('accounting custody and department day close V1920 tests passed');

@@ -64,7 +64,7 @@ function createApp(role) {
       { department: 'طباعة', materialName: 'رول طباعة خاص', inQty: 1, source: 'حركة طباعة' }
     ]
   };
-  const initialStorage={MATBAGY_EMPLOYEE_SSO:JSON.stringify({user:users[role]})};
+  const initialStorage={EASYSTORE_SESSION_V1922:JSON.stringify({user:users[role]})};
   initialStorage[scopedDataKey(users[role])]=JSON.stringify(data);
   const storage = makeStorage(initialStorage);
   const document = {
@@ -78,6 +78,7 @@ function createApp(role) {
     console,
     document,
     localStorage: storage,
+    sessionStorage: storage,
     location: { search: '?screen=dashboard', pathname: '/EasyStore/' },
     history: { back() {} },
     URL,

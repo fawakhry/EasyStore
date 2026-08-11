@@ -42,7 +42,7 @@ function createApp(role, screenName) {
       { id: 'DPP-2', workDate: '2026-08-10', employee: 'وائل', department: 'طباعة', supplier: 'مورد طباعة', material: 'رول طباعة', qty: 1, unit: 80, total: 80, paymentType: 'آجل', status: 'قيد مراجعة ضياء', stockStatus: 'مضاف فورًا' }
     ]
   };
-  const initialStorage={MATBAGY_EMPLOYEE_SSO:JSON.stringify({user:users[role]})};
+  const initialStorage={EASYSTORE_SESSION_V1922:JSON.stringify({user:users[role]})};
   initialStorage[scopedDataKey(users[role])]=JSON.stringify(data);
   const storage = makeStorage(initialStorage);
   const document = {
@@ -55,7 +55,8 @@ function createApp(role, screenName) {
   const context = {
     console,
     document,
-    localStorage: storage,
+    localStorage: makeStorage({}),
+    sessionStorage: storage,
     location: { search: `?screen=${screenName}`, pathname: '/EasyStore/' },
     history: { back() {} },
     URL,

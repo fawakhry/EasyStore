@@ -11,7 +11,7 @@ const context = { console };
 vm.createContext(context);
 vm.runInContext(code, context);
 
-assert.match(code, /V1921_SEMI_AUTOMATIC_ACCOUNTING/);
+assert.match(code, /V1922_UNIFIED_SAFE_BUILD/);
 [
   'previewAccountingAutomationV1921',
   'runAccountingDayAutomationV1921',
@@ -58,11 +58,13 @@ assert.strictEqual(duplicateLedger.balance, 85);
 assert.strictEqual(repairedMasterBalance, 85, 'retry must preserve the latest party balance, not an old duplicate row balance');
 Object.assign(context, originalLedgerFns);
 
-assert.match(code, /auth\.mode === "full" \|\| auth\.mode === "final"/,
-  'department invoice approval must be restricted to finance reviewers');
-assert.match(String(context.approveAccountingDeptInvoiceV1887_), /auth\.mode === "full" \|\| auth\.mode === "final"/,
-  'the final active approval function must keep the restricted permissions');
-assert.doesNotMatch(String(context.approveAccountingDeptInvoiceV1887_), /auth\.mode === "print"|auth\.mode === "laser"/);
+assert.match(code, /auth\.mode === "full" \|\| auth\.mode === "print" \|\| auth\.mode === "laser"/,
+  'department invoice approval must be restricted to the department itself or Diaa');
+assert.match(String(context.approveAccountingDeptInvoiceV1887_), /auth\.mode === "full" \|\| auth\.mode === "print" \|\| auth\.mode === "laser"/,
+  'the final active approval function must keep department ownership');
+assert.match(String(context.approveAccountingDeptInvoiceV1887_), /auth\.mode === "print"/);
+assert.match(String(context.approveAccountingDeptInvoiceV1887_), /auth\.mode === "laser"/);
+assert.doesNotMatch(String(context.approveAccountingDeptInvoiceV1887_), /auth\.mode === "final"/);
 assert.match(String(context.easyStoreSystemHealth_), /accountingDuplicateRequestIdsV1921_/,
   'the final active health function must run the V1921 duplicate checks');
 assert.match(String(context.saveEasyStoreSaleV2_), /easyStoreSalesHeadersV1909_\(\)/,
@@ -71,11 +73,11 @@ assert.match(String(context.saveEasyStoreSaleV2_), /if \(!accountingLineIdsV1921
   'a sale linked to already-approved department lines must not deduct stock twice');
 assert.match(String(context.saveEasyStorePurchase_), /easyStorePurchasesHeadersV1909_\(\)/,
   'the final active purchase function must preserve source and reversal columns');
-assert.match(code, /جابر ووائل يسجلان البنود للمراجعة دون اعتماد مالي/);
-context.accountingAuthorize_ = () => ({ ok:true, mode:'laser', department:'ليزر', user:{username:'جابر'} });
+assert.match(code, /رحمة وريفان يسحبان البنود المعتمدة للتقفيل النهائي/);
+context.accountingAuthorize_ = () => ({ ok:true, mode:'final', department:'', user:{username:'رحمة'} });
 const deniedApproval = context.approveAccountingDeptInvoiceV1887_({ parameter:{orderId:'1001',department:'ليزر'} });
 assert.strictEqual(deniedApproval.success, false);
-assert.match(deniedApproval.message, /جابر ووائل/);
+assert.match(deniedApproval.message, /رحمة وريفان/);
 const deniedAutomation = context.runAccountingDayAutomationV1921_({ parameter:{confirm:'RUN_SAFE_DAY_CLOSE'} });
 assert.strictEqual(deniedAutomation.success, false);
 assert.match(deniedAutomation.message, /ضياء فقط/);
@@ -91,16 +93,16 @@ assert.match(app, /مركز متابعة اليوم والتقفيل الذكي/
 assert.match(app, /تقفيل اليوم كله بموافقة واحدة/);
 assert.match(app, /لن يعتمد النظام مشتريات معلقة أو فاتورة عميل أو تسوية عهدة بها مبلغ من نفسه/);
 assert.match(app, /approveDeptInvoiceLegacy\(\)\{ return this\.approveDeptInvoice\(\); \}/);
-assert.match(app, /if\(!canFinalize\(\)\) return flash\('اعتماد فاتورة القسم من شاشة التقفيل متاح لضياء أو رحمة أو ريفان فقط\.'/);
+assert.match(app, /بانتظار اعتماد مسؤول القسم/);
 assert.match(app, /safeAutoRefresh/);
 assert.match(app, /state\.formDirty/);
 assert.match(app, /function sessionCacheKey\(\)/);
-assert.match(app, /if\(user\.token\) localStorage\.setItem\(sessionCacheKey\(\)/);
+assert.match(app, /if\(user\.token\) sessionStorage\.setItem\(sessionCacheKey\(\)/);
 assert.match(app, /localStorage\.removeItem\(STORE_KEY\)/);
 assert.doesNotMatch(app, /sales-purchases/);
 assert.match(app, /department:val\('saDept'\)/);
 assert.doesNotMatch(app, /onclick="ES27\.approveDeptInvoice\(\)">✓ اعتماد فاتورة القسم/);
 assert.match(config, /safe-3-minutes-when-clean/);
-assert.match(index, /es46-v1921-semi-automatic-accounting-20260811a/);
+assert.match(index, /es47-v1922-unified-safe-build-20260811a/);
 
 console.log('accounting semi-automatic V1921 tests passed');
