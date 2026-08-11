@@ -1,9 +1,11 @@
-// EasyStore / Matbagy Accounting - ES46 V1921 semi-automatic accounting
+// EasyStore / Matbagy Accounting - ES47 V1922 unified safe build
 window.TREND_API_URL = "https://script.google.com/macros/s/AKfycbwGHOduL0BHvH-o4up9nbk1wYFi54D2KOnW1AFDigpBzyuAOTWzPfpSFPGSyFVj_fmTmg/exec";
+// اضبطه على رابط secure-proxy بعد نشره. عند تركه فارغًا يُستخدم Apps Script POST مباشرة.
+window.MATBAGY_SECURE_API_PROXY_URL = "";
 
-window.EASYSTORE_VERSION = 'ES46 V1921 Semi-Automatic Accounting';
+window.EASYSTORE_VERSION = 'ES47 V1922 Unified Safe Build';
 window.EASYSTORE_SESSION_CATALOG_FIX = window.EASYSTORE_VERSION;
-window.EASYSTORE_CACHE_TAG = 'es46-v1921-semi-automatic-accounting-20260811a';
+window.EASYSTORE_CACHE_TAG = 'es47-v1922-unified-safe-build-20260811a';
 window.EASYSTORE_AUTO_REFRESH = 'safe-3-minutes-when-clean';
 window.EASYSTORE_INITIAL_LOAD_ONCE = true;
 window.EASYSTORE_DISABLE_PHONE_ACTIVATION = true;
@@ -20,3 +22,4 @@ window.EASYSTORE_V1918_DEPARTMENT_ACCOUNTING_SCOPE = true;
 window.EASYSTORE_V1919_IMMEDIATE_DEPARTMENT_PURCHASE_STOCK = true;
 window.EASYSTORE_V1920_CUSTODY_DEPARTMENT_DAY_CLOSE = true;
 window.EASYSTORE_V1921_SEMI_AUTOMATIC_ACCOUNTING = true;
+window.EASYSTORE_V1922_UNIFIED_SAFE_BUILD = true;

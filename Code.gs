@@ -32,7 +32,7 @@ const SHEET_NAME_ACC_FINAL_INVOICES = "حسابات - الفواتير النه�
 const SHEET_NAME_ACC_WASTE = "حسابات - هوالك الأقسام";
 const SHEET_NAME_ACC_STOCK_MOVES = "حسابات - حركة المخزون";
 const SHEET_NAME_ACC_DEPT_DAILY_PURCHASES = "حسابات - مشتريات الأقسام اليومية";
-const MATBAGY_ACCOUNTING_VERSION = "V1921_SEMI_AUTOMATIC_ACCOUNTING";
+const MATBAGY_ACCOUNTING_VERSION = "V1922_UNIFIED_SAFE_BUILD";
 const DEFAULT_PASSWORD = "";
 function employeeDefaultPassword_() {
   try { return normalize_(PropertiesService.getScriptProperties().getProperty("EMPLOYEE_DEFAULT_PASSWORD")); } catch (err) { return ""; }
@@ -75,41 +75,43 @@ function doGet(e) {
     else if (action === "health") result = healthCheck_();
     else if (action === "trendosV1900Ping" || action === "previewReadyPickupDelivery" || action === "deliverReadyPickupBulk") result = trendosV1900MainRouteObject_(e, null);
     else if (action === "login") result = login_(e);
+    else if (action === "logout") result = logoutEmployee_(e);
     else if (action === "verifyEmployeeSession") result = verifyEmployeeSession_(e);
     else if (action === "customerLogin") result = customerLogin_(e);
+    else if (action === "customerLogout") result = logoutCustomer_(e);
     else if (action === "getCustomerOrders") result = getCustomerOrders_(e);
     else if (action === "createCustomerDraft") result = createCustomerDraft_(e);
     else if (action === "addCustomerDraftItem") result = addCustomerDraftItem_(e);
     else if (action === "submitCustomerDraft") result = submitCustomerDraft_(e);
     else if (action === "getOrderConversation") result = getOrderConversation_(e);
     else if (action === "sendOrderConversationMessage") result = sendOrderConversationMessage_(e);
-    else if (action === "initOrderConversations") result = initOrderConversationsNow();
-    else if (action === "initCustomerDrafts") result = initCustomerDraftsNow();
+    else if (action === "initOrderConversations") result = runAdminMaintenance_(e, action, initOrderConversationsNow);
+    else if (action === "initCustomerDrafts") result = runAdminMaintenance_(e, action, initCustomerDraftsNow);
     else if (action === "createCustomerPortalOrder") result = createCustomerPortalOrder_(e);
     else if (action === "changeCustomerPassword") result = changeCustomerPassword_(e);
-    else if (action === "initCustomerPortal") result = initCustomerPortalNow();
+    else if (action === "initCustomerPortal") result = runAdminMaintenance_(e, action, initCustomerPortalNow);
     else if (action === "getRows") result = getRows_(e);
     else if (action === "getUrgentNotifications") result = getUrgentNotifications_(e);
     else if (action === "getDashboard") result = getDashboard_(e);
     else if (action === "getPlatformSections") result = getPlatformSections_(e);
-    else if (action === "initPlatformSections") result = initPlatformSectionsNow();
+    else if (action === "initPlatformSections") result = runAdminMaintenance_(e, action, initPlatformSectionsNow);
     else if (action === "getFranchiseBranches") result = getFranchiseBranches_(e);
     else if (action === "getServiceProviderRoutes") result = getServiceProviderRoutes_(e);
     else if (action === "getMarketplace") result = getMarketplace_(e);
-    else if (action === "initMarketplace") result = initMarketplaceNow();
-    else if (action === "initServiceProviderRoutes") result = initServiceProviderRoutesNow();
+    else if (action === "initMarketplace") result = runAdminMaintenance_(e, action, initMarketplaceNow);
+    else if (action === "initServiceProviderRoutes") result = runAdminMaintenance_(e, action, initServiceProviderRoutesNow);
     else if (action === "getWhiteLabelSettings") result = getWhiteLabelSettings_(e);
     else if (action === "getLeadPhoneNumbers") result = getLeadPhoneNumbers_(e);
-    else if (action === "initFranchiseBranches") result = initFranchiseBranchesNow();
+    else if (action === "initFranchiseBranches") result = runAdminMaintenance_(e, action, initFranchiseBranchesNow);
     else if (action === "assignCustomerBranch") result = assignCustomerBranch_(e);
     else if (action === "getPlatformAds") result = getPlatformAds_(e);
     else if (action === "deletePlatformAd") result = deletePlatformAd_(e);
-    else if (action === "initPlatformAds") result = initPlatformAdsNow();
+    else if (action === "initPlatformAds") result = runAdminMaintenance_(e, action, initPlatformAdsNow);
     else if (action === "getActivityLog") result = getActivityLog_(e);
-    else if (action === "initKnowledge" || action === "initAiKnowledge") result = initAiKnowledgeNow();
+    else if (action === "initKnowledge" || action === "initAiKnowledge") result = runAdminMaintenance_(e, action, initAiKnowledgeNow);
     else if (action === "getKnowledge") result = getKnowledge_(e);
     else if (action === "getAiKnowledge" || action === "getKnowledgePublic") result = getAiKnowledge_(e);
-    else if (action === "rebuildAIOrdersView" || action === "refreshAIOrdersView" || action === "initAIOrdersView") result = rebuildAIOrdersView_(e);
+    else if (action === "rebuildAIOrdersView" || action === "refreshAIOrdersView" || action === "initAIOrdersView") result = runAdminMaintenance_(e, action, rebuildAIOrdersView);
     else if (action === "getAIOrdersView" || action === "getAiOrdersView") result = getAIOrdersView_(e);
     else if (action === "getAIOrderStatus" || action === "getAiOrderStatus" || action === "aiOrderStatus" || action === "getAIOrderReply" || action === "getAiOrderReply" || action === "aiOrderReply") result = getAIOrderStatusV1891_(e);
     else if (action === "getAiSettings") result = getAiSettings_(e);
@@ -197,6 +199,7 @@ function doGet(e) {
     };
   }
 
+  if (e.__returnRawV1922 === true) return result;
   return output_(result, callback);
 }
 
@@ -219,7 +222,8 @@ function doPost(e) {
 
   let result;
   try {
-    if (action === "trendosV1900Ping" || action === "previewReadyPickupDelivery" || action === "deliverReadyPickupBulk") result = trendosV1900MainRouteObject_(e, payload);
+    if (action === "getAIOrderReply" || action === "getAiOrderReply" || action === "aiOrderReply" || action === "getAIOrderStatus") result = getAIOrderStatusV1891_({ parameter: payload, requestMethod: "POST" });
+    else if (action === "trendosV1900Ping" || action === "previewReadyPickupDelivery" || action === "deliverReadyPickupBulk") result = trendosV1900MainRouteObject_(e, payload);
     else if (action === "uploadCustomerDraftFile") result = uploadCustomerDraftFile_(payload);
     else if (action === "uploadOrderConversationFile") result = uploadOrderConversationFile_(payload);
     else if (action === "uploadPlatformAd") result = uploadPlatformAd_(payload);
@@ -229,9 +233,10 @@ function doPost(e) {
     else if (action === "saveMarketplaceVendor") result = saveMarketplaceVendor_(payload);
     else if (action === "saveMarketplaceProduct") result = saveMarketplaceProduct_(payload);
     else if (action === "saveWhiteLabelSettings") result = saveWhiteLabelSettings_(payload);
+    else if (action) result = doGet({ parameter: Object.assign({}, e.parameter || {}, payload), requestMethod: "POST", __returnRawV1922: true });
     else result = { success: false, message: "Action POST غير معروف." };
   } catch (err) {
-    result = { success: false, message: "خطأ في رفع الملفات: " + (err && err.message ? err.message : err) };
+    result = { success: false, message: "خطأ في السيرفر: " + (err && err.message ? err.message : err) };
   }
   return output_(result, "");
 }
@@ -548,6 +553,7 @@ function findUser_(username) {
         password: normalize_(row[colPassword - 1]) || employeeDefaultPassword_(),
         mustChange: colMustChange ? normalize_(row[colMustChange - 1]) : "",
         token: colToken ? normalize_(row[colToken - 1]) : "",
+        lastLogin: colLastLogin ? row[colLastLogin - 1] : "",
         colPassword: colPassword,
         colToken: colToken,
         colLastLogin: colLastLogin
@@ -569,30 +575,108 @@ function roleFromArabic_(role, department) {
   return "service";
 }
 
+function authPepperV1922_() {
+  const props = PropertiesService.getScriptProperties();
+  let pepper = normalize_(props.getProperty("AUTH_PASSWORD_PEPPER"));
+  if (!pepper) {
+    pepper = Utilities.getUuid() + Utilities.getUuid();
+    props.setProperty("AUTH_PASSWORD_PEPPER", pepper);
+  }
+  return pepper;
+}
+
+function authDigestV1922_(value) {
+  const bytes = Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, String(value || ""), Utilities.Charset.UTF_8);
+  return Utilities.base64EncodeWebSafe(bytes).replace(/=+$/g, "");
+}
+
+function passwordHashV1922_(password, salt) {
+  salt = normalize_(salt) || Utilities.getUuid().replace(/-/g, "");
+  let digest = String(password || "") + "|" + salt + "|" + authPepperV1922_();
+  for (let i = 0; i < 1200; i++) digest = authDigestV1922_(digest + "|" + i + "|" + salt);
+  return "v1922$" + salt + "$" + digest;
+}
+
+function constantTimeEqualsV1922_(left, right) {
+  left = String(left || "");
+  right = String(right || "");
+  let diff = left.length ^ right.length;
+  const length = Math.max(left.length, right.length);
+  for (let i = 0; i < length; i++) diff |= (left.charCodeAt(i % Math.max(1, left.length)) || 0) ^ (right.charCodeAt(i % Math.max(1, right.length)) || 0);
+  return diff === 0;
+}
+
+function passwordMatchesV1922_(stored, input) {
+  stored = String(stored || "");
+  input = String(input || "");
+  if (stored.indexOf("v1922$") !== 0) return constantTimeEqualsV1922_(stored, input);
+  const parts = stored.split("$");
+  if (parts.length !== 3 || !parts[1]) return false;
+  return constantTimeEqualsV1922_(stored, passwordHashV1922_(input, parts[1]));
+}
+
+function loginRateKeyV1922_(kind, identity) {
+  return "LOGIN_V1922_" + kind + "_" + authDigestV1922_(searchKey_(identity || "unknown")).slice(0, 32);
+}
+
+function loginRateStateV1922_(kind, identity) {
+  const cache = CacheService.getScriptCache();
+  const key = loginRateKeyV1922_(kind, identity);
+  let state = { attempts: 0 };
+  try { state = JSON.parse(cache.get(key) || '{"attempts":0}'); } catch (err) {}
+  return { cache: cache, key: key, attempts: Number(state.attempts || 0) };
+}
+
+function loginRateFailV1922_(kind, identity) {
+  const state = loginRateStateV1922_(kind, identity);
+  state.attempts++;
+  state.cache.put(state.key, JSON.stringify({ attempts: state.attempts }), 900);
+  return state.attempts;
+}
+
+function loginRateClearV1922_(kind, identity) {
+  try { const state = loginRateStateV1922_(kind, identity); state.cache.remove(state.key); } catch (err) {}
+}
+
+function sessionTtlMsV1922_() {
+  let hours = 12;
+  try { hours = Number(PropertiesService.getScriptProperties().getProperty("SESSION_TTL_HOURS") || 12) || 12; } catch (err) {}
+  return Math.max(1, Math.min(72, hours)) * 60 * 60 * 1000;
+}
+
+function sessionExpiredV1922_(issuedAt) {
+  const parsed = parseDateValue_(issuedAt);
+  return !parsed || (Date.now() - parsed.getTime()) > sessionTtlMsV1922_();
+}
+
 function login_(e) {
   const username = normalize_(e.parameter.username);
   const password = normalize_(e.parameter.password);
-
   if (!username || !password) return { success: false, message: "اكتب اسم المستخدم وكلمة المرور." };
-
+  const rate = loginRateStateV1922_("employee", username);
+  if (rate.attempts >= 5) return { success: false, rateLimited: true, message: "تم إيقاف محاولات الدخول مؤقتًا لمدة 15 دقيقة لحماية الحساب." };
   const user = findUser_(username);
-  if (!user) return { success: false, message: "المستخدم غير موجود." };
-  if (user.active && user.active !== "نعم") return { success: false, message: "هذا المستخدم غير مفعل." };
-  if (user.password !== password) return { success: false, message: "كلمة المرور غير صحيحة." };
-
-  const token = Utilities.getUuid();
+  if (!user || (user.active && user.active !== "نعم") || !passwordMatchesV1922_(user.password, password)) {
+    loginRateFailV1922_("employee", username);
+    return { success: false, message: user && user.active && user.active !== "نعم" ? "هذا المستخدم غير مفعل." : "اسم المستخدم أو كلمة المرور غير صحيحة." };
+  }
+  loginRateClearV1922_("employee", username);
+  const usedLegacyPassword = String(user.password || "").indexOf("v1922$") !== 0;
+  if (usedLegacyPassword) safeSet_(user.sheet, user.rowNumber, user.colPassword, passwordHashV1922_(password));
+  const token = Utilities.getUuid() + Utilities.getUuid();
+  const issuedAt = new Date();
   safeSet_(user.sheet, user.rowNumber, user.colToken, token);
-  safeSet_(user.sheet, user.rowNumber, user.colLastLogin, new Date());
+  safeSet_(user.sheet, user.rowNumber, user.colLastLogin, issuedAt);
   SpreadsheetApp.flush();
-
   return {
     success: true,
+    expiresAt: new Date(issuedAt.getTime() + sessionTtlMsV1922_()).toISOString(),
     user: {
       username: user.username,
       name: user.username,
       department: user.department,
       role: roleFromArabic_(user.role, user.department),
-      mustChange: user.mustChange === "نعم" || (!!employeeDefaultPassword_() && user.password === employeeDefaultPassword_()),
+      mustChange: user.mustChange === "نعم" || (!!employeeDefaultPassword_() && password === employeeDefaultPassword_()),
       token: token
     }
   };
@@ -602,27 +686,23 @@ function authorize_(username, token) {
   const user = findUser_(normalize_(username));
   if (!user) return { ok: false, message: "المستخدم غير موجود." };
   if (user.active && user.active !== "نعم") return { ok: false, message: "هذا المستخدم غير مفعل." };
-  if (!token || user.token !== normalize_(token)) return { ok: false, message: "انتهت الجلسة. سجل الدخول مرة أخرى." };
+  if (!token || !constantTimeEqualsV1922_(user.token, normalize_(token)) || sessionExpiredV1922_(user.lastLogin)) {
+    if (user.colToken) safeSet_(user.sheet, user.rowNumber, user.colToken, "");
+    return { ok: false, message: "انتهت الجلسة. سجل الدخول مرة أخرى." };
+  }
   return { ok: true, user: user };
 }
 
-function runAdminMaintenance_(e, action, handler) {
-  const params = e && e.parameter ? e.parameter : {};
-  const auth = authorize_(params.username, params.token);
-  if (!auth.ok) return { success: false, message: auth.message };
-
-  const role = roleFromArabic_(auth.user.role, auth.user.department);
-  const userKey = searchKey_(auth.user.username || auth.user.name || "");
-  const isAdmin = role === "admin" || userKey.indexOf("ضياء") !== -1 || userKey.indexOf("diaa") !== -1;
-  if (!isAdmin) return { success: false, message: "أوامر الصيانة متاحة للمدير فقط." };
-
-  if (action === "cleanStart" && normalize_(params.confirm) !== "CLEAN_START_KEEP_CUSTOMERS") {
-    return { success: false, message: "تأكيد cleanStart غير صحيح. لم يتم حذف أو تغيير أي بيانات." };
+function logoutEmployee_(e) {
+  const p = (e && e.parameter) || {};
+  const user = findUser_(normalize_(p.username));
+  if (user && p.token && constantTimeEqualsV1922_(user.token, normalize_(p.token))) {
+    safeSet_(user.sheet, user.rowNumber, user.colToken, "");
+    SpreadsheetApp.flush();
   }
-
-  if (typeof handler !== "function") return { success: false, message: "أمر الصيانة غير متاح." };
-  return handler(e);
+  return { success: true, message: "تم تسجيل الخروج بأمان." };
 }
+
 
 function verifyEmployeeSession_(e) {
   const auth = authorize_(e.parameter.username, e.parameter.token);
@@ -651,15 +731,16 @@ function changePassword_(e) {
   const newPassword = normalize_(e.parameter.newPassword);
 
   if (!oldPassword || !newPassword) return { success: false, message: "اكتب كلمة المرور القديمة والجديدة." };
-  if (newPassword.length < 4) return { success: false, message: "كلمة المرور الجديدة لا تقل عن 4 أرقام/حروف." };
-  if (auth.user.password !== oldPassword) return { success: false, message: "كلمة المرور القديمة غير صحيحة." };
+  if (newPassword.length < 6) return { success: false, message: "كلمة المرور الجديدة لا تقل عن 6 أرقام/حروف." };
+  if (!passwordMatchesV1922_(auth.user.password, oldPassword)) return { success: false, message: "كلمة المرور القديمة غير صحيحة." };
 
-  safeSet_(auth.user.sheet, auth.user.rowNumber, auth.user.colPassword, newPassword);
+  safeSet_(auth.user.sheet, auth.user.rowNumber, auth.user.colPassword, passwordHashV1922_(newPassword));
+  safeSet_(auth.user.sheet, auth.user.rowNumber, auth.user.colToken, "");
   const h = headersMap_(auth.user.sheet);
   if (h["يجب تغيير كلمة المرور؟"]) safeSet_(auth.user.sheet, auth.user.rowNumber, h["يجب تغيير كلمة المرور؟"], "لا");
   SpreadsheetApp.flush();
 
-  return { success: true, message: "تم تغيير كلمة المرور." };
+  return { success: true, forceRelogin: true, message: "تم تغيير كلمة المرور. سجل الدخول مرة أخرى." };
 }
 
 /*********************** العملاء ***********************/
@@ -714,164 +795,11 @@ function searchCustomers_(e) {
 }
 
 
-function customerCols_(sheet) {
-  const h = headersMap_(sheet);
-  return {
-    name: firstCol_(h, ["اسم الشات / المكتب", "اسم العميل", "Customer Name"], 1),
-    manager: firstCol_(h, ["اسم المسؤول", "المسؤول", "Manager"], 2),
-    phone: firstCol_(h, ["رقم العميل الأساسي", "رقم العميل", "رقم الهاتف", "Phone"], 3),
-    extra: firstCol_(h, ["رقم إضافي", "رقم إضافى", "Extra Phone"], 4),
-    type: firstCol_(h, ["نوع العميل", "Customer Type"], 5),
-    active: firstCol_(h, ["مفعل؟", "مفعل", "Active"], 0)
-  };
-}
-
-function buildCustomerPhoneMap_() {
-  const sheet = ss_().getSheetByName(SHEET_NAME_CUSTOMERS);
-  const map = {};
-  if (!sheet || sheet.getLastRow() < 2) return map;
-
-  setPhoneColumnsAsText_(sheet);
-
-  const data = sheet.getDataRange().getValues();
-  const c = customerCols_(sheet);
-
-  for (let i = 1; i < data.length; i++) {
-    const row = data[i];
-    const active = c.active ? normalize_(row[c.active - 1]) : "نعم";
-    if (active && active !== "نعم") continue;
-
-    const name = normalize_(row[c.name - 1]);
-    if (!name) continue;
-
-    const phone = c.phone ? cleanPhone_(row[c.phone - 1]) : "";
-    const extraPhone = c.extra ? cleanPhone_(row[c.extra - 1]) : "";
-    const manager = c.manager ? normalize_(row[c.manager - 1]) : "";
-    const type = c.type ? normalize_(row[c.type - 1]) : "";
-    const key = searchKey_(name);
-
-    if (!map[key] || (!map[key].phone && (phone || extraPhone))) {
-      map[key] = {
-        name: name,
-        phone: phone || extraPhone,
-        extraPhone: extraPhone,
-        manager: manager,
-        type: type
-      };
-    }
-  }
-
-  return map;
-}
-
-function findCustomerInfoByName_(customerName) {
-  const nameKey = searchKey_(customerName);
-  if (!nameKey) return { name: "", phone: "", extraPhone: "", manager: "", type: "" };
-
-  const map = buildCustomerPhoneMap_();
-  if (map[nameKey]) return map[nameKey];
-
-  // لو الاسم في الأوردر مختلف بسيط عن الاسم في العملاء، نعمل بحث احتياطي يحتوي الاسم.
-  const keys = Object.keys(map);
-  for (let i = 0; i < keys.length; i++) {
-    if (keys[i].indexOf(nameKey) !== -1 || nameKey.indexOf(keys[i]) !== -1) {
-      return map[keys[i]];
-    }
-  }
-
-  return { name: normalize_(customerName), phone: "", extraPhone: "", manager: "", type: "" };
-}
 
 
-function canCreateCustomer_(user) {
-  const role = roleFromArabic_(user.role, user.department);
-  const username = searchKey_(user.username || "");
-  return role === "admin" || role === "service" || username === "ضياء" || username === "رحمه";
-}
 
-function createCustomer_(e) {
-  const auth = authorize_(e.parameter.username, e.parameter.token);
-  if (!auth.ok) return { success: false, message: auth.message };
-  if (!canCreateCustomer_(auth.user)) return { success: false, message: "ليس لديك صلاحية إضافة عميل." };
 
-  const customerName = normalize_(e.parameter.customerName || e.parameter.name);
-  const manager = normalize_(e.parameter.manager) || auth.user.username;
-  const phone = cleanPhone_(e.parameter.phone || e.parameter.customerPhone);
-  const extraPhone = cleanPhone_(e.parameter.extraPhone || e.parameter.customerExtraPhone);
-  const customerType = safeCustomerTypeForValidation_(e.parameter.customerType || e.parameter.type);
-  const active = normalize_(e.parameter.active) || "نعم";
-  const notes = normalize_(e.parameter.notes);
 
-  if (!customerName) return { success: false, message: "اسم الشات / العميل مطلوب." };
-
-  const sheet = ss_().getSheetByName(SHEET_NAME_CUSTOMERS);
-  if (!sheet) return { success: false, message: "شيت العملاء غير موجود." };
-
-  // تأكد من وجود الأعمدة الاختيارية بدون المساس بالعملاء الحاليين
-  ensureHeaderIfAnyMissing_(sheet, ["اسم الشات / المكتب", "اسم المسؤول", "رقم العميل الأساسي", "رقم إضافي", "نوع العميل", "مفعل؟", "ملاحظات", "تاريخ الإضافة", "آخر تحديث"]);
-
-  const h = headersMap_(sheet);
-  const colName = firstCol_(h, ["اسم الشات / المكتب", "اسم العميل", "Customer Name"], 1);
-  const colPhone = firstCol_(h, ["رقم العميل الأساسي", "رقم العميل", "رقم الهاتف", "Phone"], 3);
-  const colExtra = firstCol_(h, ["رقم إضافي", "رقم إضافى", "Extra Phone"], 4);
-  const colActive = firstCol_(h, ["مفعل؟", "مفعل", "Active"], 0);
-
-  const data = sheet.getDataRange().getValues();
-  const nameKey = searchKey_(customerName);
-  const phoneKey = searchKey_(phone);
-  const extraKey = searchKey_(extraPhone);
-
-  for (let i = 1; i < data.length; i++) {
-    const row = data[i];
-    const existingName = searchKey_(valueAt_(row, colName));
-    const existingPhone = searchKey_(valueAt_(row, colPhone));
-    const existingExtra = searchKey_(valueAt_(row, colExtra));
-    const existingActive = colActive ? normalize_(valueAt_(row, colActive)) : "نعم";
-
-    if (existingName && existingName === nameKey) {
-      return { success: false, message: "العميل موجود بالفعل بنفس الاسم في شيت العملاء." };
-    }
-    if (phoneKey && (phoneKey === existingPhone || phoneKey === existingExtra)) {
-      return { success: false, message: "رقم العميل موجود بالفعل في شيت العملاء." };
-    }
-    if (extraKey && (extraKey === existingPhone || extraKey === existingExtra)) {
-      return { success: false, message: "الرقم الإضافي موجود بالفعل في شيت العملاء." };
-    }
-  }
-
-  const now = new Date();
-  appendByHeaders_(sheet, {
-    "اسم الشات / المكتب": customerName,
-    "اسم العميل": customerName,
-    "اسم المسؤول": manager,
-    "رقم العميل الأساسي": phone,
-    "رقم العميل": phone,
-    "رقم الهاتف": phone,
-    "رقم إضافي": extraPhone,
-    "رقم إضافى": extraPhone,
-    "نوع العميل": customerType,
-    "مفعل؟": active,
-    "مفعل": active,
-    "ملاحظات": notes,
-    "تاريخ الإضافة": now,
-    "آخر تحديث": now
-  });
-
-  SpreadsheetApp.flush();
-
-  return {
-    success: true,
-    message: "تم إضافة العميل في شيت العملاء.",
-    customer: {
-      name: customerName,
-      manager: manager,
-      phone: phone,
-      extraPhone: extraPhone,
-      type: customerType,
-      active: active
-    }
-  };
-}
 
 function ensureHeaderIfAnyMissing_(sheet, headers) {
   headers.forEach(function(headerName) {
@@ -953,139 +881,7 @@ function getActivityLog_(e) {
   return { success: true, rows: rows };
 }
 
-function getDashboard_(e) {
-  const auth = authorize_(e.parameter.username, e.parameter.token);
-  if (!auth.ok) return { success: false, message: auth.message };
 
-  const screen = normalize_(e.parameter.screen || "service");
-  const lines = ss_().getSheetByName(SHEET_NAME_LINES);
-  if (!lines) return { success: false, message: "شيت بنود الأوردرات غير موجود." };
-  if (lines.getLastRow() < 2) return { success: true, dashboard: emptyDashboard_(screen) };
-
-  const data = lines.getDataRange().getValues();
-  const h = headersMap_(lines);
-
-  const colOrderId = firstCol_(h, ["رقم الأوردر", "Order ID"], 1);
-  const colOrderCode = firstCol_(h, ["كود الأوردر"], 2);
-  const colDept = firstCol_(h, ["القسم", "Department"], 5);
-  const colQty = firstCol_(h, ["الكمية", "Qty"], 8);
-  const colPriority = firstCol_(h, ["الأولوية", "Priority"], 10);
-  const colStatus = firstCol_(h, ["الحالة", "Status"], 11);
-  const colUpdated = firstCol_(h, ["آخر تحديث", "Updated At"], 13);
-  const colReceivedAt = firstCol_(h, ["تاريخ الاستلام", "تاريخ الإنشاء", "Received At"], 0);
-  const colExpectedAt = firstCol_(h, ["تاريخ التسليم المتوقع", "Expected Delivery"], 0);
-  const colExpectedText = firstCol_(h, ["الوقت المتوقع"], 0);
-  const colPress = firstCol_(h, ["مكبس", "مكبس حراري", "مكبس؟", "Press", "Heat Press"], 0);
-
-  const dashboard = emptyDashboard_(screen);
-  const today = startOfToday_();
-  const yesterday = addDays_(today, -1);
-  const tomorrow = addDays_(today, 1);
-  const todayWorkOrderSet = {};
-  const activeOrderSet = {};
-  const deliveredTodayOrderSet = {};
-  const readyOrderSet = {};
-  const overdueOrderSet = {};
-
-  for (let i = 1; i < data.length; i++) {
-    const row = data[i];
-    const orderId = normalize_(valueAt_(row, colOrderId)) || normalize_(valueAt_(row, colOrderCode));
-    const status = normalize_(valueAt_(row, colStatus)) || "طلب جديد";
-    const priority = normalize_(valueAt_(row, colPriority)) || "عادي";
-    const dept = normalize_(valueAt_(row, colDept)) || "غير محدد";
-    const press = isHeatPressFlag_(valueAt_(row, colPress));
-    const qty = Number(valueAt_(row, colQty)) || 1;
-    const expectedRaw = valueAt_(row, colExpectedAt) || valueAt_(row, colExpectedText);
-    const receivedRaw = valueAt_(row, colReceivedAt);
-    const updatedRaw = valueAt_(row, colUpdated);
-
-    if (!orderId && !dept) continue;
-    if (!dashboardMatchesScreen_(screen, dept, press)) continue;
-
-    const received = parseDateValue_(receivedRaw);
-    let expected = parseDateValue_(expectedRaw);
-    if (!expected && received) expected = addDays_(received, 2);
-    const updated = parseDateValue_(updatedRaw);
-
-    if (status === "تم التسليم") {
-      dashboard.delivered++;
-      if (isSameDay_(updated, today)) {
-        dashboard.deliveredToday++;
-        if (orderId) deliveredTodayOrderSet[orderId] = true;
-      }
-    }
-    if (status === "جاهز للاستلام") {
-      dashboard.readyForPickup++;
-      if (orderId) readyOrderSet[orderId] = true;
-    }
-    if (status === "مكرر") dashboard.duplicate++;
-
-    if (!isHiddenFromUserScreens_(status)) {
-      dashboard.activeLines++;
-      dashboard.activeSheets += qty;
-      if (orderId) activeOrderSet[orderId] = true;
-
-      if (priority === "عاجل" || priority === "VIP") dashboard.urgent++;
-      else if (!priority || priority === "عادي") dashboard.normal++;
-      else if (priority === "مؤجل") dashboard.delayedPriority++;
-
-      dashboard.byDepartment[dept] = (dashboard.byDepartment[dept] || 0) + 1;
-      if (press || dept === "مكبس") dashboard.heatPress++;
-      if (status === "متوقف") dashboard.problems++;
-
-      if (isOverdueByExpected_(status, expected || expectedRaw)) {
-        dashboard.overdue++;
-        if (orderId) overdueOrderSet[orderId] = true;
-      }
-
-      // شغل اليوم = مستلم امبارح + تسليمه بكرة، حسب قاعدة ترند مول:
-      // يوم استلام، اليوم التالي تنفيذ، اليوم الثالث تسليم.
-      if (isSameDay_(received, yesterday) && isSameDay_(expected, tomorrow)) {
-        dashboard.todayWorkLines++;
-        dashboard.todayWorkSheets += qty;
-        if (orderId) todayWorkOrderSet[orderId] = true;
-      }
-    }
-  }
-
-  dashboard.todayWorkOrders = Object.keys(todayWorkOrderSet).length;
-  dashboard.todayOrders = dashboard.todayWorkOrders;
-  dashboard.activeOrders = Object.keys(activeOrderSet).length;
-  dashboard.deliveredTodayOrders = Object.keys(deliveredTodayOrderSet).length;
-  dashboard.readyOrders = Object.keys(readyOrderSet).length;
-  dashboard.overdueOrders = Object.keys(overdueOrderSet).length;
-  dashboard.updatedAt = formatDateAr_(new Date());
-  return { success: true, dashboard: dashboard };
-}
-
-function emptyDashboard_(screen) {
-  const nameMap = { service: "خدمة العملاء", print: "الطباعة", laser: "الليزر", press: "المكبس" };
-  return {
-    screen: screen || "service",
-    departmentName: nameMap[screen] || "خدمة العملاء",
-    todayOrders: 0,
-    todayWorkOrders: 0,
-    todayWorkLines: 0,
-    todayWorkSheets: 0,
-    activeOrders: 0,
-    activeLines: 0,
-    activeSheets: 0,
-    urgent: 0,
-    normal: 0,
-    delayedPriority: 0,
-    overdue: 0,
-    overdueOrders: 0,
-    problems: 0,
-    readyForPickup: 0,
-    readyOrders: 0,
-    delivered: 0,
-    deliveredToday: 0,
-    deliveredTodayOrders: 0,
-    duplicate: 0,
-    heatPress: 0,
-    byDepartment: { "طباعة": 0, "ليزر": 0, "مكبس": 0 }
-  };
-}
 
 function dashboardMatchesScreen_(screen, department, heatPress) {
   screen = normalize_(screen || "service");
@@ -1110,145 +906,8 @@ function isSameDay_(date, target) {
 
 /*********************** عرض البنود ***********************/
 
-function getRows_(e) {
-  const auth = authorize_(e.parameter.username, e.parameter.token);
-  if (!auth.ok) return { success: false, message: auth.message };
-
-  const screen = normalize_(e.parameter.screen);
-  const lines = ss_().getSheetByName(SHEET_NAME_LINES);
-  if (!lines) return { success: false, message: "شيت بنود الأوردرات غير موجود." };
-
-  ensureWhatsAppHeaders_(lines);
-  ensurePressColumn_(lines);
-  ensureFlyPrintColumn_(lines);
-
-  const data = lines.getDataRange().getValues();
-  const h = headersMap_(lines);
-  const rows = [];
-
-  const colOrderId = firstCol_(h, ["رقم الأوردر", "Order ID"], 1);
-  const colOrderCode = firstCol_(h, ["كود الأوردر"], 2);
-  const colCustomer = firstCol_(h, ["اسم الشات / المكتب", "اسم العميل", "Customer Name"], 3);
-  const colDept = firstCol_(h, ["القسم", "Department"], 5);
-  const colLineId = firstCol_(h, ["رقم البند", "Line ID"], 6);
-  const colItem = firstCol_(h, ["اسم البند / نوع الشغل", "اسم البند", "Item Name"], 7);
-  const colQty = firstCol_(h, ["الكمية", "Qty"], 8);
-  const colAssigned = firstCol_(h, ["مسؤول القسم", "Assigned To"], 9);
-  const colPriority = firstCol_(h, ["الأولوية", "Priority"], 10);
-  const colStatus = firstCol_(h, ["الحالة", "Status"], 11);
-  const colReady = firstCol_(h, ["جاهز؟", "جاهز", "Ready"], 12);
-  const colUpdated = firstCol_(h, ["آخر تحديث", "Updated At"], 13);
-  const colNotes = firstCol_(h, ["ملاحظات", "Notes"], 14);
-  const colPhone = firstCol_(h, ["رقم العميل الخارجي", "رقم العميل", "رقم الهاتف", "Phone"], 17);
-  const colPress = firstCol_(h, ["مكبس", "مكبس حراري", "مكبس؟", "Press", "Heat Press"], 0);
-  const colCustomerNotified = firstCol_(h, ["تم إبلاغ العميل؟"], 0);
-  const colNotifyAt = firstCol_(h, ["وقت الإبلاغ"], 0);
-  const colNotifyBy = firstCol_(h, ["تم الإبلاغ بواسطة"], 0);
-  const colLastWaMessage = firstCol_(h, ["آخر رسالة واتساب"], 0);
-  const colLastWaAt = firstCol_(h, ["آخر وقت واتساب"], 0);
-  const colLastWaBy = firstCol_(h, ["آخر واتساب بواسطة"], 0);
-  const colReceivedAt = firstCol_(h, ["تاريخ الاستلام", "تاريخ الإنشاء", "Received At"], 0);
-  const colExpectedAt = firstCol_(h, ["تاريخ التسليم المتوقع", "Expected Delivery"], 0);
-  const colExpectedText = firstCol_(h, ["الوقت المتوقع"], 0);
-  const colRegistrationSent = firstCol_(h, ["تم إرسال رسالة التسجيل؟"], 0);
-  const colCustomerSourceV1903 = firstCol_(h, ["مصدر الطلب", "Source"], 0);
-  const colExternalIdV1903 = firstCol_(h, ["علامة العميل الخارجي", "رقم/علامة العميل", "معرف العميل الخارجي", "External Customer ID"], 0);
-  const colCustomerModeV1903 = firstCol_(h, ["نوع إدخال العميل", "Customer Mode"], 0);
-  const customerPhoneMap = buildCustomerPhoneMap_();
-
-  for (let i = 1; i < data.length; i++) {
-    const row = data[i];
-
-    const orderId = normalize_(valueAt_(row, colOrderId)) || normalize_(valueAt_(row, colOrderCode));
-    const lineId = normalize_(valueAt_(row, colLineId));
-    const department = normalize_(valueAt_(row, colDept));
-    const status = normalize_(valueAt_(row, colStatus));
-
-    if (!orderId && !lineId) continue;
-
-    if (screen === "print" && department !== "طباعة") continue;
-    if (screen === "laser" && department !== "ليزر") continue;
-    if (screen === "press" && department !== "مكبس" && normalize_(valueAt_(row, colPress)) !== "نعم") continue;
-
-    // لا نخفي الصفوف هنا؛ الواجهة هي التي تخفيها افتراضيًا.
-    // هذا يسمح بفلاتر محسوبة مثل "تسليمات اليوم" أن تظهر عند الطلب.
-
-    const customerName = normalize_(valueAt_(row, colCustomer));
-    let customerPhone = cleanPhone_(valueAt_(row, colPhone));
-    const customerLookup = customerPhoneMap[searchKey_(customerName)] || {};
-    if (!customerPhone && customerLookup.phone) {
-      customerPhone = customerLookup.phone;
-      if (colPhone) {
-        try {
-          lines.getRange(i + 1, colPhone).setNumberFormat("@").setValue(customerPhone);
-        } catch (phoneWriteErr) {}
-      }
-    }
-
-    rows.push({
-      rowNumber: i + 1,
-      orderId: orderId,
-      orderCode: normalize_(valueAt_(row, colOrderCode)) || orderId,
-      lineId: lineId,
-      customer: customerName,
-      customerPhone: customerPhone,
-      customerSource: normalize_(valueAt_(row, colCustomerSourceV1903)),
-      source: normalize_(valueAt_(row, colCustomerSourceV1903)),
-      externalCustomerId: normalize_(valueAt_(row, colExternalIdV1903)),
-      customerMode: normalize_(valueAt_(row, colCustomerModeV1903)),
-      department: department,
-      itemName: normalize_(valueAt_(row, colItem)),
-      qty: valueAt_(row, colQty) || 1,
-      assignedTo: normalize_(valueAt_(row, colAssigned)),
-      priority: normalize_(valueAt_(row, colPriority)) || "عادي",
-      status: status || "طلب جديد",
-      ready: normalize_(valueAt_(row, colReady)),
-      heatPress: normalize_(valueAt_(row, colPress)),
-      updatedAt: dateText_(valueAt_(row, colUpdated)) || valueAt_(row, colUpdated),
-      notes: normalize_(valueAt_(row, colNotes)),
-      customerNotified: normalize_(valueAt_(row, colCustomerNotified)),
-      notifiedAt: dateText_(valueAt_(row, colNotifyAt)) || valueAt_(row, colNotifyAt),
-      notifiedBy: normalize_(valueAt_(row, colNotifyBy)),
-      lastWhatsAppMessage: normalize_(valueAt_(row, colLastWaMessage)),
-      lastWhatsAppAt: dateText_(valueAt_(row, colLastWaAt)) || valueAt_(row, colLastWaAt),
-      lastWhatsAppBy: normalize_(valueAt_(row, colLastWaBy)),
-      receivedAt: dateText_(valueAt_(row, colReceivedAt)) || valueAt_(row, colReceivedAt),
-      expectedDeliveryAt: dateText_(valueAt_(row, colExpectedAt)) || valueAt_(row, colExpectedAt),
-      expectedDeliveryText: dateText_(valueAt_(row, colExpectedText)) || dateText_(valueAt_(row, colExpectedAt)),
-      overdue: isOverdueByExpected_(status || "طلب جديد", valueAt_(row, colExpectedAt) || valueAt_(row, colExpectedText)) ? "نعم" : "لا",
-      registrationSent: normalize_(valueAt_(row, colRegistrationSent))
-    });
-  }
-
-  rows.sort(function (a, b) {
-    const pa = priorityRank_(a.priority);
-    const pb = priorityRank_(b.priority);
-    if (pa !== pb) return pa - pb;
-    return String(a.orderId).localeCompare(String(b.orderId));
-  });
-
-  return { success: true, rows: rows };
-}
 
 
-function ensureWhatsAppHeaders_(sheet) {
-  ensureHeaderIfAnyMissing_(sheet, [
-    "تم إبلاغ العميل؟",
-    "وقت الإبلاغ",
-    "تم الإبلاغ بواسطة",
-    "آخر رسالة واتساب",
-    "آخر وقت واتساب",
-    "آخر واتساب بواسطة",
-    "نوع رسالة واتساب",
-    "تم إرسال رسالة التسجيل؟",
-    "وقت رسالة التسجيل",
-    "رسالة التسجيل بواسطة",
-    "تاريخ الاستلام",
-    "تاريخ التسليم المتوقع",
-    "الوقت المتوقع",
-    "مكبس حراري"
-  ]);
-}
 
 function findLineTarget_(sheet, rowNumber, lineId, orderIdParam) {
   const h = headersMap_(sheet);
@@ -1411,92 +1070,6 @@ function syncWhatsAppToOrder_(orderId, whatsappType, message, now, by) {
 
 /*********************** حفظ الحالة والتربيط ***********************/
 
-function updateLine_(e) {
-  const auth = authorize_(e.parameter.username, e.parameter.token);
-  if (!auth.ok) return { success: false, message: auth.message };
-
-  const rowNumber = Number(e.parameter.rowNumber || 0);
-  const lineId = normalize_(e.parameter.lineId);
-  const orderIdParam = normalize_(e.parameter.orderId);
-  const status = normalize_(e.parameter.status) || "طلب جديد";
-  const notes = normalize_(e.parameter.notes);
-
-  const sheet = ss_().getSheetByName(SHEET_NAME_LINES);
-  if (!sheet) return { success: false, message: "شيت بنود الأوردرات غير موجود." };
-
-  const h = headersMap_(sheet);
-  const colOrderId = firstCol_(h, ["رقم الأوردر", "Order ID"], 1);
-  const colLineId = firstCol_(h, ["رقم البند", "Line ID"], 6);
-  const colStatus = firstCol_(h, ["الحالة", "Status"], 11);
-  const colReady = firstCol_(h, ["جاهز؟", "جاهز", "Ready"], 12);
-  const colUpdated = firstCol_(h, ["آخر تحديث", "Updated At"], 13);
-  const colNotes = firstCol_(h, ["ملاحظات", "Notes"], 14);
-
-  if (!colStatus) return { success: false, message: 'عمود "الحالة" غير موجود في شيت بنود الأوردرات.' };
-  if (!lineId && !rowNumber && !orderIdParam) return { success: false, message: "رقم البند أو رقم الصف ناقص." };
-
-  let targetRow = 0;
-  let orderId = orderIdParam;
-
-  if (rowNumber > 1 && rowNumber <= sheet.getLastRow()) {
-    targetRow = rowNumber;
-    orderId = orderId || normalize_(sheet.getRange(targetRow, colOrderId).getValue());
-  }
-
-  if (!targetRow && lineId) {
-    const data = sheet.getDataRange().getValues();
-    for (let i = 1; i < data.length; i++) {
-      if (normalize_(data[i][colLineId - 1]) === lineId) {
-        targetRow = i + 1;
-        orderId = orderId || normalize_(data[i][colOrderId - 1]);
-        break;
-      }
-    }
-  }
-
-  if (!targetRow) return { success: false, message: "البند غير موجود في الشيت." };
-
-  const oldStatus = colStatus ? normalize_(sheet.getRange(targetRow, colStatus).getValue()) : "";
-  const oldNotes = colNotes ? normalize_(sheet.getRange(targetRow, colNotes).getValue()) : "";
-  const rowValues = sheet.getRange(targetRow, 1, 1, sheet.getLastColumn()).getValues()[0];
-  const colCustomer = firstCol_(h, ["اسم الشات / المكتب", "اسم العميل", "Customer Name"], 3);
-  const colDept = firstCol_(h, ["القسم", "Department"], 5);
-
-  const now = new Date();
-  safeSet_(sheet, targetRow, colStatus, status);
-  if (colNotes) safeSet_(sheet, targetRow, colNotes, notes);
-  if (colUpdated) safeSet_(sheet, targetRow, colUpdated, now);
-  if (colReady) safeSet_(sheet, targetRow, colReady, isReadyStatus_(status) ? "نعم" : "لا");
-
-  if (orderId) syncOrderFromLines_(orderId);
-
-  if (oldStatus !== status || oldNotes !== notes) {
-    appendActivityLog_({
-      time: now,
-      orderId: orderId,
-      lineId: lineId || normalize_(sheet.getRange(targetRow, colLineId).getValue()),
-      customer: normalize_(valueAt_(rowValues, colCustomer)),
-      department: normalize_(valueAt_(rowValues, colDept)),
-      action: "تعديل حالة / ملاحظات",
-      oldStatus: oldStatus,
-      newStatus: status,
-      oldNotes: oldNotes,
-      newNotes: notes,
-      by: auth.user.username,
-      details: "تم الحفظ من شاشة TrendOS"
-    });
-  }
-
-  SpreadsheetApp.flush();
-  return {
-    success: true,
-    message: "تم حفظ الحالة في الشيت.",
-    rowNumber: targetRow,
-    orderId: orderId,
-    lineId: lineId,
-    status: status
-  };
-}
 
 function syncOrderFromLines_(orderId) {
   orderId = normalize_(orderId);
@@ -1589,201 +1162,10 @@ function syncOrderFromLines_(orderId) {
   upsertOrderSummary_(summary);
 }
 
-function upsertOrderSummary_(o) {
-  const ss = ss_();
-  const sheet = ss.getSheetByName(SHEET_NAME_ORDERS);
-  if (!sheet) return;
-  ensureWhatsAppHeaders_(sheet);
-  ensurePressColumn_(sheet);
-  ensureFlyPrintColumn_(sheet);
-
-  const h = headersMap_(sheet);
-  const colOrderId = firstCol_(h, ["رقم الأوردر", "Order ID"], 1);
-  const colOrderCode = firstCol_(h, ["كود الأوردر"], 2);
-
-  let rowNumber = 0;
-  const lastRow = sheet.getLastRow();
-  if (lastRow > 1) {
-    const ids = sheet.getRange(2, 1, lastRow - 1, Math.max(colOrderId, colOrderCode, 1)).getValues();
-    for (let i = 0; i < ids.length; i++) {
-      const row = ids[i];
-      const oid = normalize_(colOrderId ? row[colOrderId - 1] : "") || normalize_(colOrderCode ? row[colOrderCode - 1] : "");
-      if (oid === o.orderId) {
-        rowNumber = i + 2;
-        break;
-      }
-    }
-  }
-
-  const values = {
-    "رقم الأوردر": o.orderId,
-    "كود الأوردر": o.orderId,
-    "تاريخ الإنشاء": o.now,
-    "اسم الشات / المكتب": o.customerName,
-    "اسم العميل": o.customerName,
-    "اسم المسؤول": o.manager || "",
-    "رقم العميل": cleanPhone_(o.customerPhone),
-    "رقم العميل الخارجي": cleanPhone_(o.customerPhone),
-    "نوع العميل": o.customerType,
-    "القسم الرئيسي": o.department,
-    "القسم": o.department,
-    "وصف مختصر": o.itemName,
-    "وصف الأوردر": o.itemName,
-    "الأولوية": o.priority,
-    "الحالة العامة": o.status,
-    "الحالة": o.status,
-    "آخر تحديث": o.updatedAt || o.now,
-    "عدد البنود": o.lineCount || 1,
-    "بنود جاهزة": o.readyCount || 0,
-    "بنود غير جاهزة": o.notReadyCount === undefined ? 0 : o.notReadyCount,
-    "تسليم جزئي؟": o.partial || "لا",
-    "ملاحظات": o.notes || "",
-    "تاريخ الاستلام": o.receivedAt || o.now,
-    "تاريخ التسليم المتوقع": o.expectedDeliveryAt || expectedDeliveryDate_(o.now),
-    "الوقت المتوقع": o.expectedDeliveryText || expectedDeliveryText_(o.now),
-    "مكبس حراري": o.heatPress ? "نعم" : "لا",
-    "تم إبلاغ العميل؟": o.customerNotified || "لا",
-    "تم إرسال رسالة التسجيل؟": o.registrationSent || "لا",
-    "كود الشات": o.customerCode || "",
-    "مصدر الطلب": o.source || "داخلي",
-    "أنشئ بواسطة": o.createdBy || "الموظف",
-    "ملاحظات العميل": o.customerNotes || "",
-    "فاصل واتساب": o.whatsappSeparator || "",
-    "تأكيد فاصل واتساب": o.whatsappSeparatorStatus || "غير مطلوب"
-  };
-
-  if (rowNumber) updateByHeaders_(sheet, rowNumber, values, true);
-  else appendByHeaders_(sheet, values);
-}
 
 /*********************** إضافة أوردر ***********************/
 
-function canCreateOrder_(user) {
-  const role = roleFromArabic_(user.role, user.department);
-  return role === "admin" || role === "service";
-}
 
-function createManualOrder_(e) {
-  const auth = authorize_(e.parameter.username, e.parameter.token);
-  if (!auth.ok) return { success: false, message: auth.message };
-  if (!canCreateOrder_(auth.user)) return { success: false, message: "ليس لديك صلاحية إضافة أوردر." };
-
-  const customerName = normalize_(e.parameter.customerName);
-  const customerInfo = findCustomerInfoByName_(customerName);
-  const customerPhone = cleanPhone_(e.parameter.customerPhone) || customerInfo.phone || customerInfo.extraPhone || "";
-  const customerType = safeCustomerTypeForValidation_(e.parameter.customerType || customerInfo.type || "");
-  const department = normalize_(e.parameter.department);
-  const heatPress = isHeatPressFlag_(e.parameter.heatPress || e.parameter.press || e.parameter.isPress);
-  const flyPrint = department === "طباعة" && isFlyPrintFlag_(e.parameter.flyPrint || e.parameter.quickPrint || e.parameter.fastPrint || e.parameter["طباعة على الطاير"]);
-  let itemName = normalize_(e.parameter.itemName);
-  const qty = Number(e.parameter.qty || 1) || 1;
-  const priority = flyPrint ? "عاجل" : (normalize_(e.parameter.priority) || "عادي");
-  const status = normalize_(e.parameter.status) || "طلب جديد";
-  const assignedToParam = normalize_(e.parameter.assignedTo);
-  const notes = normalize_(e.parameter.notes);
-
-  if (!customerName || !department) return { success: false, message: "اسم الشات والقسم مطلوبين." };
-  if (!itemName) itemName = "أوردر جديد - " + department;
-
-  const ss = ss_();
-  const lines = ss.getSheetByName(SHEET_NAME_LINES);
-  if (!lines) return { success: false, message: "شيت بنود الأوردرات غير موجود." };
-  ensureWhatsAppHeaders_(lines);
-  ensurePressColumn_(lines);
-  ensureFlyPrintColumn_(lines);
-
-  const now = new Date();
-  const expectedDeliveryAt = flyPrint ? new Date(now) : expectedDeliveryDate_(now);
-  const expectedDeliveryText = flyPrint ? (formatDateAr_(expectedDeliveryAt) + " - نفس اليوم") : formatDateAr_(expectedDeliveryAt);
-  const orderId = makeOrderId_(lines, now);
-
-  let departments = [];
-  if (department === "متعدد الأقسام") {
-    departments = [
-      { department: "طباعة", assignedTo: "وائل", suffix: "طباعة" },
-      { department: "ليزر", assignedTo: "جابر", suffix: "ليزر" }
-    ];
-  } else {
-    departments = [
-      { department: department, assignedTo: assignedToParam || defaultAssigned_(department), suffix: department }
-    ];
-  }
-
-  const readyCount = isReadyStatus_(status) ? departments.length : 0;
-
-  upsertOrderSummary_({
-    orderId: orderId,
-    now: now,
-    customerName: customerName,
-    customerPhone: customerPhone,
-    customerType: customerType,
-    department: department,
-    itemName: itemName,
-    qty: qty,
-    priority: priority,
-    status: status,
-    lineCount: departments.length,
-    readyCount: readyCount,
-    notReadyCount: departments.length - readyCount,
-    partial: readyCount > 0 && readyCount < departments.length ? "نعم" : "لا",
-    notes: notes,
-    receivedAt: now,
-    expectedDeliveryAt: expectedDeliveryAt,
-    expectedDeliveryText: expectedDeliveryText,
-    heatPress: heatPress
-  });
-
-  departments.forEach(function (d, idx) {
-    const lineNo = String(idx + 1).padStart(2, "0");
-    const lineId = orderId + "-" + lineNo;
-    appendLine_(ss, {
-      orderId: orderId,
-      lineId: lineId,
-      now: now,
-      customerName: customerName,
-      customerPhone: customerPhone,
-      customerType: customerType,
-      department: d.department,
-      itemName: departments.length > 1 ? (itemName + " - " + d.suffix) : itemName,
-      qty: qty,
-      priority: priority,
-      status: status,
-      assignedTo: d.assignedTo,
-      notes: notes,
-      receivedAt: now,
-      expectedDeliveryAt: expectedDeliveryAt,
-      expectedDeliveryText: expectedDeliveryText,
-      heatPress: (d.department === "مكبس") || (heatPress && d.department === "طباعة")
-    });
-  });
-
-  appendActivityLog_({
-    time: now,
-    orderId: orderId,
-    lineId: orderId + "-01",
-    customer: customerName,
-    department: department,
-    action: "تسجيل أوردر جديد",
-    oldStatus: "",
-    newStatus: status,
-    oldNotes: "",
-    newNotes: notes,
-    by: auth.user.username,
-    details: "عدد البنود: " + departments.length + " | الأولوية: " + priority + (heatPress ? " | مكبس حراري" : "")
-  });
-
-  SpreadsheetApp.flush();
-
-  return {
-    success: true,
-    orderId: orderId,
-    lineId: orderId + "-01",
-    linesCreated: departments.length,
-    expectedDeliveryAt: expectedDeliveryAt,
-    expectedDeliveryText: expectedDeliveryText,
-    message: "تم إضافة الأوردر في الشيتين."
-  };
-}
 
 function defaultAssigned_(department) {
   if (department === "طباعة") return "وائل";
@@ -1860,52 +1242,6 @@ function resetSimpleOrderCounterNow(startFrom) {
   return { success: true, nextOrderNumber: n, message: "تم ضبط أول رقم أوردر جديد على: " + n };
 }
 
-function appendLine_(ss, o) {
-  const sheet = ss.getSheetByName(SHEET_NAME_LINES);
-  if (!sheet) return;
-
-  const ready = isReadyStatus_(o.status) ? "نعم" : "لا";
-
-  appendByHeaders_(sheet, {
-    "رقم الأوردر": o.orderId,
-    "كود الأوردر": o.orderId,
-    "اسم الشات / المكتب": o.customerName,
-    "اسم العميل": o.customerName,
-    "رقم العميل": cleanPhone_(o.customerPhone),
-    "رقم العميل الخارجي": cleanPhone_(o.customerPhone),
-    "نوع العميل": o.customerType,
-    "القسم الرئيسي": o.department,
-    "القسم الرئيسي": o.department,
-    "القسم": o.department,
-    "رقم البند": o.lineId,
-    "Line ID": o.lineId,
-    "اسم البند / نوع الشغل": o.itemName,
-    "اسم البند": o.itemName,
-    "الكمية": o.qty,
-    "مسؤول القسم": o.assignedTo,
-    "الأولوية": o.priority,
-    "الحالة": o.status,
-    "جاهز؟": ready,
-    "آخر تحديث": o.now,
-    "ملاحظات": o.notes,
-    "مكبس حراري": (o.department === "مكبس" || o.heatPress) ? "نعم" : "لا",
-    "تاريخ الاستلام": o.receivedAt || o.now,
-    "تاريخ التسليم المتوقع": o.expectedDeliveryAt || expectedDeliveryDate_(o.now),
-    "الوقت المتوقع": o.expectedDeliveryText || expectedDeliveryText_(o.now),
-    "تم إبلاغ العميل؟": "لا",
-    "تم إرسال رسالة التسجيل؟": "لا",
-    "آخر رسالة واتساب": "",
-    "آخر وقت واتساب": "",
-    "آخر واتساب بواسطة": "",
-    "نوع رسالة واتساب": "",
-    "كود الشات": o.customerCode || "",
-    "مصدر الطلب": o.source || "داخلي",
-    "أنشئ بواسطة": o.createdBy || "الموظف",
-    "ملاحظات العميل": o.customerNotes || "",
-    "فاصل واتساب": o.whatsappSeparator || "",
-    "تأكيد فاصل واتساب": o.whatsappSeparatorStatus || "غير مطلوب"
-  });
-}
 
 /*********************** أدوات كتابة حسب الهيدر ***********************/
 
@@ -3330,29 +2666,6 @@ function initAccountingNow_(e) {
   return { success: true, message: "تم تجهيز شيتات حسابات مطبعجي: الخامات، البنود، فواتير الأقسام، الفواتير النهائية، هوالك الأقسام، وحركة المخزون." };
 }
 
-function getAccounting_(e) {
-  const auth = accountingAuthorize_(e);
-  if (!auth.ok) return { success: false, message: auth.message };
-  const sheets = ensureAccountingSheets_();
-  const materials = accountingFilterRows_(accSheetRows_(sheets.materials), auth, "materials");
-  const templates = accountingFilterRows_(accSheetRows_(sheets.templates), auth, "templates");
-  const deptLinesAll = accSheetRows_(sheets.deptLines);
-  const deptLines = accountingFilterRows_(deptLinesAll, auth, "deptLines");
-  const finalInvoices = accountingFilterRows_(accSheetRows_(sheets.finalInvoices), auth, "finalInvoices");
-  const wasteLines = accountingFilterRows_(accSheetRows_(sheets.waste), auth, "deptLines");
-  const stockMoves = accountingFilterRows_(accSheetRows_(sheets.stockMoves), auth, "deptLines");
-  return {
-    success: true,
-    permissions: { mode: auth.mode, department: auth.department, canManageMaterials: auth.mode === "full", canCloseFinalInvoice: auth.mode === "full" || auth.mode === "final", canEnterDeptLine: auth.mode === "full" || auth.mode === "print" || auth.mode === "laser" },
-    materials: materials,
-    templates: templates,
-    deptLines: deptLines,
-    finalInvoices: finalInvoices,
-    wasteLines: wasteLines,
-    stockMoves: stockMoves,
-    summary: auth.mode === "full" ? accountingSummary_(deptLinesAll) : accountingSummary_(deptLines)
-  };
-}
 
 
 function accountingMaterialKey_(name) {
@@ -3719,16 +3032,33 @@ function saveAccountingDeptLine_(e) {
   const auth = accountingAuthorize_(e);
   if (!auth.ok) return { success: false, message: auth.message };
   if (!(auth.mode === "full" || auth.mode === "print" || auth.mode === "laser")) return { success: false, message: "تسجيل فاتورة القسم متاح لوائل وجابر وضياء فقط." };
+  const lock = LockService.getScriptLock();
+  lock.waitLock(20000);
+  try {
   const orderId = normalize_(e.parameter.orderId);
   const itemName = normalize_(e.parameter.itemName);
   if (!orderId || !itemName) return { success: false, message: "رقم الأوردر واسم البند مطلوبين." };
   const sheets = ensureAccountingSheets_();
   ensureV1887DeptApprovalColumns_(sheets.deptLines);
-  ensureHeaderIfAnyMissing_(sheets.deptLines, ["كود الصنف", "سعر الوحدة"]);
+  ensureHeaderIfAnyMissing_(sheets.deptLines, ["كود الصنف", "سعر الوحدة", "مفتاح الطلب"]);
   let department = normalize_(e.parameter.department) || auth.department || "طباعة";
   if (auth.mode === "print") department = "طباعة";
   if (auth.mode === "laser") department = "ليزر";
   const qty = parseMoney_(e.parameter.qty) || 1;
+  const explicitRequestKey = normalize_(e.parameter.requestId || e.parameter.clientRequestId || e.parameter.idempotencyKey);
+  const requestFingerprint = [orderId, department, itemName, qty, normalize_(e.parameter.salePrice || e.parameter.sale || e.parameter.unitSalePrice), normalize_(e.parameter.notes)].join("|");
+  const requestKey = explicitRequestKey || ("AUTO-DLINE-" + authDigestV1922_(requestFingerprint).slice(0, 36));
+  const requestHeaderMap = headersMap_(sheets.deptLines);
+  const requestCol = firstCol_(requestHeaderMap, ["مفتاح الطلب", "requestId", "Idempotency Key"], 0);
+  const idCol = firstCol_(requestHeaderMap, ["ID", "id"], 1);
+  if (requestCol && sheets.deptLines.getLastRow() > 1) {
+    const existingRows = sheets.deptLines.getRange(2, 1, sheets.deptLines.getLastRow() - 1, sheets.deptLines.getLastColumn()).getValues();
+    for (let ri = existingRows.length - 1; ri >= 0; ri--) {
+      if (normalize_(valueAt_(existingRows[ri], requestCol)) !== requestKey) continue;
+      const existingId = normalize_(valueAt_(existingRows[ri], idCol));
+      return { success: true, duplicatePrevented: true, lineId: existingId, stockDeducted: false, message: "تم منع تكرار بند القسم؛ البند محفوظ بالفعل.", version: MATBAGY_ACCOUNTING_VERSION };
+    }
+  }
   let materialName = normalize_(e.parameter.materialName);
   const now = new Date();
   const lineUniqueId = "DLINE-" + Utilities.getUuid().slice(0, 8);
@@ -3784,6 +3114,7 @@ function saveAccountingDeptLine_(e) {
   const billingStatus = normalize_(e.parameter.billingStatus) || "مسجل - قيد مراجعة القسم";
   appendByHeaders_(sheets.deptLines, {
     "ID": lineUniqueId,
+    "مفتاح الطلب": requestKey,
     "وقت التسجيل": now,
     "رقم الأوردر": orderId,
     "رقم البند": normalize_(e.parameter.lineId),
@@ -3848,7 +3179,11 @@ function saveAccountingDeptLine_(e) {
       "آخر تحديث": now
     });
   }
-  return { success: true, message: "تم تسجيل مسودة فاتورة القسم. سيُخصم المخزون عند اعتماد القسم." , lineId: lineUniqueId, stockDeducted: false, version: MATBAGY_ACCOUNTING_VERSION };
+  SpreadsheetApp.flush();
+  return { success: true, requestId: requestKey, message: "تم تسجيل مسودة فاتورة القسم. سيُخصم المخزون عند اعتماد القسم." , lineId: lineUniqueId, stockDeducted: false, version: MATBAGY_ACCOUNTING_VERSION };
+  } finally {
+    try { lock.releaseLock(); } catch (err) {}
+  }
 }
 
 function saveAccountingWaste_(e) {
@@ -3956,44 +3291,6 @@ function makeAccountingInvoiceNo_(sheet, now) {
   return "ACC-" + ymd + "-" + String(serial).padStart(4, "0");
 }
 
-function saveAccountingFinalInvoice_(e) {
-  const auth = accountingAuthorize_(e);
-  if (!auth.ok) return { success: false, message: auth.message };
-  if (!(auth.mode === "full" || auth.mode === "final")) return { success: false, message: "تقفيل الفاتورة عند رحمه أو ريفان أو ضياء فقط." };
-  const orderId = normalize_(e.parameter.orderId);
-  const customerName = normalize_(e.parameter.customerName);
-  if (!orderId || !customerName) return { success: false, message: "رقم الأوردر واسم العميل مطلوبين." };
-  const sheets = ensureAccountingSheets_();
-  const now = new Date();
-  const invoiceNo = makeAccountingInvoiceNo_(sheets.finalInvoices, now);
-  let lineIds = [];
-  try { lineIds = JSON.parse(normalize_(e.parameter.lineIds) || "[]"); } catch (err) { lineIds = []; }
-  const subtotal = parseMoney_(e.parameter.subtotal);
-  const discount = parseMoney_(e.parameter.discount);
-  const finalTotal = parseMoney_(e.parameter.finalTotal);
-  const paid = parseMoney_(e.parameter.paid);
-  const remaining = parseMoney_(e.parameter.remaining);
-  appendByHeaders_(sheets.finalInvoices, {
-    "رقم الفاتورة": invoiceNo,
-    "وقت التقفيل": now,
-    "رقم الأوردر": orderId,
-    "اسم العميل": customerName,
-    "بنود الأقسام": lineIds.join(", "),
-    "بند يدوي": normalize_(e.parameter.manualDescription),
-    "قيمة بند يدوي": parseMoney_(e.parameter.manualAmount),
-    "الإجمالي قبل الخصم": subtotal,
-    "الخصم": discount,
-    "الإجمالي النهائي": finalTotal,
-    "المدفوع": paid,
-    "الباقي": remaining,
-    "الحالة": normalize_(e.parameter.status) || (remaining > 0 ? "عليها باقي" : "مدفوعة"),
-    "قفل بواسطة": auth.user.username,
-    "ملاحظات": normalize_(e.parameter.notes),
-    "آخر تحديث": now
-  });
-  markAccountingDeptLinesClosed_(sheets.deptLines, lineIds, invoiceNo, now);
-  return { success: true, message: "تم تقفيل الفاتورة النهائية رقم " + invoiceNo, invoiceNo: invoiceNo };
-}
 
 function markAccountingDeptLinesClosed_(sheet, lineIds, invoiceNo, now) {
   if (!lineIds || !lineIds.length || !sheet || sheet.getLastRow() < 2) return;
@@ -4199,20 +3496,6 @@ function ensureCustomerDebtHeaders_() {
   return sheet;
 }
 
-function customerCols_(sheet) {
-  const h = headersMap_(sheet);
-  return {
-    name: firstCol_(h, ["اسم الشات / المكتب", "اسم العميل", "Customer Name"], 1),
-    manager: firstCol_(h, ["اسم المسؤول", "المسؤول", "Manager"], 2),
-    phone: firstCol_(h, ["رقم العميل الأساسي", "رقم العميل", "رقم الهاتف", "Phone"], 3),
-    extra: firstCol_(h, ["رقم إضافي", "رقم إضافى", "Extra Phone"], 4),
-    type: firstCol_(h, ["نوع العميل", "Customer Type"], 5),
-    active: firstCol_(h, ["مفعل؟", "مفعل", "Active"], 0),
-    // مصدر المديونية الوحيد داخل شيت العملاء هو العمود الصريح: مديونية
-    debt: firstCol_(h, ["مديونية"], 0),
-    debtNotes: firstCol_(h, ["ملاحظات المديونية", "ملاحظات الدين", "Debt Notes"], 0)
-  };
-}
 
 function buildCustomerPhoneMap_() {
   const sheet = ensureCustomerDebtHeaders_() || ss_().getSheetByName(SHEET_NAME_CUSTOMERS);
@@ -4312,92 +3595,6 @@ function ensureWhatsAppHeaders_(sheet) {
   ]);
 }
 
-function createCustomer_(e) {
-  const auth = authorize_(e.parameter.username, e.parameter.token);
-  if (!auth.ok) return { success: false, message: auth.message };
-  if (!canCreateCustomer_(auth.user)) return { success: false, message: "ليس لديك صلاحية إضافة عميل." };
-
-  const customerName = normalize_(e.parameter.customerName || e.parameter.name);
-  const manager = normalize_(e.parameter.manager) || auth.user.username;
-  const phone = cleanPhone_(e.parameter.phone || e.parameter.customerPhone);
-  const extraPhone = cleanPhone_(e.parameter.extraPhone || e.parameter.customerExtraPhone);
-  const customerType = safeCustomerTypeForValidation_(e.parameter.customerType || e.parameter.type);
-  const debtAmount = parseDebtAmount_(e.parameter.debtAmount || e.parameter.debt || 0);
-  const branchCode = normalize_(e.parameter.franchiseBranchCode || e.parameter.branchCode);
-  const branchName = normalize_(e.parameter.franchiseBranchName || e.parameter.branchName);
-  const active = normalize_(e.parameter.active) || "نعم";
-  const notes = normalize_(e.parameter.notes);
-
-  if (!customerName) return { success: false, message: "اسم الشات / العميل مطلوب." };
-
-  const sheet = ensureCustomerDebtHeaders_();
-  if (!sheet) return { success: false, message: "شيت العملاء غير موجود." };
-
-  ensureHeaderIfAnyMissing_(sheet, ["اسم الشات / المكتب", "اسم المسؤول", "رقم العميل الأساسي", "رقم إضافي", "نوع العميل", "مفعل؟", "ملاحظات", "تاريخ الإضافة", "آخر تحديث", "مديونية", "ملاحظات المديونية", "آخر تحديث مديونية", "كود فرع مطبعجي", "اسم فرع مطبعجي", "آخر تحديث فرع العميل"]);
-
-  const h = headersMap_(sheet);
-  const colName = firstCol_(h, ["اسم الشات / المكتب", "اسم العميل", "Customer Name"], 1);
-  const colPhone = firstCol_(h, ["رقم العميل الأساسي", "رقم العميل", "رقم الهاتف", "Phone"], 3);
-  const colExtra = firstCol_(h, ["رقم إضافي", "رقم إضافى", "Extra Phone"], 4);
-  const data = sheet.getDataRange().getValues();
-  const nameKey = searchKey_(customerName);
-  const phoneKey = searchKey_(phone);
-  const extraKey = searchKey_(extraPhone);
-
-  for (let i = 1; i < data.length; i++) {
-    const row = data[i];
-    const existingName = searchKey_(valueAt_(row, colName));
-    const existingPhone = searchKey_(valueAt_(row, colPhone));
-    const existingExtra = searchKey_(valueAt_(row, colExtra));
-    if (existingName && existingName === nameKey) return { success: false, message: "العميل موجود بالفعل بنفس الاسم في شيت العملاء." };
-    if (phoneKey && (phoneKey === existingPhone || phoneKey === existingExtra)) return { success: false, message: "رقم العميل موجود بالفعل في شيت العملاء." };
-    if (extraKey && (extraKey === existingPhone || extraKey === existingExtra)) return { success: false, message: "الرقم الإضافي موجود بالفعل في شيت العملاء." };
-  }
-
-  const now = new Date();
-  appendByHeaders_(sheet, {
-    "اسم الشات / المكتب": customerName,
-    "اسم العميل": customerName,
-    "اسم المسؤول": manager,
-    "رقم العميل الأساسي": phone,
-    "رقم العميل": phone,
-    "رقم الهاتف": phone,
-    "رقم إضافي": extraPhone,
-    "رقم إضافى": extraPhone,
-    "نوع العميل": customerType,
-    "مفعل؟": active,
-    "مفعل": active,
-    "ملاحظات": notes,
-    "مديونية": debtAmount,
-    "ملاحظات المديونية": debtAmount > 0 ? "مديونية حالية" : "",
-    "آخر تحديث مديونية": debtAmount > 0 ? now : "",
-    "كود فرع مطبعجي": branchCode,
-    "اسم فرع مطبعجي": branchName,
-    "آخر تحديث فرع العميل": branchCode ? now : "",
-    "تاريخ الإضافة": now,
-    "آخر تحديث": now
-  });
-
-  SpreadsheetApp.flush();
-  // V1843: بعد إضافة العميل يتم تجهيز كود الشات وكلمة مرور افتراضية تلقائيًا.
-  let portalCode = "";
-  try {
-    const initRes = initCustomerPortalNow();
-    const foundPortal = findCustomerInfoByName_(customerName);
-    const portalSheet = ensureCustomerPortalHeaders_();
-    const portalCols = customerCols_(portalSheet);
-    const portalData = portalSheet.getDataRange().getValues();
-    const key = searchKey_(customerName);
-    for (let pi = 1; pi < portalData.length; pi++) {
-      if (searchKey_(valueAt_(portalData[pi], portalCols.name)) === key) {
-        portalCode = normalize_(valueAt_(portalData[pi], portalCols.code));
-        break;
-      }
-    }
-  } catch (portalErr) {}
-  const customerDefaultPassword = customerDefaultPassword_();
-  return { success: true, message: "تم إضافة العميل في شيت العملاء." + (portalCode ? " كود الشات: " + portalCode + " | كلمة المرور المؤقتة: " + customerDefaultPassword : ""), customer: { name: customerName, manager: manager, phone: phone, extraPhone: extraPhone, type: customerType, active: active, debtAmount: debtAmount, branchCode: branchCode, branchName: branchName, customerCode: portalCode, defaultPassword: customerDefaultPassword } };
-}
 
 function ensureDemoCustomer_(e) {
   const auth = authorize_(e.parameter.username, e.parameter.token);
@@ -4599,122 +3796,6 @@ function appendLine_(ss, o) {
   });
 }
 
-function createManualOrder_(e) {
-  const auth = authorize_(e.parameter.username, e.parameter.token);
-  if (!auth.ok) return { success: false, message: auth.message };
-  if (!canCreateOrder_(auth.user)) return { success: false, message: "ليس لديك صلاحية إضافة أوردر." };
-
-  const customerName = normalize_(e.parameter.customerName);
-  const customerInfo = findCustomerInfoByName_(customerName);
-  const debtAmount = parseDebtAmount_(customerInfo.debtAmount || 0);
-  const debtNotes = customerInfo.debtNotes || "";
-  const customerPhone = cleanPhone_(e.parameter.customerPhone) || customerInfo.phone || customerInfo.extraPhone || "";
-  const customerType = safeCustomerTypeForValidation_(e.parameter.customerType || customerInfo.type || "");
-  const department = normalize_(e.parameter.department);
-  const heatPress = isHeatPressFlag_(e.parameter.heatPress || e.parameter.press || e.parameter.isPress);
-  const flyPrint = department === "طباعة" && isFlyPrintFlag_(e.parameter.flyPrint || e.parameter.quickPrint || e.parameter.fastPrint || e.parameter["طباعة على الطاير"]);
-  let itemName = normalize_(e.parameter.itemName);
-  const qty = Number(e.parameter.qty || 1) || 1;
-  const priority = flyPrint ? "عاجل" : (normalize_(e.parameter.priority) || "عادي");
-  const status = normalize_(e.parameter.status) || "طلب جديد";
-  const assignedToParam = normalize_(e.parameter.assignedTo);
-  let notes = normalize_(e.parameter.notes);
-
-  if (!customerName || !department) return { success: false, message: "اسم الشات والقسم مطلوبين." };
-  if (!itemName) itemName = "أوردر جديد - " + department;
-  if (debtAmount > 0) notes = (notes ? notes + " | " : "") + "تنبيه مديونية: " + debtAmount + " ج. لا يتم التسليم قبل السداد.";
-
-  const ss = ss_();
-  const lines = ss.getSheetByName(SHEET_NAME_LINES);
-  if (!lines) return { success: false, message: "شيت بنود الأوردرات غير موجود." };
-  ensureWhatsAppHeaders_(lines);
-  ensurePressColumn_(lines);
-  ensureFlyPrintColumn_(lines);
-
-  const now = new Date();
-  const expectedDeliveryAt = flyPrint ? new Date(now) : expectedDeliveryDate_(now);
-  const expectedDeliveryText = flyPrint ? (formatDateAr_(expectedDeliveryAt) + " - نفس اليوم") : formatDateAr_(expectedDeliveryAt);
-  const orderId = makeOrderId_(lines, now);
-
-  let departments = [];
-  if (department === "متعدد الأقسام") {
-    departments = [
-      { department: "طباعة", assignedTo: "وائل", suffix: "طباعة" },
-      { department: "ليزر", assignedTo: "جابر", suffix: "ليزر" }
-    ];
-  } else {
-    departments = [{ department: department, assignedTo: assignedToParam || defaultAssigned_(department), suffix: department }];
-  }
-
-  const readyCount = isReadyStatus_(status) ? departments.length : 0;
-  upsertOrderSummary_({
-    orderId: orderId,
-    now: now,
-    customerName: customerName,
-    customerPhone: customerPhone,
-    customerType: customerType,
-    department: department,
-    itemName: itemName,
-    qty: qty,
-    priority: priority,
-    status: status,
-    lineCount: departments.length,
-    readyCount: readyCount,
-    notReadyCount: departments.length - readyCount,
-    partial: readyCount > 0 && readyCount < departments.length ? "نعم" : "لا",
-    notes: notes,
-    receivedAt: now,
-    expectedDeliveryAt: expectedDeliveryAt,
-    expectedDeliveryText: expectedDeliveryText,
-    heatPress: heatPress,
-    flyPrint: flyPrint,
-    debtAmount: debtAmount,
-    debtNotes: debtNotes
-  });
-
-  departments.forEach(function(d, idx) {
-    const lineNo = String(idx + 1).padStart(2, "0");
-    const lineId = orderId + "-" + lineNo;
-    appendLine_(ss, {
-      orderId: orderId,
-      lineId: lineId,
-      now: now,
-      customerName: customerName,
-      customerPhone: customerPhone,
-      customerType: customerType,
-      department: d.department,
-      itemName: departments.length > 1 ? (itemName + " - " + d.suffix) : itemName,
-      qty: qty,
-      priority: priority,
-      status: status,
-      assignedTo: d.assignedTo,
-      notes: notes,
-      receivedAt: now,
-      expectedDeliveryAt: expectedDeliveryAt,
-      expectedDeliveryText: expectedDeliveryText,
-      heatPress: heatPress,
-      flyPrint: flyPrint,
-      debtAmount: debtAmount,
-      debtNotes: debtNotes
-    });
-  });
-
-  appendActivityLog_({ time: now, orderId: orderId, lineId: orderId + "-01", customer: customerName, department: department, action: "إنشاء أوردر", newStatus: status, by: auth.user.username, details: debtAmount > 0 ? "تم تسجيل الأوردر مع تنبيه مديونية" : "تم تسجيل أوردر جديد" });
-
-  SpreadsheetApp.flush();
-  return {
-    success: true,
-    orderId: orderId,
-    lineId: orderId + "-01",
-    linesCreated: departments.length,
-    expectedDeliveryAt: expectedDeliveryAt,
-    expectedDeliveryText: expectedDeliveryText,
-    debtAmount: debtAmount,
-    debtHold: debtAmount > 0 ? "نعم" : "لا",
-    debtInfo: { hasDebt: debtAmount > 0, amount: debtAmount, notes: debtNotes },
-    message: debtAmount > 0 ? "تم إضافة الأوردر مع تنبيه مديونية العميل." : "تم إضافة الأوردر في الشيتين."
-  };
-}
 
 function getRows_(e) {
   const auth = authorize_(e.parameter.username, e.parameter.token);
@@ -5653,18 +4734,19 @@ function customerCols_(sheet) {
 }
 
 function hashCustomerPassword_(password) {
-  const raw = normalize_(password);
-  const bytes = Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, raw, Utilities.Charset.UTF_8);
-  const b64 = Utilities.base64Encode(bytes);
-  return "sha256:" + b64;
+  return passwordHashV1922_(normalize_(password));
 }
 
 function customerPasswordMatches_(stored, input) {
   const s = normalize_(stored);
   const v = normalize_(input);
   if (!s) return v === customerDefaultPassword_();
-  if (s.indexOf("sha256:") === 0) return s === hashCustomerPassword_(v);
-  return s === v;
+  if (s.indexOf("v1922$") === 0) return passwordMatchesV1922_(s, v);
+  if (s.indexOf("sha256:") === 0) {
+    const bytes = Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, v, Utilities.Charset.UTF_8);
+    return constantTimeEqualsV1922_(s, "sha256:" + Utilities.base64Encode(bytes));
+  }
+  return constantTimeEqualsV1922_(s, v);
 }
 
 function makeNextCustomerCode_(sheet, cols) {
@@ -5718,7 +4800,11 @@ function customerAuthorize_(customerCode, token) {
   const found = findCustomerByPortalCode_(customerCode);
   if (!found) return { ok: false, message: "كود الشات غير صحيح." };
   const storedToken = normalize_(valueAt_(found.row, found.cols.token));
-  if (!storedToken || storedToken !== normalize_(token)) return { ok: false, message: "انتهت جلسة العميل. سجل الدخول مرة أخرى." };
+  const lastLogin = valueAt_(found.row, found.cols.lastLogin);
+  if (!storedToken || !constantTimeEqualsV1922_(storedToken, normalize_(token)) || sessionExpiredV1922_(lastLogin)) {
+    if (found.cols.token) safeSet_(found.sheet, found.rowNumber, found.cols.token, "");
+    return { ok: false, message: "انتهت جلسة العميل. سجل الدخول مرة أخرى." };
+  }
   const active = normalize_(valueAt_(found.row, found.cols.active));
   if (active && active === "لا") return { ok: false, message: "حساب العميل غير مفعل." };
   return { ok: true, found: found, customer: customerPublicObject_(found, storedToken) };
@@ -5728,9 +4814,14 @@ function customerLogin_(e) {
   const code = normalize_(e.parameter.customerCode || e.parameter.code || e.parameter.chatCode);
   const password = normalize_(e.parameter.password || e.parameter.customerPassword);
   if (!code || !password) return { success: false, message: "كود الشات وكلمة المرور مطلوبين." };
+  const rate = loginRateStateV1922_("customer", code);
+  if (rate.attempts >= 5) return { success: false, rateLimited: true, message: "تم إيقاف محاولات الدخول مؤقتًا لمدة 15 دقيقة لحماية الحساب." };
 
   const found = findCustomerByPortalCode_(code);
-  if (!found) return { success: false, message: "كود الشات غير موجود." };
+  if (!found) {
+    loginRateFailV1922_("customer", code);
+    return { success: false, message: "كود الشات أو كلمة المرور غير صحيحة." };
+  }
 
   const active = normalize_(valueAt_(found.row, found.cols.active));
   if (active && active === "لا") return { success: false, message: "حساب العميل غير مفعل." };
@@ -5742,15 +4833,21 @@ function customerLogin_(e) {
     safeSet_(found.sheet, found.rowNumber, found.cols.mustChange, "نعم");
   }
 
-  if (!customerPasswordMatches_(stored, password)) return { success: false, message: "كلمة المرور غير صحيحة." };
+  if (!customerPasswordMatches_(stored, password)) {
+    loginRateFailV1922_("customer", code);
+    return { success: false, message: "كود الشات أو كلمة المرور غير صحيحة." };
+  }
+  loginRateClearV1922_("customer", code);
+  if (stored.indexOf("v1922$") !== 0) safeSet_(found.sheet, found.rowNumber, found.cols.pass, hashCustomerPassword_(password));
 
-  const token = Utilities.getUuid();
+  const token = Utilities.getUuid() + Utilities.getUuid();
+  const issuedAt = new Date();
   safeSet_(found.sheet, found.rowNumber, found.cols.token, token);
-  safeSet_(found.sheet, found.rowNumber, found.cols.lastLogin, new Date());
+  safeSet_(found.sheet, found.rowNumber, found.cols.lastLogin, issuedAt);
   SpreadsheetApp.flush();
 
   const refreshed = findCustomerByPortalCode_(code) || found;
-  return { success: true, customer: customerPublicObject_(refreshed, token), message: "تم دخول العميل بنجاح." };
+  return { success: true, expiresAt: new Date(issuedAt.getTime() + sessionTtlMsV1922_()).toISOString(), customer: customerPublicObject_(refreshed, token), message: "تم دخول العميل بنجاح." };
 }
 
 function changeCustomerPassword_(e) {
@@ -5759,7 +4856,7 @@ function changeCustomerPassword_(e) {
   const oldPassword = normalize_(e.parameter.oldPassword);
   const newPassword = normalize_(e.parameter.newPassword);
   if (!oldPassword || !newPassword) return { success: false, message: "كلمة المرور الحالية والجديدة مطلوبين." };
-  if (newPassword.length < 4) return { success: false, message: "كلمة المرور الجديدة يجب ألا تقل عن 4 أرقام/حروف." };
+  if (newPassword.length < 6) return { success: false, message: "كلمة المرور الجديدة يجب ألا تقل عن 6 أرقام/حروف." };
 
   const found = auth.found;
   const stored = normalize_(valueAt_(found.row, found.cols.pass));
@@ -5768,8 +4865,20 @@ function changeCustomerPassword_(e) {
   safeSet_(found.sheet, found.rowNumber, found.cols.pass, hashCustomerPassword_(newPassword));
   safeSet_(found.sheet, found.rowNumber, found.cols.mustChange, "لا");
   safeSet_(found.sheet, found.rowNumber, found.cols.passChanged, new Date());
+  safeSet_(found.sheet, found.rowNumber, found.cols.token, "");
   SpreadsheetApp.flush();
-  return { success: true, message: "تم تغيير كلمة مرور العميل." };
+  return { success: true, forceRelogin: true, message: "تم تغيير كلمة مرور العميل. سجل الدخول مرة أخرى." };
+}
+
+function logoutCustomer_(e) {
+  const p = (e && e.parameter) || {};
+  const found = findCustomerByPortalCode_(p.customerCode || p.code);
+  if (found) {
+    const storedToken = normalize_(valueAt_(found.row, found.cols.token));
+    if (p.token && constantTimeEqualsV1922_(storedToken, normalize_(p.token))) safeSet_(found.sheet, found.rowNumber, found.cols.token, "");
+  }
+  SpreadsheetApp.flush();
+  return { success: true, message: "تم تسجيل خروج العميل بأمان." };
 }
 
 function getCustomerOrders_(e) {
@@ -7956,15 +7065,6 @@ function archiveAccountingMaterial_(e) {
   updateByHeaders_(sheet, row, { "مفعل": "لا", "ملاحظات": "تم الإيقاف من EasyStore - " + new Date(), "آخر تحديث": new Date() }, true);
   return { success: true, message: "تم إيقاف الخامة/الصنف. لن تظهر للموظفين في الاختيارات الجديدة، وتظل محفوظة للتقارير القديمة." };
 }
-function saveEasyStorePurchase_(e) {
-  const auth = accountingAuthorize_(e);
-  if (!auth.ok) return { success: false, message: auth.message };
-  if (auth.mode !== "full") return { success: false, message: "فواتير الشراء عند ضياء فقط." };
-  const sheet = mbEnsureSheet_("حسابات - فواتير الشراء", accPurchasesHeaders_());
-  const qty = parseMoney_(e.parameter.qty), unit = parseMoney_(e.parameter.unitPrice);
-  appendByHeaders_(sheet, {"ID":"PUR-"+Utilities.getUuid().slice(0,8), "وقت التسجيل":new Date(), "رقم الفاتورة":normalize_(e.parameter.invoiceNo), "المورد":normalize_(e.parameter.supplier), "الخامة":normalize_(e.parameter.materialName), "الكمية":qty, "سعر الوحدة":unit, "الإجمالي":qty*unit, "مسجل بواسطة":auth.user.username, "ملاحظات":normalize_(e.parameter.notes)});
-  return { success:true, message:"تم حفظ فاتورة الشراء." };
-}
 function saveEasyStoreSale_(e) {
   const auth = accountingAuthorize_(e);
   if (!auth.ok) return { success: false, message: auth.message };
@@ -7979,12 +7079,6 @@ function saveEasyStoreSale_(e) {
 function accSuppliersHeaders_() {
   return ["ID", "وقت التسجيل", "اسم المورد", "الهاتف", "العنوان", "رصيد افتتاحي", "مديونية", "مفعل", "مسجل بواسطة", "ملاحظات"];
 }
-function getEasyStoreSuppliers_(e) {
-  const auth = accountingAuthorize_(e);
-  if (!auth.ok) return { success:false, message: auth.message };
-  const sh = mbEnsureSheet_("حسابات - الموردين", accSuppliersHeaders_());
-  return { success:true, suppliers: accSheetRows_(sh) };
-}
 function saveEasyStoreSupplier_(e) {
   const auth = accountingAuthorize_(e);
   if (!auth.ok) return { success:false, message: auth.message };
@@ -7997,25 +7091,6 @@ function saveEasyStoreSupplier_(e) {
   const obj = {"ID":"SUP-"+Utilities.getUuid().slice(0,8), "وقت التسجيل":new Date(), "اسم المورد":name, "الهاتف":normalize_(e.parameter.phone), "العنوان":normalize_(e.parameter.address), "رصيد افتتاحي":parseMoney_(e.parameter.opening), "مديونية":parseMoney_(e.parameter.debt), "مفعل":"نعم", "مسجل بواسطة":auth.user.username, "ملاحظات":normalize_(e.parameter.notes)};
   if (row) updateByHeaders_(sh, row, obj, true); else appendByHeaders_(sh, obj);
   return { success:true, message:"تم حفظ المورد." };
-}
-function saveEasyStorePurchaseV2_(e) {
-  const auth = accountingAuthorize_(e);
-  if (!auth.ok) return { success:false, message: auth.message };
-  if (auth.mode !== "full") return { success:false, message:"فواتير الشراء عند ضياء فقط." };
-  const sh = mbEnsureSheet_("حسابات - فواتير الشراء", ["ID","وقت التسجيل","رقم الفاتورة","المورد","نوع الدفع","تاريخ الاستحقاق","الخامة","الكمية","سعر الوحدة","الإجمالي","المدفوع","المتبقي","مسجل بواسطة","ملاحظات"]);
-  const qty=parseMoney_(e.parameter.qty), unit=parseMoney_(e.parameter.unit), total=parseMoney_(e.parameter.total)||qty*unit, paid=parseMoney_(e.parameter.paid), remain=parseMoney_(e.parameter.remain)||Math.max(0,total-paid);
-  appendByHeaders_(sh,{"ID":"PUR-"+Utilities.getUuid().slice(0,8),"وقت التسجيل":new Date(),"رقم الفاتورة":normalize_(e.parameter.no||e.parameter.invoiceNo),"المورد":normalize_(e.parameter.supplier),"نوع الدفع":normalize_(e.parameter.paymentType),"تاريخ الاستحقاق":normalize_(e.parameter.dueDate),"الخامة":normalize_(e.parameter.material),"الكمية":qty,"سعر الوحدة":unit,"الإجمالي":total,"المدفوع":paid,"المتبقي":remain,"بنود الأقسام":normalize_(e.parameter.lineIds),"مسجل بواسطة":auth.user.username,"ملاحظات":normalize_(e.parameter.notes)});
-  try { saveStockMoveBatch25_(normalize_(e.parameter.material), qty, 0, "شراء", normalize_(e.parameter.no||e.parameter.invoiceNo), auth.user.username); } catch(err) {}
-  return { success:true, message:"تم حفظ فاتورة الشراء وتسجيل حركة المخزون." };
-}
-function saveEasyStoreSaleV2_(e) {
-  const auth = accountingAuthorize_(e);
-  if (!auth.ok) return { success:false, message: auth.message };
-  const sh = mbEnsureSheet_("حسابات - فواتير المبيعات", easyStoreSalesHeadersV1909_());
-  const qty=parseMoney_(e.parameter.qty), unit=parseMoney_(e.parameter.unit), discount=parseMoney_(e.parameter.discount), total=parseMoney_(e.parameter.total)||Math.max(0,qty*unit-discount), paid=parseMoney_(e.parameter.paid), remain=parseMoney_(e.parameter.remain)||Math.max(0,total-paid);
-  appendByHeaders_(sh,{"ID":"SAL-"+Utilities.getUuid().slice(0,8),"وقت التسجيل":new Date(),"رقم الفاتورة":normalize_(e.parameter.no||e.parameter.invoiceNo),"رقم الأوردر":normalize_(e.parameter.orderId),"العميل":normalize_(e.parameter.customer),"نوع الدفع":normalize_(e.parameter.paymentType),"البند":normalize_(e.parameter.item),"الكمية":qty,"سعر الوحدة":unit,"خصم":discount,"الإجمالي":total,"المدفوع":paid,"المتبقي":remain,"بنود الأقسام":normalize_(e.parameter.lineIds),"مسجل بواسطة":auth.user.username,"ملاحظات":normalize_(e.parameter.notes)});
-  try { saveStockMoveBatch25_(normalize_(e.parameter.item), 0, qty, "بيع", normalize_(e.parameter.no||e.parameter.invoiceNo), auth.user.username); } catch(err) {}
-  return { success:true, message:"تم حفظ فاتورة البيع وتسجيل حركة المخزون." };
 }
 function saveStockMoveBatch25_(materialName, inQty, outQty, source, ref, user) {
   if (!materialName) return;
@@ -8036,46 +7111,9 @@ function archiveAccountingTemplate_(e) {
   updateByHeaders_(sh,row,{"مفعل":"لا","آخر تحديث":new Date()},true);
   return { success:true, message:"تم إيقاف الصنف." };
 }
-function easyStoreSystemHealth_(e) {
-  const auth = accountingAuthorize_(e);
-  if (!auth.ok) return { success:false, message: auth.message };
-  const sh = ensureAccountingSheets_();
-  return { success:true, message:"النظام سليم", sheets:Object.keys(sh), version:"Batch25 Full Accounting Core" };
-}
 
 
 /*********************** Patch 28 - EasyStore customer preload ***********************/
-function getEasyStoreCustomers_(e) {
-  const auth = authorize_(e.parameter.username, e.parameter.token);
-  if (!auth.ok) return { success: false, message: auth.message };
-  const sheet = ss_().getSheetByName(SHEET_NAME_CUSTOMERS);
-  if (!sheet || sheet.getLastRow() < 2) return { success: true, customers: [] };
-  const limit = Math.min(Number(e.parameter.limit || 200) || 200, 500);
-  const data = sheet.getDataRange().getValues();
-  const h = headersMap_(sheet);
-  const colName = firstCol_(h, ["اسم الشات / المكتب", "اسم العميل", "Customer Name"], 1);
-  const colManager = firstCol_(h, ["اسم المسؤول", "المسؤول", "Manager"], 2);
-  const colPhone = firstCol_(h, ["رقم العميل الأساسي", "رقم العميل", "رقم الهاتف", "Phone"], 3);
-  const colExtra = firstCol_(h, ["رقم إضافي", "رقم إضافى", "Extra Phone"], 4);
-  const colType = firstCol_(h, ["نوع العميل", "Customer Type"], 5);
-  const colActive = firstCol_(h, ["مفعل؟", "مفعل", "Active"], 0);
-  const out = [];
-  const seen = {};
-  for (let i = 1; i < data.length; i++) {
-    const row = data[i];
-    if (colActive && normalize_(row[colActive - 1]) && normalize_(row[colActive - 1]) !== "نعم") continue;
-    const name = normalize_(row[colName - 1]);
-    const phone = colPhone ? cleanPhone_(row[colPhone - 1]) : "";
-    const extra = colExtra ? cleanPhone_(row[colExtra - 1]) : "";
-    if (!name && !phone && !extra) continue;
-    const key = name + "|" + (phone || extra);
-    if (seen[key]) continue;
-    seen[key] = true;
-    out.push({ name: name, customerName: name, manager: colManager ? normalize_(row[colManager - 1]) : "", phone: phone || extra, mobile: phone || extra, extraPhone: extra, type: colType ? normalize_(row[colType - 1]) : "" });
-    if (out.length >= limit) break;
-  }
-  return { success: true, customers: out };
-}
 
 
 /************************************************************
@@ -8085,7 +7123,7 @@ function getEasyStoreCustomers_(e) {
  * - Alias لتحديث الخامات من الواجهة: recalcAccountingMaterialsCascade.
  ************************************************************/
 function accountingCanSavePurchaseV1857_(auth) {
-  return auth && (auth.mode === "full" || auth.mode === "final");
+  return auth && auth.mode === "full";
 }
 function accountingSanitizeNumberHiddenV1857_(obj) {
   if (!obj) return obj;
@@ -8221,7 +7259,7 @@ function getAccounting_(e) {
   const stockRaw = accountingFilterRows_(accSheetRows_(sheets.stockMoves), auth, "deptLines");
   const mode = auth.mode;
   const salesRaw = (mode === "full" || mode === "final") ? accSheetRows_(mbEnsureSheet_("حسابات - فواتير المبيعات", easyStoreSalesHeadersV1909_())) : [];
-  const purchasesRaw = (mode === "full" || mode === "final") ? accSheetRows_(mbEnsureSheet_("حسابات - فواتير الشراء", easyStorePurchasesHeadersV1909_())) : [];
+  const purchasesRaw = mode === "full" ? accSheetRows_(mbEnsureSheet_("حسابات - فواتير الشراء", easyStorePurchasesHeadersV1909_())) : [];
   const dailyPurchases = deptDailyPurchasesForAuthV1917_(auth, deptDailyPurchaseRowsV1917_(sheets.dailyPurchases));
   const custodyRows = purchaseCustodyRowsForAuthV1920_(auth);
   const custodySummary = purchaseCustodySummariesV1920_(auth, deptDailyPurchaseTodayV1917_());
@@ -8235,7 +7273,7 @@ function getAccounting_(e) {
       canManageMaterials: mode === "full",
       canCloseFinalInvoice: mode === "full" || mode === "final",
       canEnterDeptLine: mode === "full" || mode === "print" || mode === "laser",
-      canEnterPurchaseInvoice: mode === "full" || mode === "final",
+      canEnterPurchaseInvoice: mode === "full",
       canEnterDailyPurchase: mode === "print" || mode === "laser",
       canApproveDailyPurchases: mode === "full",
       canManageCustody: mode === "full",
@@ -8261,28 +7299,6 @@ function getAccounting_(e) {
     summary: mode === "full" ? accountingSummary_(deptLinesAll) : accountingSummary_(deptLinesRaw).byDepartment.map ? { byDepartment: accountingSummary_(deptLinesRaw).byDepartment.map(function(x){ return { department:x.department, sales:x.sales, cost:"", profit:"", count:x.count }; }) } : { byDepartment: [] },
     version: MATBAGY_ACCOUNTING_VERSION
   };
-}
-function saveEasyStorePurchase_(e) {
-  const auth = accountingAuthorize_(e);
-  if (!auth.ok) return { success: false, message: auth.message };
-  if (!accountingCanSavePurchaseV1857_(auth)) return { success: false, message: "فواتير المشتريات عند ضياء / رحمه / ريفان فقط. وائل وجابر يسجلوا فاتورة القسم فقط." };
-  const sheet = mbEnsureSheet_("حسابات - فواتير الشراء", easyStorePurchasesHeadersV1909_());
-  const qty = parseMoney_(e.parameter.qty), unit = parseMoney_(e.parameter.unitPrice || e.parameter.unit);
-  const total = parseMoney_(e.parameter.total) || qty * unit;
-  const paid = parseMoney_(e.parameter.paid);
-  const remain = parseMoney_(e.parameter.remain) || Math.max(0, total - paid);
-  appendByHeaders_(sheet, {"ID":"PUR-"+Utilities.getUuid().slice(0,8), "وقت التسجيل":new Date(), "رقم الفاتورة":normalize_(e.parameter.invoiceNo || e.parameter.no), "القسم":normalize_(e.parameter.department || auth.department || "إدارة"), "المورد":normalize_(e.parameter.supplier), "نوع الدفع":normalize_(e.parameter.paymentType), "تاريخ الاستحقاق":normalize_(e.parameter.dueDate), "الخامة":normalize_(e.parameter.materialName || e.parameter.material), "الكمية":qty, "سعر الوحدة":unit, "الإجمالي":total, "المدفوع":paid, "المتبقي":remain, "بنود الأقسام":normalize_(e.parameter.lineIds), "مسجل بواسطة":auth.user.username, "ملاحظات":normalize_(e.parameter.notes)});
-  try { saveStockMoveBatch25_(normalize_(e.parameter.materialName || e.parameter.material), qty, 0, "شراء", normalize_(e.parameter.invoiceNo || e.parameter.no), auth.user.username); } catch(err) {}
-  return { success:true, message:"تم حفظ فاتورة الشراء وتسجيل حركة المخزون." };
-}
-function saveEasyStorePurchaseV2_(e) {
-  return saveEasyStorePurchase_(e);
-}
-function easyStoreSystemHealth_(e) {
-  const auth = accountingAuthorize_(e);
-  if (!auth.ok) return { success:false, message: auth.message };
-  const sh = ensureAccountingSheets_();
-  return { success:true, message:"النظام سليم", sheets:Object.keys(sh), version:"V1857 ES14 Accounting Merge", permissions:{ mode:auth.mode, canEnterPurchaseInvoice: accountingCanSavePurchaseV1857_(auth), canSeeCosts: auth.mode === "full" } };
 }
 
 
@@ -8866,16 +7882,6 @@ function saveEasyStorePurchase_(e) {
   } finally { try { lock.releaseLock(); } catch (err) {} }
 }
 function saveEasyStorePurchaseV2_(e) { return saveEasyStorePurchase_(e); }
-function easyStoreSystemHealth_(e) {
-  const auth = accountingAuthorize_(e);
-  if (!auth.ok) return { success:false, message: auth.message };
-  const sh = ensureAccountingSheets_();
-  const ledger=accountsEnsureLedgerSheetV1858_(),cashbox=mbEnsureSheet_("حسابات - الخزنة",es16CashboxHeaders_());
-  const duplicateLedgerRequests=accountingDuplicateRequestIdsV1921_(ledger),duplicateCashboxRequests=accountingDuplicateRequestIdsV1921_(cashbox);
-  const preview=auth.mode==="full"?accountingAutomationPreviewDataV1921_(deptDailyPurchaseTodayV1917_()):null;
-  const healthy=duplicateLedgerRequests.length===0&&duplicateCashboxRequests.length===0;
-  return { success:true, healthy:healthy, message:healthy?"النظام سليم ولا توجد مفاتيح مالية مكررة.":"النظام يعمل، لكن توجد حركات تحتاج مراجعة ضياء.", sheets:Object.keys(sh).concat(["حسابات - كشف العملاء والموردين","حسابات - الخزنة","حسابات - تقفيل الأقسام اليومي"]), version:MATBAGY_ACCOUNTING_VERSION, checks:{duplicateLedgerRequests:duplicateLedgerRequests,duplicateCashboxRequests:duplicateCashboxRequests,automationPreview:preview}, permissions:{ mode:auth.mode, canEnterPurchaseInvoice: accountingCanSavePurchaseV1857_(auth), canApproveDeptInvoice:auth.mode==="full"||auth.mode==="final", canSeeCosts: auth.mode === "full", canEditLedger:accountsCanEditV1858_(auth) } };
-}
 
 
 /************************************************************
@@ -8965,42 +7971,6 @@ function backupAndClearAccountingMaterialsV1859_(e){
   if(sh.getLastRow()>1) sh.getRange(2,1,sh.getLastRow()-1,sh.getLastColumn()).clearContent();
   es16Audit_(auth.user.username,"مسح الخامات","حسابات - الخامات",backupName,values.length-1,0,"تم إنشاء نسخة احتياطية قبل المسح");
   return {success:true,message:"تم مسح الخامات وإنشاء نسخة احتياطية: "+backupName,backupSheet:backupName,deleted:Math.max(0,values.length-1)};
-}
-function activateAccountingItemV1859_(e){
-  const auth = accountingAuthorize_(e); if(!auth.ok) return {success:false,message:auth.message};
-  if(!es16AdminOnly_(auth)) return {success:false,message:"تفعيل/إيقاف الأصناف عند ضياء فقط."};
-  const kind = normalizeKey_(e.parameter.kind || e.parameter.type || "template");
-  const active = normalize_(e.parameter.active || "نعم");
-  const name = normalize_(e.parameter.name || e.parameter.itemName || e.parameter.materialName || "");
-  const department = normalize_(e.parameter.department || "");
-  const sh = kind.indexOf("material")!==-1 || kind.indexOf("خامة")!==-1 ? ensureAccountingSheets_().materials : ensureAccountingSheets_().templates;
-  let row = 0;
-  if(sh === ensureAccountingSheets_().materials) row = accountingFindMaterialRow_(sh, name, department); else row = accountingFindTemplateRow_(sh, name, department);
-  if(!row) return {success:false,message:"لم أجد الصنف/الخامة للتعديل."};
-  updateByHeaders_(sh,row,{"مفعل":active,"آخر تحديث":new Date()},true);
-  es16Audit_(auth.user.username,active==="نعم"?"تفعيل":"إيقاف",kind,name,"",active,department);
-  return {success:true,message:active==="نعم"?"تم التفعيل.":"تم الإيقاف."};
-}
-function updateAccountingItemV1859_(e){
-  const auth = accountingAuthorize_(e); if(!auth.ok) return {success:false,message:auth.message};
-  if(!es16AdminOnly_(auth)) return {success:false,message:"تعديل الأصناف والخامات عند ضياء فقط."};
-  const kind = normalizeKey_(e.parameter.kind || e.parameter.type || "template");
-  const name = normalize_(e.parameter.name || e.parameter.itemName || e.parameter.materialName || "");
-  const oldName = normalize_(e.parameter.oldName || name);
-  const department = normalize_(e.parameter.department || "");
-  if(!name) return {success:false,message:"اسم الصنف/الخامة مطلوب."};
-  let sh, row, updates = {"آخر تحديث":new Date(),"مفعل":normalize_(e.parameter.active || "نعم")};
-  if(kind.indexOf("material")!==-1 || kind.indexOf("خامة")!==-1){
-    sh = ensureAccountingSheets_().materials; row = accountingFindMaterialRow_(sh, oldName, department) || accountingFindMaterialRow_(sh, name, department);
-    updates["اسم الخامة"] = name; updates["القسم"] = department; updates["سعر الوحدة"] = parseMoney_(e.parameter.unitCost || e.parameter.cost); updates["عرض الخام"] = parseMoney_(e.parameter.width); updates["طول الخام"] = parseMoney_(e.parameter.height); updates["نسبة الهالك"] = parseMoney_(e.parameter.wastePercent || e.parameter.waste); updates["سعر بيع مقترح"] = parseMoney_(e.parameter.salePrice);
-  } else {
-    sh = ensureAccountingSheets_().templates; row = accountingFindTemplateRow_(sh, oldName, department) || accountingFindTemplateRow_(sh, name, department);
-    updates["اسم البند"] = name; updates["القسم"] = department; updates["سعر بيع مقترح"] = parseMoney_(e.parameter.salePrice); updates["التكلفة"] = parseMoney_(e.parameter.cost || e.parameter.unitCost); updates["المقاس"] = normalize_(e.parameter.size || ""); updates["ملاحظات"] = normalize_(e.parameter.notes || "");
-  }
-  if(!row) return {success:false,message:"لم أجد الصف للتحديث."};
-  updateByHeaders_(sh,row,updates,true);
-  es16Audit_(auth.user.username,"تعديل صنف/خامة",kind,oldName,"",JSON.stringify(updates),"");
-  return {success:true,message:"تم تحديث البيانات."};
 }
 function getCustomerPortalAccountsV1859_(e){
   const auth = customerAuthorize_(e.parameter.customerCode || e.parameter.code, e.parameter.token);
@@ -9222,110 +8192,6 @@ function ensureV1887DeptApprovalColumns_(sheet) {
   if (!sheet) return;
   ensureHeaderIfAnyMissing_(sheet, ["حالة اعتماد القسم", "اعتمد القسم بواسطة", "وقت اعتماد القسم", "دفعة اعتماد القسم", "ملاحظات اعتماد القسم", "مسحوب للفاتورة النهائية؟"]);
 }
-function deptLineClosedForFinalV1887_(row, h) {
-  const closeStatus = searchKey_(valueAt_(row, firstCol_(h, ["حالة التقفيل", "closeStatus"], 0)));
-  const invoiceNo = normalize_(valueAt_(row, firstCol_(h, ["رقم الفاتورة النهائية", "invoiceNo"], 0)));
-  if (invoiceNo) return true;
-  return closeStatus.indexOf("تم") !== -1 || closeStatus.indexOf("مقفل") !== -1 || closeStatus.indexOf("مغلق") !== -1 || closeStatus.indexOf("closed") !== -1 || closeStatus.indexOf("billed") !== -1;
-}
-function rowToObjectV1887_(sheet, rowValues, rowNumber) {
-  const h = headersMap_(sheet);
-  const obj = { rowNumber: rowNumber };
-  Object.keys(h).forEach(function(k){ obj[k] = cleanText_(valueAt_(rowValues, h[k])); });
-  obj.id = obj["ID"] || "";
-  obj.orderId = obj["رقم الأوردر"] || "";
-  obj.lineId = obj["رقم البند"] || "";
-  obj.customerName = obj["اسم العميل"] || "";
-  obj.department = obj["القسم"] || "";
-  obj.itemName = obj["اسم البند"] || "";
-  obj.qty = obj["الكمية"] || 1;
-  obj.lineTotal = parseMoney_(obj["سعر البيع"] || 0);
-  obj.unitSalePrice = parseMoney_(obj["سعر الوحدة"] || 0) || (obj.lineTotal / (parseMoney_(obj.qty) || 1));
-  obj.sale = obj.unitSalePrice;
-  obj.billingStatus = obj["حالة الفوترة"] || "";
-  obj.approvalStatus = obj["حالة اعتماد القسم"] || obj.billingStatus || "قيد مراجعة القسم";
-  obj.closeStatus = obj["حالة التقفيل"] || "";
-  obj.createdBy = obj["مسجل بواسطة"] || "";
-  obj.approvedBy = obj["اعتمد القسم بواسطة"] || "";
-  obj.approvedAt = obj["وقت اعتماد القسم"] || "";
-  return obj;
-}
-function getDeptInvoiceDraftV1887_(e) {
-  const auth = accountingAuthorize_(e);
-  if (!auth.ok) return { success: false, message: auth.message };
-  const sheets = ensureAccountingSheets_();
-  ensureV1887DeptApprovalColumns_(sheets.deptLines);
-  const orderId = normalize_(e.parameter.orderId);
-  let department = normalize_(e.parameter.department) || auth.department;
-  if (auth.mode === "print") department = "طباعة";
-  if (auth.mode === "laser") department = "ليزر";
-  if (!orderId) return { success: false, message: "رقم الأوردر مطلوب." };
-  const sh = sheets.deptLines;
-  const h = headersMap_(sh);
-  const colOrder = firstCol_(h, ["رقم الأوردر", "orderId"], 0);
-  const colDept = firstCol_(h, ["القسم", "department"], 0);
-  if (!colOrder || sh.getLastRow() < 2) return { success: true, lines: [], total: 0 };
-  const data = sh.getRange(2, 1, sh.getLastRow() - 1, sh.getLastColumn()).getValues();
-  const lines = [];
-  let total = 0;
-  data.forEach(function(row, i){
-    if (normalize_(valueAt_(row, colOrder)) !== orderId) return;
-    if (department && normalize_(valueAt_(row, colDept)) !== department) return;
-    if (deptLineClosedForFinalV1887_(row, h)) return;
-    const obj = rowToObjectV1887_(sh, row, i + 2);
-    lines.push(obj);
-    total += parseMoney_(obj.lineTotal);
-  });
-  return { success: true, lines: lines, total: total, orderId: orderId, department: department, version: "V1887_DEPT_APPROVAL_FLOW" };
-}
-function approveAccountingDeptInvoiceV1887_(e) {
-  const auth = accountingAuthorize_(e);
-  if (!auth.ok) return { success: false, message: auth.message };
-  if (!(auth.mode === "full" || auth.mode === "final")) return { success: false, message: "اعتماد فاتورة القسم متاح لضياء أو رحمة أو ريفان فقط. جابر ووائل يسجلان البنود للمراجعة دون اعتماد مالي." };
-  const sheets = ensureAccountingSheets_();
-  ensureV1887DeptApprovalColumns_(sheets.deptLines);
-  const sh = sheets.deptLines;
-  const orderId = normalize_(e.parameter.orderId);
-  let department = normalize_(e.parameter.department) || auth.department;
-  if (!orderId || !department) return { success: false, message: "رقم الأوردر والقسم مطلوبين للاعتماد." };
-  if (sh.getLastRow() < 2) return { success: false, message: "لا توجد بنود مسجلة." };
-  const now = new Date();
-  const batchId = "DAPP-" + Utilities.getUuid().slice(0, 8);
-  const h = headersMap_(sh);
-  const colOrder = firstCol_(h, ["رقم الأوردر", "orderId"], 0);
-  const colDept = firstCol_(h, ["القسم", "department"], 0);
-  const colStatus = firstCol_(h, ["حالة الفوترة"], 0);
-  const colApproval = firstCol_(h, ["حالة اعتماد القسم"], 0);
-  const colApprovedBy = firstCol_(h, ["اعتمد القسم بواسطة"], 0);
-  const colApprovedAt = firstCol_(h, ["وقت اعتماد القسم"], 0);
-  const colBatch = firstCol_(h, ["دفعة اعتماد القسم"], 0);
-  const colApprovalNotes = firstCol_(h, ["ملاحظات اعتماد القسم"], 0);
-  const colClose = firstCol_(h, ["حالة التقفيل"], 0);
-  const colUpdate = firstCol_(h, ["آخر تحديث"], 0);
-  const data = sh.getRange(2, 1, sh.getLastRow() - 1, sh.getLastColumn()).getValues();
-  let count = 0;
-  let total = 0;
-  data.forEach(function(row, i){
-    if (normalize_(valueAt_(row, colOrder)) !== orderId) return;
-    if (normalize_(valueAt_(row, colDept)) !== department) return;
-    if (deptLineClosedForFinalV1887_(row, h)) return;
-    const rowNumber = i + 2;
-    if (colStatus) sh.getRange(rowNumber, colStatus).setValue("معتمد من القسم");
-    if (colApproval) sh.getRange(rowNumber, colApproval).setValue("معتمد من القسم");
-    if (colApprovedBy) sh.getRange(rowNumber, colApprovedBy).setValue(auth.user.username);
-    if (colApprovedAt) sh.getRange(rowNumber, colApprovedAt).setValue(now);
-    if (colBatch) sh.getRange(rowNumber, colBatch).setValue(batchId);
-    if (colApprovalNotes) sh.getRange(rowNumber, colApprovalNotes).setValue(normalize_(e.parameter.notes));
-    if (colClose) sh.getRange(rowNumber, colClose).setValue("معتمد من القسم");
-    if (colUpdate) sh.getRange(rowNumber, colUpdate).setValue(now);
-    count++;
-    total += parseMoney_(valueAt_(row, firstCol_(h, ["سعر البيع"], 0)));
-  });
-  if (!count) return { success: false, message: "لا توجد بنود مفتوحة لهذا الأوردر في هذا القسم للاعتماد." };
-  appendActivityLog_({ orderId: orderId, department: department, action: "اعتماد فاتورة القسم", newStatus: "معتمد من القسم", by: auth.user.username, details: "عدد البنود: " + count + " | إجمالي القسم: " + total + " | دفعة: " + batchId });
-  SpreadsheetApp.flush();
-  return { success: true, message: "تم اعتماد فاتورة قسم " + department + " للأوردر " + orderId + " بعدد " + count + " بند. أصبحت جاهزة للسحب في الفاتورة النهائية.", count: count, total: total, batchId: batchId };
-}
 /************************************************************
  * V1889 STABLE MERGE
  * - الفاتورة النهائية لا تثق في إجماليات المتصفح.
@@ -9443,7 +8309,7 @@ function getDeptInvoiceDraftV1887_(e) {
 function approveAccountingDeptInvoiceV1887_(e) {
   const auth = accountingAuthorize_(e);
   if (!auth.ok) return { success: false, message: auth.message };
-  if (!(auth.mode === "full" || auth.mode === "final")) return { success: false, message: "اعتماد فاتورة القسم متاح لضياء أو رحمة أو ريفان فقط. جابر ووائل يسجلان البنود للمراجعة دون اعتماد مالي." };
+  if (!(auth.mode === "full" || auth.mode === "print" || auth.mode === "laser")) return { success: false, message: "اعتماد فاتورة القسم متاح للقسم نفسه أو لضياء فقط. رحمة وريفان يسحبان البنود المعتمدة للتقفيل النهائي." };
   const lock = LockService.getScriptLock();
   lock.waitLock(20000);
   try {
@@ -9452,7 +8318,11 @@ function approveAccountingDeptInvoiceV1887_(e) {
     const sh = sheets.deptLines;
     const orderId = normalize_(e.parameter.orderId);
     let department = normalize_(e.parameter.department) || auth.department;
+    if (auth.mode === "print") department = "طباعة";
+    if (auth.mode === "laser") department = "ليزر";
     if (!orderId || !department) return { success: false, message: "رقم الأوردر والقسم مطلوبين للاعتماد." };
+    if (auth.mode === "print" && department !== "طباعة") return { success: false, message: "وائل يعتمد قسم الطباعة فقط." };
+    if (auth.mode === "laser" && department !== "ليزر") return { success: false, message: "جابر يعتمد قسم الليزر فقط." };
     if (sh.getLastRow() < 2) return { success: false, message: "لا توجد بنود مسجلة." };
     const now = new Date();
     const batchId = "DAPP-" + Utilities.getUuid().slice(0, 8);
@@ -10055,19 +8925,11 @@ function rebuildAIOrdersView() {
 function rebuildAIOrdersView_(e) {
   e = e || { parameter: {} };
   const p = e.parameter || {};
-
-  // لو الطلب جاي من الواجهة ومعاه جلسة، نتحقق من المدير.
-  // ولو الدالة اتشغلت يدويًا من Apps Script بدون باراميترات، تشتغل مباشرة.
-  if (normalize_(p.username) || normalize_(p.token)) {
-    const auth = authorize_(p.username, p.token);
-    if (!auth.ok) return { success: false, message: auth.message };
-    const role = roleFromArabic_(auth.user.role, auth.user.department);
-    const userKey = searchKey_(auth.user.username || "");
-    if (!(role === "admin" || userKey.indexOf("ضياء") !== -1 || userKey.indexOf("diaa") !== -1)) {
-      return { success: false, message: "تحديث AI_Orders_View متاح لضياء فقط." };
-    }
-  }
-
+  const auth = authorize_(p.username, p.token);
+  if (!auth.ok) return { success: false, message: auth.message };
+  const role = roleFromArabic_(auth.user.role, auth.user.department);
+  const userKey = searchKey_(auth.user.username || "");
+  if (!(role === "admin" || userKey.indexOf("ضياء") !== -1 || userKey.indexOf("diaa") !== -1)) return { success: false, message: "تحديث AI_Orders_View متاح لضياء فقط." };
   return rebuildAIOrdersView();
 }
 
@@ -10092,13 +8954,14 @@ function aiOrdersViewRows_() {
 function getAIOrdersView_(e) {
   e = e || { parameter: {} };
   const p = e.parameter || {};
+  const auth = authorize_(p.username, p.token);
+  if (!auth.ok) return { success: false, message: auth.message };
+  const role = roleFromArabic_(auth.user.role, auth.user.department);
+  const userKey = searchKey_(auth.user.username || "");
+  if (!(role === "admin" || userKey.indexOf("ضياء") !== -1 || userKey.indexOf("diaa") !== -1)) return { success: false, message: "عرض AI_Orders_View متاح لضياء فقط." };
   const limit = Math.min(Number(p.limit || 100) || 100, 500);
-  let rows = aiOrdersViewRows_();
-  if (!rows.length) {
-    const rebuilt = rebuildAIOrdersView();
-    rows = aiOrdersViewRows_();
-    return { success: true, rebuilt: true, rebuildResult: rebuilt, count: rows.length, rows: rows.slice(0, limit) };
-  }
+  const rows = aiOrdersViewRows_();
+  if (!rows.length) return { success: false, safeFailure: true, message: "شيت AI_Orders_View غير موجود أو فارغ. حدّثه يدويًا من قائمة TrendOS AI." };
   return { success: true, rebuilt: false, count: rows.length, rows: rows.slice(0, limit) };
 }
 
@@ -10179,46 +9042,34 @@ function onOpen() {
  * طبقة توافق فقط: لا تغيّر شيت العرض أو منطق البحث القديم.
  ************************************************************/
 
-function aiOrderLatinDigitsV1891_(value) {
-  return String(value || "")
-    .replace(/[\u0660-\u0669]/g, function(ch) { return String(ch.charCodeAt(0) - 0x0660); })
-    .replace(/[\u06F0-\u06F9]/g, function(ch) { return String(ch.charCodeAt(0) - 0x06F0); });
-}
-
-function extractAIOrderIdV1891_(p) {
-  p = p || {};
-  const explicit = normalize_(p.orderId || p.order_id || p.id || p.order);
-  if (explicit) return aiOrderLatinDigitsV1891_(explicit);
-
-  const source = aiOrderLatinDigitsV1891_(p.message || p.text || p.body || "");
-  if (!source) return "";
-
-  const labeled = source.match(/(?:الأوردر|الاوردر|اوردر|order(?:\s*(?:id|no|number))?|طلب)\D{0,20}(\d{2,})/i);
-  if (labeled && labeled[1]) return normalize_(labeled[1]);
-
-  const numbers = source.match(/\d{3,}/g);
-  return numbers && numbers.length ? normalize_(numbers[0]) : "";
-}
-
 function getAIOrderStatusV1891_(e) {
   e = e || { parameter: {} };
   const p = e.parameter || {};
-  const extractedOrderId = extractAIOrderIdV1891_(p);
-  const forwarded = { parameter: Object.assign({}, p) };
-  if (extractedOrderId) forwarded.parameter.orderId = extractedOrderId;
-
-  const result = getAIOrderStatus_(forwarded) || { success: false, message: "تعذر قراءة حالة الأوردر." };
-  const matchedOrderId = result.success && result.order ? normalize_(result.order.order_id) : "";
-  const reply = result.success ? normalize_(result.ai_reply || (result.order && result.order.ai_reply) || "") : "";
-
-  return Object.assign({}, result, {
-    version: "V1891",
-    requested_order_id: extractedOrderId,
-    matched_order_id: matchedOrderId,
-    verify_code: matchedOrderId,
-    reply_lock: !!(result.success && matchedOrderId && reply),
-    reply: reply
-  });
+  const fallbackReply = (function(){
+    try { return String(PropertiesService.getScriptProperties().getProperty("AI_ORDER_NOT_FOUND_REPLY") || "الأوردر غير موجود. اطلب من العميل رقم الأوردر الصحيح."); }
+    catch (err) { return "الأوردر غير موجود. اطلب من العميل رقم الأوردر الصحيح."; }
+  })();
+  if (String(e.requestMethod || "GET").toUpperCase() !== "POST") return { success: false, ok: false, safeFailure: true, reply: "هذا المسار يقبل POST فقط.", ai_reply: "هذا المسار يقبل POST فقط." };
+  let expectedKey = "";
+  try { expectedKey = String(PropertiesService.getScriptProperties().getProperty("AI_ORDER_LOOKUP_KEY") || ""); } catch (err) {}
+  const suppliedKey = String(p.api_key || p.apiKey || p.lookup_key || "");
+  if (!expectedKey || !suppliedKey || !constantTimeEqualsV1922_(expectedKey, suppliedKey)) return { success: false, ok: false, safeFailure: true, reply: "غير مصرح بالوصول.", ai_reply: "غير مصرح بالوصول." };
+  if (!Object.prototype.hasOwnProperty.call(p, "order_id")) return { success: false, ok: false, safeFailure: true, reply: "رقم الأوردر مطلوب في الحقل order_id.", ai_reply: "رقم الأوردر مطلوب في الحقل order_id." };
+  const requestedOrderId = String(p.order_id == null ? "" : p.order_id).trim();
+  if (!requestedOrderId || !/^[0-9]{1,20}$/.test(requestedOrderId)) return { success: false, ok: false, safeFailure: true, reply: "رقم الأوردر غير صحيح.", ai_reply: "رقم الأوردر غير صحيح." };
+  const sheet = ss_().getSheetByName(SHEET_NAME_AI_ORDERS_VIEW);
+  if (!sheet || sheet.getLastRow() < 2) return { success: false, ok: false, safeFailure: true, reply: fallbackReply, ai_reply: fallbackReply };
+  const values = sheet.getDataRange().getDisplayValues();
+  const headers = values[0].map(function(value){ return String(value || "").trim().toLowerCase(); });
+  const orderCol = headers.indexOf("order_id");
+  const replyCol = headers.indexOf("ai_reply");
+  if (orderCol < 0 || replyCol < 0) return { success: false, ok: false, safeFailure: true, reply: fallbackReply, ai_reply: fallbackReply };
+  for (let i = values.length - 1; i >= 1; i--) {
+    if (String(values[i][orderCol] == null ? "" : values[i][orderCol]).trim() !== requestedOrderId) continue;
+    const exactReply = values[i][replyCol] == null ? "" : String(values[i][replyCol]);
+    return { success: true, ok: true, order_id: requestedOrderId, matched_order_id: requestedOrderId, reply: exactReply, ai_reply: exactReply, sourceSheet: SHEET_NAME_AI_ORDERS_VIEW, freshLookup: true, version: "V1922_EXACT_AI_ORDER_REPLY" };
+  }
+  return { success: false, ok: false, order_id: requestedOrderId, safeFailure: true, reply: fallbackReply, ai_reply: fallbackReply, sourceSheet: SHEET_NAME_AI_ORDERS_VIEW, freshLookup: true, version: "V1922_EXACT_AI_ORDER_REPLY" };
 }
 
 /************************************************************
@@ -10962,6 +9813,90 @@ function trendosV1908RecentDuplicate_(lines, fingerprint, now) {
   return null;
 }
 
+function trendosV1922ClosedOrderStatus_(value) {
+  const status = searchKey_(value || "");
+  return status === searchKey_("تم التسليم") || status === searchKey_("مكرر") || status === searchKey_("ملغي") || status === searchKey_("ملغى");
+}
+
+function trendosV1922OrderAgeDays_(value, now) {
+  const parsed = parseDateValue_(value);
+  if (!parsed) return 0;
+  const left = new Date(parsed.getFullYear(), parsed.getMonth(), parsed.getDate());
+  const right = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  return Math.max(0, Math.floor((right.getTime() - left.getTime()) / 86400000));
+}
+
+function trendosV1922FindOpenOrderInSheet_(sheet, identity, now) {
+  if (!sheet || sheet.getLastRow() < 2) return null;
+  const h = headersMap_(sheet);
+  const colOrder = firstCol_(h, ["رقم الأوردر", "Order ID"], 1);
+  const colCustomer = firstCol_(h, ["اسم الشات / المكتب", "اسم العميل", "Customer Name"], 0);
+  const colPhone = firstCol_(h, ["رقم العميل", "رقم العميل الأساسي", "رقم الهاتف", "Phone"], 0);
+  const colExternal = firstCol_(h, ["علامة العميل الخارجي", "معرف العميل الخارجي", "External Customer ID"], 0);
+  const colStatus = firstCol_(h, ["الحالة العامة", "الحالة", "Status"], 0);
+  const colDate = firstCol_(h, ["تاريخ الاستلام", "تاريخ الإنشاء", "Received At", "وقت التسجيل", "آخر تحديث"], 0);
+  if (!colOrder) return null;
+  const data = sheet.getRange(2, 1, sheet.getLastRow() - 1, sheet.getLastColumn()).getValues();
+  for (let i = data.length - 1; i >= 0; i--) {
+    const row = data[i];
+    const orderId = normalize_(valueAt_(row, colOrder));
+    const status = normalize_(valueAt_(row, colStatus));
+    if (!orderId || trendosV1922ClosedOrderStatus_(status)) continue;
+    const rowPhone = cleanPhone_(valueAt_(row, colPhone));
+    const rowExternal = trendosV1903Digits_(valueAt_(row, colExternal));
+    const rowName = searchKey_(valueAt_(row, colCustomer));
+    let matches = false;
+    if (identity.phone) matches = rowPhone === identity.phone || rowExternal === identity.phone;
+    else if (identity.externalId) matches = rowExternal === identity.externalId || rowPhone === identity.externalId;
+    else if (identity.customerName) matches = rowName === identity.customerName;
+    if (!matches) continue;
+    const rawDate = valueAt_(row, colDate);
+    return { orderId: orderId, status: status, receivedAt: rawDate, ageDays: trendosV1922OrderAgeDays_(rawDate, now), rowNumber: i + 2, sheetName: sheet.getName() };
+  }
+  return null;
+}
+
+function trendosV1922FindOpenOrder_(orders, lines, identity, now) {
+  return trendosV1922FindOpenOrderInSheet_(orders, identity, now) || trendosV1922FindOpenOrderInSheet_(lines, identity, now);
+}
+
+function trendosV1922TouchOpenOrder_(orders, lines, orderId, now) {
+  const expected = expectedDeliveryDate_(now);
+  [orders, lines].forEach(function(sheet){
+    if (!sheet || sheet.getLastRow() < 2) return;
+    const h = headersMap_(sheet);
+    const colOrder = firstCol_(h, ["رقم الأوردر", "Order ID"], 1);
+    const colReceived = firstCol_(h, ["تاريخ الاستلام", "Received At"], 0);
+    const colExpected = firstCol_(h, ["تاريخ التسليم المتوقع", "موعد التسليم المتوقع", "Expected Delivery"], 0);
+    const colUpdated = firstCol_(h, ["آخر تحديث", "Updated At"], 0);
+    if (!colOrder) return;
+    const ids = sheet.getRange(2, colOrder, sheet.getLastRow() - 1, 1).getValues();
+    ids.forEach(function(row, index){
+      if (normalize_(row[0]) !== orderId) return;
+      const rowNumber = index + 2;
+      if (colReceived) sheet.getRange(rowNumber, colReceived).setValue(now);
+      if (colExpected) sheet.getRange(rowNumber, colExpected).setValue(expected);
+      if (colUpdated) sheet.getRange(rowNumber, colUpdated).setValue(now);
+    });
+  });
+}
+
+function trendosV1922NextLineNumber_(lines, orderId) {
+  if (!lines || lines.getLastRow() < 2) return 1;
+  const h = headersMap_(lines);
+  const colOrder = firstCol_(h, ["رقم الأوردر", "Order ID"], 1);
+  const colLine = firstCol_(h, ["رقم البند", "Line ID"], 2);
+  if (!colOrder || !colLine) return 1;
+  const data = lines.getRange(2, 1, lines.getLastRow() - 1, lines.getLastColumn()).getValues();
+  let maxLine = 0;
+  data.forEach(function(row){
+    if (normalize_(valueAt_(row, colOrder)) !== orderId) return;
+    const match = normalize_(valueAt_(row, colLine)).match(/-(\d+)$/);
+    if (match) maxLine = Math.max(maxLine, Number(match[1]) || 0);
+  });
+  return maxLine + 1;
+}
+
 function createManualOrder_(e) {
   e = e || { parameter: {} };
   const p = e.parameter || {};
@@ -10992,27 +9927,6 @@ function createManualOrder_(e) {
       return { success: false, version: TRENDOS_V1903.VERSION, message: 'للعميل الخارجي اكتب 3 أرقام على الأقل في خانة رقم/علامة العميل.' };
     }
 
-    const openMatches = trendosV1903FindOpenExternalOrders_(externalDigits, isFullExternalPhone);
-    if (openMatches.length && isFullExternalPhone) {
-      return {
-        success: false,
-        version: TRENDOS_V1903.VERSION,
-        duplicateBlocked: true,
-        openOrder: openMatches[0],
-        message: 'يوجد أوردر مفتوح لنفس الرقم الكامل. رقم الأوردر: ' + openMatches[0].orderId + ' | الحالة: ' + openMatches[0].status
-      };
-    }
-    if (openMatches.length && normalize_(p.forceCreate) !== 'YES') {
-      return {
-        success: false,
-        version: TRENDOS_V1903.VERSION,
-        warningOnly: true,
-        needsConfirmation: true,
-        openOrder: openMatches[0],
-        message: 'يوجد أوردر مفتوح بنفس الرقم المختصر/العلامة: ' + externalDigits + '. رقم الأوردر: ' + openMatches[0].orderId + '. يمكنك فتح أوردر جديد لو العميل مختلف.'
-      };
-    }
-
     customerPhone = externalDigits;
     customerType = TRENDOS_V1903.EXTERNAL_SOURCE;
     if (!customerName || searchKey_(customerName) === searchKey_(TRENDOS_V1903.EXTERNAL_LABEL) || searchKey_(customerName) === searchKey_('عميل عابر')) {
@@ -11027,8 +9941,9 @@ function createManualOrder_(e) {
     customerType = safeCustomerTypeForValidation_(p.customerType || customerInfo.type || '');
   }
 
-  const department = normalize_(p.department);
-  const heatPress = isHeatPressFlag_(p.heatPress || p.press || p.isPress);
+  let department = normalize_(p.department);
+  let heatPress = isHeatPressFlag_(p.heatPress || p.press || p.isPress);
+  if (department === 'مكبس') { department = 'طباعة'; heatPress = true; }
   const flyPrint = department === 'طباعة' && isFlyPrintFlag_(p.flyPrint || p.quickPrint || p.fastPrint || p['طباعة على الطاير']);
   let itemName = normalize_(p.itemName);
   const qty = Number(p.qty || 1) || 1;
@@ -11055,8 +9970,8 @@ function createManualOrder_(e) {
   const expectedDeliveryAt = flyPrint ? new Date(now) : expectedDeliveryDate_(now);
   const expectedDeliveryText = flyPrint ? (formatDateAr_(expectedDeliveryAt) + ' - نفس اليوم') : formatDateAr_(expectedDeliveryAt);
   const trendosV1908Fingerprint = trendosV1908Fingerprint_(customerName, customerPhone, externalDigits, department, itemName, qty);
-  let trendosV1908Duplicate = normalize_(p.forceDuplicateOrder) === 'YES' ? null : trendosV1908RecentDuplicate_(lines, trendosV1908Fingerprint, now);
-  if (!trendosV1908Duplicate && department === 'متعدد الأقسام' && normalize_(p.forceDuplicateOrder) !== 'YES') {
+  let trendosV1908Duplicate = trendosV1908RecentDuplicate_(lines, trendosV1908Fingerprint, now);
+  if (!trendosV1908Duplicate && department === 'متعدد الأقسام') {
     trendosV1908Duplicate = trendosV1908RecentDuplicate_(lines, trendosV1908Fingerprint_(customerName, customerPhone, externalDigits, 'طباعة', itemName + ' - طباعة', qty), now) ||
       trendosV1908RecentDuplicate_(lines, trendosV1908Fingerprint_(customerName, customerPhone, externalDigits, 'ليزر', itemName + ' - ليزر', qty), now);
   }
@@ -11072,7 +9987,20 @@ function createManualOrder_(e) {
       message: 'تم منع تكرار الأوردر. نفس العميل/القسم/البند/الكمية مسجل قريبًا بالفعل. رقم الأوردر: ' + (trendosV1908Duplicate.orderId || '-') + '.'
     };
   }
-  const orderId = makeOrderId_(lines, now, true);
+  const identity = {
+    phone: customerPhone && customerPhone.length >= TRENDOS_V1903.FULL_PHONE_MIN_LENGTH ? customerPhone : '',
+    externalId: isExternal && !isFullExternalPhone ? externalDigits : '',
+    customerName: (!customerPhone && !externalDigits) ? searchKey_(customerName) : ''
+  };
+  const openOrder = trendosV1922FindOpenOrder_(orders, lines, identity, now);
+  if (openOrder && openOrder.ageDays > 2) {
+    return { success: false, duplicateBlocked: true, openOrder: openOrder, orderId: openOrder.orderId, message: 'يوجد أوردر مفتوح قديم لنفس العميل رقم ' + openOrder.orderId + '. أغلقه أو ألغِه قبل تسجيل شغل جديد.' };
+  }
+  const reusedOrder = !!openOrder;
+  const dateMoved = !!(openOrder && openOrder.ageDays >= 1 && openOrder.ageDays <= 2);
+  const orderId = reusedOrder ? openOrder.orderId : makeOrderId_(lines, now, true);
+  if (dateMoved) trendosV1922TouchOpenOrder_(orders, lines, orderId, now);
+  const firstLineNumber = reusedOrder ? trendosV1922NextLineNumber_(lines, orderId) : 1;
 
   let departments = [];
   if (department === 'متعدد الأقسام') {
@@ -11117,7 +10045,7 @@ function createManualOrder_(e) {
     customerMode: customerMode
   };
 
-  upsertOrderSummary_(common);
+  if (!reusedOrder) upsertOrderSummary_(common);
   if (orders) {
     const hOrders = headersMap_(orders);
     const colOrderId = firstCol_(hOrders, ['رقم الأوردر', 'Order ID'], 1);
@@ -11139,7 +10067,7 @@ function createManualOrder_(e) {
   }
 
   departments.forEach(function(d, idx) {
-    const lineNo = String(idx + 1).padStart(2, '0');
+    const lineNo = String(firstLineNumber + idx).padStart(2, '0');
     const lineId = orderId + '-' + lineNo;
     appendLine_(ss, Object.assign({}, common, {
       lineId: lineId,
@@ -11159,25 +10087,29 @@ function createManualOrder_(e) {
     }, true);
   });
 
+  if (reusedOrder) syncOrderFromLines_(orderId);
+
   appendActivityLog_({
     time: now,
     orderId: orderId,
-    lineId: orderId + '-01',
+    lineId: orderId + '-' + String(firstLineNumber).padStart(2, '0'),
     customer: customerName,
     department: department,
-    action: isExternal ? 'إنشاء أوردر عميل خارجي' : 'إنشاء أوردر',
+    action: reusedOrder ? 'إضافة بند إلى أوردر مفتوح' : (isExternal ? 'إنشاء أوردر عميل خارجي' : 'إنشاء أوردر'),
     newStatus: status,
     by: auth.user.username,
-    details: isExternal ? ('علامة العميل الخارجي: ' + externalDigits) : (debtAmount > 0 ? 'تم تسجيل الأوردر مع تنبيه مديونية' : 'تم تسجيل أوردر جديد')
+    details: reusedOrder ? ('تم الحفاظ على أوردر واحد للعميل' + (dateMoved ? ' وترحيل تاريخ الاستلام' : '')) : (isExternal ? ('علامة العميل الخارجي: ' + externalDigits) : (debtAmount > 0 ? 'تم تسجيل الأوردر مع تنبيه مديونية' : 'تم تسجيل أوردر جديد'))
   });
 
   SpreadsheetApp.flush();
   const trendosV1908Response = {
     success: true,
-    version: "V1908_DUPLICATE_GUARD",
+    version: "V1922_SINGLE_OPEN_ORDER",
     orderId: orderId,
-    lineId: orderId + '-01',
+    lineId: orderId + '-' + String(firstLineNumber).padStart(2, '0'),
     linesCreated: departments.length,
+    reusedOpenOrder: reusedOrder,
+    dateMoved: dateMoved,
     expectedDeliveryAt: expectedDeliveryAt,
     expectedDeliveryText: expectedDeliveryText,
     debtAmount: debtAmount,
@@ -11185,7 +10117,7 @@ function createManualOrder_(e) {
     debtInfo: { hasDebt: debtAmount > 0, amount: debtAmount, notes: debtNotes },
     customerMode: customerMode,
     externalCustomerId: isExternal ? externalDigits : '',
-    message: isExternal ? 'تم إضافة أوردر عميل خارجي بدون تسجيله في شيت العملاء.' : (debtAmount > 0 ? 'تم إضافة الأوردر مع تنبيه مديونية العميل.' : 'تم إضافة الأوردر في الشيتين.')
+    message: reusedOrder ? ('تمت إضافة البند إلى الأوردر المفتوح رقم ' + orderId + ' بدون إنشاء أوردر ثانٍ.' + (dateMoved ? ' وتم ترحيل تاريخ الاستلام.' : '')) : (isExternal ? 'تم إضافة أوردر عميل خارجي بدون تسجيله في شيت العملاء.' : (debtAmount > 0 ? 'تم إضافة الأوردر مع تنبيه مديونية العميل.' : 'تم إضافة الأوردر في الشيتين.'))
   };
   trendosV1908SaveResponse_(trendosV1908RequestKey, trendosV1908Response);
   return trendosV1908Response;
