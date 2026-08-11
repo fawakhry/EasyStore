@@ -11,6 +11,12 @@ function makeStorage(initial) {
     removeItem: key => { delete values[key]; }
   };
 }
+function scopedDataKey(user) {
+  const raw=String(user.token||'');let hash=2166136261;
+  for(let i=0;i<raw.length;i++){hash^=raw.charCodeAt(i);hash=Math.imul(hash,16777619);}
+  const name=String(user.username||user.name||'employee').toLowerCase().replace(/[إأآا]/g,'ا').replace(/[ى]/g,'ي').replace(/[ةه]/g,'ه').replace(/[ؤ]/g,'و').replace(/[ئ]/g,'ي').trim().replace(/\s+/g,'_');
+  return 'EASYSTORE_CLEAN_V1880_DATA_'+name+'_'+(hash>>>0).toString(36);
+}
 
 function createApp(role, screenName) {
   const screen = { innerHTML: '' };
@@ -36,10 +42,9 @@ function createApp(role, screenName) {
       { id: 'DPP-2', workDate: '2026-08-10', employee: 'وائل', department: 'طباعة', supplier: 'مورد طباعة', material: 'رول طباعة', qty: 1, unit: 80, total: 80, paymentType: 'آجل', status: 'قيد مراجعة ضياء', stockStatus: 'مضاف فورًا' }
     ]
   };
-  const storage = makeStorage({
-    MATBAGY_EMPLOYEE_SSO: JSON.stringify({ user: users[role] }),
-    EASYSTORE_CLEAN_V1880_DATA: JSON.stringify(data)
-  });
+  const initialStorage={MATBAGY_EMPLOYEE_SSO:JSON.stringify({user:users[role]})};
+  initialStorage[scopedDataKey(users[role])]=JSON.stringify(data);
+  const storage = makeStorage(initialStorage);
   const document = {
     body: { appendChild() {}, removeChild() {} },
     getElementById: id => id === 'app' ? app : id === 'screen' ? screen : null,
