@@ -1,0 +1,32 @@
+name: EasyStore A1 Core Read Router CI
+
+on:
+  push:
+    branches:
+      - candidate/easystore-zero-google-audit-20261004
+    paths:
+      - 'app.js'
+      - 'tests/easystore_a1_core_read_router.test.js'
+      - '.github/workflows/easystore-a1-core-read-router-ci.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  qualify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Validate A1 core D1 read router
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check app.js
+          node tests/easystore_a1_core_read_router.test.js
+          echo EASYSTORE_A1_CORE_READ_ROUTER_CI=PASS
