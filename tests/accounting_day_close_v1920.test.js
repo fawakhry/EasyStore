@@ -66,6 +66,6 @@ assert.match(app, /عكس الحركة/);
 assert.match(app, /التقارير والأرباح/);
 assert.match(app, /paymentType:val\('fiPayment'\)/);
 assert.match(config, /ES47 V1922/);
-assert.match(index, /entry619-d1-readonly-sso-20261004/);
+assert.match(index, /entry619-d1-readonly-sso2-20261004/);
 
 console.log('accounting custody and department day close V1920 tests passed');
