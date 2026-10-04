@@ -1029,3 +1029,63 @@ This aligns with Autonomous Printshop Build Matrix module:
   - continue `A1_1_CORE_READ_API_DEPLOY_CONTROLLED`;
   - every new accounting read/write/event must expose a connector-safe contract where cross-system use is expected.
 
+## Entry ACC-009 — A1 current Production truth refreshed
+- Date: 2026-10-05
+- Goal: Refresh the real runtime state before any A1 Production cutover so stale Entry614/Entry619 assumptions do not drive deployment.
+- Scope: Read-only runtime audit only.
+- Dependency workflow:
+  - Repo: `fawakhry/TrendOs`
+  - Workflow: `.github/workflows/easystore-a1-current-runtime-preflight.yml`
+  - Initial workflow commit: `161ccaad85589007bc39a34468fe9f8b33f71407`
+  - Exact EasyStore read-set detection correction: `55d283de2e14cafb66527c160006b112cd047c06`
+  - Run: `37244971391`
+  - Job: `111560935274`
+  - Result: **SUCCESS**
+- Runtime truth:
+  ```ini
+  API_VERSION=22201b84-6bff-41be-8ce5-b2f6382aa0db
+  UI_VERSION=bfcc6f85-a748-4b66-a334-b605c72108f7
+
+  AUTH_MODE=OFF
+  AUTH_ENV_ENABLED=false
+
+  BRIDGE_ENABLED=false
+  BRIDGE_SECRET_CONFIGURED=true
+  BRIDGE_POLICY_COUNT=17
+
+  OPS_MODE=GENERAL
+  OPS_POLICY_EPOCH=7
+
+  ACCOUNTING_MODE=READONLY
+  ACCOUNTING_POLICY_EPOCH=2
+  ACCOUNTING_SCHEMA_READY=true
+  ACCOUNTING_AUTHORITATIVE_WRITES=false
+  ACCOUNTING_GOOGLE_BUSINESS_CALLS=0
+
+  CONTENT_MODE=OFF
+  COMMS_MODE=OFF
+  CORE_MODE=OFF
+
+  TRENDOS_UI_ACCOUNTING_READONLY=true
+  EASYSTORE_D1_READONLY_FLAG=true
+  EASYSTORE_APPS_SCRIPT_FALLBACK=true
+  EASYSTORE_D1_READ_SET=getAccounting,getDeptInvoiceDraftV1887,getPartyAccountV1858
+  EASYSTORE_D1_CORE_4_ROUTED=false
+  ```
+- Important correction:
+  - older source qualification workflows still expect historical runtime states such as Accounting=OFF or Bridge policy count=0;
+  - those failures are classified as stale-runtime-assumption failures, not current accounting implementation failures;
+  - all further A1 controlled deployment gates must lock against the runtime truth above.
+- Data mutation: NO.
+- Production impact: NO.
+- Result: **PASS**
+- Post-state:
+  ```ini
+  A1_RUNTIME_TRUTH_REFRESHED=YES
+  CURRENT_ACCOUNTING=READONLY_EPOCH_2
+  CURRENT_EASYSTORE_D1_READ_ACTIONS=3
+  CURRENT_EASYSTORE_APPS_SCRIPT_FALLBACK=YES
+  ```
+- Next gate:
+  - `A1_1_FRONTEND_CORE_READ_ROUTER_SOURCE`
+
