@@ -552,4 +552,48 @@ Target daily lifecycle:
 Final acceptance target:
 > A normal workshop day completes without the owner manually entering routine accounting data, while every financial result stays deterministic, auditable, evidence-backed, policy-controlled, and reversible where required.
 
+## Entry ACC-002 — A0 accounting-only purge preflight and Google dataset census
+- Date: 2026-10-05
+- Goal: Identify the exact Google accounting-only production dataset before destructive reset.
+- Scope: Read-only discovery/census. No data mutation in this entry.
+- Authorized deletion scope:
+  - accounting business/configuration rows only;
+  - preserve sheet schemas/header rows;
+  - preserve TrendOS orders, order lines, customers, employees/users, attendance, customer conversations, operational logs and unrelated platform data.
+- Production Google spreadsheet identified:
+  - Title: `TrendOS_Operations_CLEAN_START_CUSTOMERS_ONLY`
+  - Spreadsheet ID: `1PtsjF4oHfk__R8XheYjqlo3Rt1269rot6Q0hCU9_6bI`
+- Accounting purge sheet scope:
+  - every sheet prefixed `حسابات -`;
+  - derived debt-block sheet `عملاء منع التسليم بالمديونية`;
+  - `بنود تسعير الفاتورة` and other non-accounting operational/configuration sheets are explicitly out of purge scope.
+- Pre-purge Google accounting rows observed:
+  - حسابات - الخزنة: 1
+  - حسابات - سجل المراجعة: 5
+  - حسابات - كشف العملاء والموردين: 7
+  - حسابات - الفواتير النهائية: 3
+  - حسابات - فواتير الأقسام: 18
+  - حسابات - الخامات: 2
+  - حسابات - البنود الثابتة: 1
+  - حسابات - مسودات الفواتير: 41
+  - حسابات - أرشيف مسودات الفواتير: 4
+  - all other targeted accounting sheets: 0 data rows
+  - total observed targeted Google data rows: **82**
+- Safety rule for purge:
+  - clear values below row 1 only;
+  - do not delete sheet tabs;
+  - do not remove headers/schema/formatting;
+  - do not touch non-target sheets.
+- Data mutation: NO.
+- Production impact: NO.
+- Result: **PASS**
+- Post-state:
+  ```ini
+  A0_GOOGLE_TARGET_IDENTIFIED=YES
+  A0_GOOGLE_TARGETED_DATA_ROWS=82
+  A0_NON_ACCOUNTING_SCOPE_EXCLUDED=YES
+  A0_PURGE_AUTHORIZATION=YES
+  ```
+- Next gate:
+  - `A0_GOOGLE_ACCOUNTING_ROWS_PURGE`
 
