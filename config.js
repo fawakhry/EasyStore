@@ -3,9 +3,13 @@ window.TREND_API_URL = "https://script.google.com/macros/s/AKfycbwGHOduL0BHvH-o4
 // اضبطه على رابط secure-proxy بعد نشره. عند تركه فارغًا يُستخدم Apps Script POST مباشرة.
 window.MATBAGY_SECURE_API_PROXY_URL = "";
 
+window.EASYSTORE_ACCOUNTING_D1_READONLY = true;
+window.EASYSTORE_ACCOUNTING_D1_URL = "https://trendos-d1-api.trendmall-contact.workers.dev/v1/employee/accounting";
+window.EASYSTORE_TRENDOS_SSO_HANDOFF_V1 = true;
+
 window.EASYSTORE_VERSION = 'ES47 V1922 Unified Safe Build';
 window.EASYSTORE_SESSION_CATALOG_FIX = window.EASYSTORE_VERSION;
-window.EASYSTORE_CACHE_TAG = 'es47-v1922-unified-safe-build-20260811a';
+window.EASYSTORE_CACHE_TAG = 'entry619-d1-readonly-sso-20261004';
 window.EASYSTORE_AUTO_REFRESH = 'safe-3-minutes-when-clean';
 window.EASYSTORE_INITIAL_LOAD_ONCE = true;
 window.EASYSTORE_DISABLE_PHONE_ACTIVATION = true;
