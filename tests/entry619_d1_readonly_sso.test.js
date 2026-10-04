@@ -18,6 +18,9 @@ assert.match(app, /qs\.get\('ssoNonce'\)/);
 assert.match(app, /Math\.abs\(Date\.now\(\)\s*-\s*issuedAt\)\s*>\s*30000/);
 assert.match(app, /sessionStorage\.setItem\('EASYSTORE_SESSION_V1922'/);
 assert.match(app, /ensureTrendosSso/);
+assert.match(app, /entry619SchedulePostSsoRead/);
+assert.match(app, /D1 READONLY/);
+assert.match(app, /SSO OK/);
 
 assert.match(app, /D1_ACCOUNTING_READ_ACTIONS\s*=\s*new Set\(\['getAccounting','getDeptInvoiceDraftV1887','getPartyAccountV1858'\]\)/);
 assert.match(app, /EASYSTORE_ACCOUNTING_D1_READONLY\s*===\s*true/);
@@ -27,6 +30,6 @@ assert.match(app, /MATBAGY_SECURE_API_PROXY_URL\|\|window\.TREND_API_URL/);
 assert.match(app, /'Content-Type':'text\/plain;charset=utf-8'/);
 
 assert.doesNotMatch(app, /searchParams\.set\([^\n]*(token)/i);
-assert.match(index, /entry619-d1-readonly-sso-20261004/);
+assert.match(index, /entry619-d1-readonly-sso2-20261004/);
 
 console.log('Entry619 EasyStore secure SSO + D1 READONLY routing qualification passed');
