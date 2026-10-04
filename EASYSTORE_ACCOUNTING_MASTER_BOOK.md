@@ -853,3 +853,66 @@ Final acceptance target:
 - Next gate:
   - `A1_1_CORE_CUSTOMER_AND_HEALTH_READS`
 
+## Entry ACC-007A — A1.1 core-read CI first attempt blocked safely
+- Date: 2026-10-05
+- Goal: Qualify source for four new D1 accounting reads.
+- Source change:
+  - Dependency repo: `fawakhry/TrendOs`
+  - `cloudflare-d1/src/employee-accounting-native-v1.mjs`
+  - Commit: `5478dcc0fc1d405ce9416764156bd66d2af255a9`
+  - Added READONLY actions:
+    - `getEasyStoreCustomers`
+    - `searchCustomers`
+    - `getCustomerAccountV1915`
+    - `easyStoreSystemHealth`
+  - customer master source = `t12_customers`;
+  - balance source = `employee_accounting_party_ledger_v1`.
+- Test/CI:
+  - Test commit: `1108db28abaaa69eae718b09713c10d541a80544`
+  - CI commit: `ce3e5024e5dd32429b18b28f4c32177023c8e84b`
+  - Run: `37242867207`
+  - Job: `111554878111`
+- Failure:
+  - source syntax and existing Entry614 tests passed;
+  - new source test failed because its READ_ACTIONS regex incorrectly depended on action ordering;
+  - implementation itself was not shown defective by this failure.
+- Data mutation: NO.
+- Production impact: NO.
+- Result: **BLOCKED_SAFE**
+- Remediation:
+  - make the test order-independent.
+
+## Entry ACC-007B — A1.1 core D1 read source qualified
+- Date: 2026-10-05
+- Goal: Qualify the corrected A1.1 core-read source gate.
+- Test fix commit:
+  - `42f01cdb7119304c991801c8a558d489f420c5c9`
+- CI evidence:
+  - Run: `37242893892`
+  - Job: `111554956498`
+  - Conclusion: **SUCCESS**
+- Qualified read actions:
+  ```text
+  getEasyStoreCustomers
+  searchCustomers
+  getCustomerAccountV1915
+  easyStoreSystemHealth
+  ```
+- Design evidence:
+  - no SpreadsheetApp/DriveApp/PropertiesService dependency in the D1 accounting module;
+  - stable `customerId` is returned from `t12_customers.customer_id`;
+  - customer balances/transactions use `employee_accounting_party_ledger_v1`;
+  - system health explicitly marks purchase/custody/day-close domains as partial until their D1 schema is built.
+- Data mutation: NO.
+- Production impact: NO.
+- Result: **PASS — SOURCE QUALIFIED, NOT YET DEPLOYED**
+- Post-state:
+  ```ini
+  A1_1_CORE_READ_SOURCE=PASS
+  A1_1_PRODUCTION_DEPLOYED=NO
+  A1_1_FRONTEND_ROUTED=NO
+  ACCOUNTING_MODE=READONLY
+  ```
+- Next gate:
+  - `A1_1_CORE_READ_API_DEPLOY_CONTROLLED`
+
