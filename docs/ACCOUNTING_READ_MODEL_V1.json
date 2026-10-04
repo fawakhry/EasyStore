@@ -14,7 +14,8 @@
     "financialBalanceSource": "employee_accounting_party_ledger_v1",
     "accountingSourceOfTruth": "D1",
     "supplierMasterSource": "employee_accounting_parties_v1",
-    "partyLedgerStableIdField": "party_id"
+    "partyLedgerStableIdField": "party_id",
+    "materialQuoteAuthority": "D1_DETERMINISTIC"
   },
   "actions": [
     {
@@ -102,11 +103,17 @@
       "action": "calculateAccountingLaserQuoteV1913",
       "kind": "read-calc",
       "target": "D1",
-      "status": "A1_DETERMINISTIC_CALC",
+      "status": "A1_DETERMINISTIC_CALC_SOURCE_QUALIFIED",
       "tables": [
         "employee_accounting_materials_v1",
         "employee_accounting_templates_v1"
-      ]
+      ],
+      "stableMaterialId": true,
+      "materialDimensions": [
+        "raw_width",
+        "raw_height"
+      ],
+      "migration": "0021_employee_accounting_material_dimensions_v1.sql"
     },
     {
       "action": "getDailyDepartmentReportV1920",
