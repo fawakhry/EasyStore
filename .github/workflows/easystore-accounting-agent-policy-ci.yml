@@ -8,8 +8,11 @@ on:
       - 'docs/ACCOUNTING_AGENT_PRODUCT_CONTRACT_V1.md'
       - 'docs/ACCOUNTING_AGENT_POLICY_V1.json'
       - 'docs/ACCOUNTING_READ_MODEL_V1.json'
+      - 'docs/ACCOUNTING_CONNECTOR_CONTRACT_V1.json'
+      - 'docs/ACCOUNTING_AUTONOMOUS_PRINTSHOP_CONNECTOR_V1.md'
       - 'tests/accounting_agent_policy_v1.test.js'
       - 'tests/accounting_read_model_v1.test.js'
+      - 'tests/accounting_connector_contract_v1.test.js'
       - '.github/workflows/easystore-accounting-agent-policy-ci.yml'
 
 permissions:
@@ -32,7 +35,9 @@ jobs:
           set -euo pipefail
           node tests/accounting_agent_policy_v1.test.js
           node tests/accounting_read_model_v1.test.js
+          node tests/accounting_connector_contract_v1.test.js
           grep -Fq 'ACCOUNTING_AGENT_MODE=OBSERVE' docs/ACCOUNTING_AGENT_PRODUCT_CONTRACT_V1.md
           grep -Fq 'DIRECT_AI_DB_WRITE=false' docs/ACCOUNTING_AGENT_PRODUCT_CONTRACT_V1.md
           grep -Fq 'AI_LEDGER_AUTHORITY=false' docs/ACCOUNTING_AGENT_PRODUCT_CONTRACT_V1.md
           echo ACCOUNTING_ARCHITECTURE_CONTRACTS=PASS
+          echo ACCOUNTING_CONNECTOR_CONTRACT_V1=PASS
