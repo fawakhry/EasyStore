@@ -629,3 +629,17 @@ CURRENT_ZERO_GOOGLE=NO
 NEXT_ARCHITECTURE_GATE=ACCOUNTING_AGENT_CONTRACT_TOOL_REGISTRY_AND_AUTONOMY_POLICY
 ```
 
+## Canonical bookkeeping moved
+
+From 2026-10-05 onward, the canonical record for **all EasyStore Accounting / AI Accounting Agent work** is:
+
+`EASYSTORE_ACCOUNTING_MASTER_BOOK.md`
+
+Do not add new accounting execution entries to this Zero-Google book. This file remains historical context only.
+
+Accounting execution must also **not** be recorded in `TrendOS_MASTER_BOOK.md`.
+
+Canonical logging rule:
+
+`Every accounting step -> EASYSTORE_ACCOUNTING_MASTER_BOOK.md only`
+
