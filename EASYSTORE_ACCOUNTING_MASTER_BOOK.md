@@ -1134,3 +1134,88 @@ This aligns with Autonomous Printshop Build Matrix module:
 - Next gate:
   - `A1_2_PARTY_MASTER_AND_SUPPLIER_READS`
 
+## Entry ACC-011 — A1.2 stable Party/Supplier D1 source qualified
+- Date: 2026-10-05
+- Goal: Remove supplier-read dependence on Google and introduce stable Party IDs compatible with the Autonomous Printshop Finance Connector.
+- Scope: Additive D1 schema + D1 read source + tests. Not deployed/applied in Production in this entry.
+- Dependency repo changes:
+  - Migration: `cloudflare-d1/migrations/0020_employee_accounting_party_master_v1.sql`
+  - Accounting source: `cloudflare-d1/src/employee-accounting-native-v1.mjs`
+- Schema decisions:
+  - Added `employee_accounting_parties_v1`.
+  - Stable `party_id` is the primary key.
+  - Supplier/customer names are display/search fields, never primary identity.
+  - Added `party_id` to `employee_accounting_party_ledger_v1`.
+  - Existing name-based ledger rows remain readable as compatibility fallback.
+  - No balance is stored as authority in the Party master; balance remains derived from the financial ledger.
+- Read implementation:
+  - Added `getEasyStoreSuppliers` to native READONLY actions.
+  - Supplier list reads from `employee_accounting_parties_v1`.
+  - Supplier balance reads from `employee_accounting_party_ledger_v1`.
+  - `getPartyAccountV1858` can now query by stable `partyId` when supplied.
+- Connector alignment:
+  ```ini
+  PARTY_ID_STABLE=YES
+  NAMES_ARE_PRIMARY_KEYS=NO
+  EASYSTORE_PARTY_AUTHORITY=FINANCIAL_DOMAIN
+  CONNECTOR_CAN_REFERENCE_PARTY_ID=YES
+  DIRECT_CROSS_SYSTEM_DB_WRITE=NO
+  ```
+- Files/commits:
+  - Migration: `378219396aa58d131143b385953a7440c28b46c7`
+  - Source: `d616e2f6c57538c1d36e087e2dee2a0c1b5d9273`
+  - Test: `c4d12aba577d616888ca0dc56de989f96796e9c4`
+  - CI: `cb91b59ac3dcfe377c87dfef878d618f3e45fcce`
+- CI/Run evidence:
+  - Run: `37245229733`
+  - Conclusion: **SUCCESS**
+  - Evidence:
+    ```ini
+    EASYSTORE_A1_PARTY_MASTER_SOURCE=PASS
+    SUPPLIER_MASTER=employee_accounting_parties_v1
+    PARTY_LEDGER_STABLE_ID=party_id
+    GET_EASYSTORE_SUPPLIERS_D1=YES
+    GOOGLE_BUSINESS_CALLS=0
+    PRODUCTION_MUTATION=NO
+    ```
+- Data mutation: NO.
+- Production impact: NO.
+- Result: **PASS — SOURCE QUALIFIED / MIGRATION NOT APPLIED**
+- Next gate:
+  - `A1_2_EASYSTORE_SUPPLIER_ROUTER`
+
+## Entry ACC-012 — A1.2 EasyStore supplier read router qualified
+- Date: 2026-10-05
+- Goal: Route the EasyStore supplier list through the same D1 READONLY boundary.
+- Scope: Repo-only EasyStore source + contract update + CI.
+- Actions performed:
+  - Added `getEasyStoreSuppliers` to `D1_ACCOUNTING_READ_ACTIONS`.
+  - D1 READONLY set is now 8 read actions.
+  - Updated `ACCOUNTING_READ_MODEL_V1`:
+    - supplier source = `employee_accounting_parties_v1`;
+    - stable Party ledger identifier = `party_id`;
+    - supplier action status = source-qualified.
+  - Financial supplier writes remain outside the READONLY router.
+- Files/commits:
+  - Read-model contract: `b79e070af3741c1fc10a0c5f4ceced1e9ff5d8a6`
+  - EasyStore router: `4c6cb91373f5f504ebcab54c3ede0b0c854432b0`
+  - Router regression update: `6218e51b89e64992799fa108263c2c4ffdcb8e0e`
+- CI/Run evidence:
+  - Run: `37245286499`
+  - Conclusion: **SUCCESS**
+- Runtime evidence:
+  - Production still remains on the previous router until controlled cutover.
+  - Migration 0020 is not yet applied to Production.
+- Data mutation: NO.
+- Production impact: NO.
+- Result: **PASS — SOURCE QUALIFIED**
+- Post-state:
+  ```ini
+  A1_2_PARTY_MASTER_SOURCE=PASS
+  A1_2_SUPPLIER_READ_SOURCE=PASS
+  A1_D1_READ_ACTIONS_SOURCE=8
+  MIGRATION_0020_PRODUCTION=NOT_APPLIED
+  ```
+- Next gate:
+  - `A1_3_DETERMINISTIC_QUOTE_READ_CALC`
+
