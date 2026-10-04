@@ -12,7 +12,9 @@
     "stableEntityIdsRequired": true,
     "customerMasterSource": "t12_customers",
     "financialBalanceSource": "employee_accounting_party_ledger_v1",
-    "accountingSourceOfTruth": "D1"
+    "accountingSourceOfTruth": "D1",
+    "supplierMasterSource": "employee_accounting_parties_v1",
+    "partyLedgerStableIdField": "party_id"
   },
   "actions": [
     {
@@ -79,11 +81,12 @@
       "action": "getEasyStoreSuppliers",
       "kind": "read",
       "target": "D1",
-      "status": "A1_PARTY_MASTER_REQUIRED",
+      "status": "A1_PARTY_MASTER_SOURCE_QUALIFIED",
       "tables": [
         "employee_accounting_party_ledger_v1",
         "employee_accounting_parties_v1"
-      ]
+      ],
+      "stableIdField": "partyId"
     },
     {
       "action": "easyStoreSystemHealth",
