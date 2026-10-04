@@ -634,3 +634,33 @@ Final acceptance target:
 - Next gate:
   - `A0_D1_ACCOUNTING_BUSINESS_DATA_PURGE`
 
+## Entry ACC-004A — A0 D1 purge first controlled attempt blocked before mutation
+- Date: 2026-10-05
+- Goal: Purge D1 accounting business data with pre/post invariance checks.
+- Controlled workflow:
+  - TrendOS dependency workflow: `.github/workflows/easystore-a0-d1-accounting-purge-controlled.yml`
+  - Commit: `005f72dc1dbafa95df1eaae16b0a99c035620660`
+  - Run: `37242097846`
+  - Job: `111552705434`
+- Preflight evidence:
+  ```ini
+  A0_D1_PREFLIGHT=PASS
+  A0_D1_MODE=READONLY
+  ```
+- Failure:
+  - The first design attempted a count snapshot across 66 non-accounting tables in one compound D1 query.
+  - That census command exited with code 1 during the **Snapshot before purge** step.
+  - The destructive purge step was automatically skipped.
+- Data mutation:
+  - D1 accounting purge: **NO**
+  - Non-accounting D1 mutation: **NO**
+- Production impact: NO.
+- Result: **BLOCKED_SAFE**
+- Safety conclusion:
+  - Fail-closed behavior worked correctly.
+  - No destructive D1 command ran after the snapshot failure.
+- Remediation:
+  - Replace the oversized all-table invariance query with a bounded set of high-value non-accounting sentinel tables while keeping the purge SQL accounting-scoped only.
+- Next gate:
+  - `A0_D1_ACCOUNTING_PURGE_RETRY_CONTROLLED`
+
