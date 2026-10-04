@@ -13,6 +13,7 @@ for(const action of [
   'getCustomerAccountV1915',
   'getEasyStoreCustomers',
   'searchCustomers',
+  'getEasyStoreSuppliers',
   'easyStoreSystemHealth'
 ]) assert.ok(setText.includes("'"+action+"'"),'missing D1 read route '+action);
 
@@ -31,10 +32,11 @@ assert.match(app,/credentials:'omit'/);
 assert.match(app,/api\('getEasyStoreCustomers'/);
 assert.match(app,/api\('searchCustomers'/);
 assert.match(app,/api\('getCustomerAccountV1915'/);
+assert.match(app,/api\('getEasyStoreSuppliers'/);
 assert.match(app,/api\('easyStoreSystemHealth'/);
 
 console.log('EASYSTORE_A1_CORE_READ_ROUTER_SOURCE=PASS');
-console.log('D1_READ_ACTION_COUNT=7');
-console.log('NEW_A1_CORE_READ_ACTIONS=4');
+console.log('D1_READ_ACTION_COUNT=8');
+console.log('A1_CUSTOMER_AND_SUPPLIER_READ_ACTIONS=5');
 console.log('FINANCIAL_WRITES_REROUTED=NO');
 console.log('PRODUCTION_MUTATION=NO');
