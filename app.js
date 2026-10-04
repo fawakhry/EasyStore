@@ -80,7 +80,32 @@
     };
     try{ sessionStorage.setItem('EASYSTORE_SESSION_V1922', JSON.stringify(handoff)); }catch(e){}
     if(!ssoReadySettled){ ssoReadySettled = true; ssoReadyResolve(true); }
+    entry619SchedulePostSsoRead();
     return true;
+  }
+
+  function entry619SchedulePostSsoRead(){
+    let tries=0;
+    const timer=setInterval(function(){
+      tries++;
+      if(!user.token){
+        if(tries>=20) clearInterval(timer);
+        return;
+      }
+      if(state.loading){
+        if(tries>=20) clearInterval(timer);
+        return;
+      }
+      clearInterval(timer);
+      Promise.resolve().then(function(){ return load(true); }).catch(function(){});
+    },250);
+    setTimeout(function(){ try{clearInterval(timer);}catch(e){} },6000);
+  }
+
+  function entry619RuntimeBadge(){
+    const d1=window.EASYSTORE_ACCOUNTING_D1_READONLY===true;
+    const sso=!!user.token;
+    return '<span class="badge">'+(d1?'D1 READONLY':'LEGACY READ')+' / '+(sso?'SSO OK':'SSO WAIT')+'</span>';
   }
 
   window.addEventListener('message', function(event){
@@ -409,7 +434,7 @@
     app.innerHTML = `<div class="wrap">
       <div class="top">
         <div><h1>💰 إيزي ستور مطبعجي - برنامج الحسابات ES46</h1><p>أصناف، موردين، فواتير شراء ومبيعات، مخزون، تقارير، ومطبخ الحسابات.</p><div class="versionLine">${VERSION} / app.js محمل: ${new Date().toLocaleTimeString('ar-EG')}</div></div>
-        <div class="actions"><span class="badge">${esc(user.name)} - ${esc(roleText())}</span><button class="btn secondary" onclick="ES27.load(true)">تحديث البيانات</button><button class="btn secondary" onclick="ES27.hardReload()">تحديث البرنامج</button><button class="btn secondary" onclick="history.back()">إغلاق</button></div>
+        <div class="actions"><span class="badge">${esc(user.name)} - ${esc(roleText())}</span>${entry619RuntimeBadge()}<button class="btn secondary" onclick="ES27.load(true)">تحديث البيانات</button><button class="btn secondary" onclick="ES27.hardReload()">تحديث البرنامج</button><button class="btn secondary" onclick="history.back()">إغلاق</button></div>
       </div>
       <div id="mainMsg" class="msg"></div>
       ${tabs()}
