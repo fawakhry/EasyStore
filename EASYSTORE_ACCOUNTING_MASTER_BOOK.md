@@ -1,0 +1,389 @@
+# EasyStore Accounting Master Book
+
+Canonical project record for EasyStore / Accounting Agent.
+
+Repository: `fawakhry/EasyStore`  
+Canonical branch: `candidate/easystore-zero-google-audit-20261004`  
+Created: 2026-10-05
+
+## Record rule
+
+This file is the **single canonical accounting project book**.
+
+From this point forward:
+
+- every accounting step, gate, audit, source change, runtime change, migration, purge, deploy, test, rollback, policy change, agent-tool addition, autonomy change, and production verification MUST be recorded here;
+- Accounting work MUST NOT be logged in `TrendOS_MASTER_BOOK.md`;
+- TrendOS may expose integration contracts, but the accounting execution history stays here;
+- EasyStore/Accounting commits may reference TrendOS runtime facts when needed, but ownership of the accounting roadmap and status remains in this book;
+- no accounting step is considered complete until its evidence is recorded here;
+- use the rule:
+  `Runtime truth > deployed > tested > repo-only > historical`.
+
+## Product mission
+
+EasyStore is being rebuilt as an **AI Accounting Agent**, not merely a conventional accounting screen.
+
+Target operating model:
+
+`TrendOS operational facts -> Accounting Agent -> deterministic accounting tools -> D1 financial ledgers -> audited result`
+
+The long-term goal is that AI manages routine accounting work and humans handle only:
+
+- exceptions;
+- approvals above policy limits;
+- physical facts the system cannot infer;
+- legally/financially sensitive overrides.
+
+## Core architecture
+
+### Deterministic Accounting Engine
+Owns the financial truth.
+
+Responsibilities:
+- balances;
+- invoices;
+- receivables;
+- payables;
+- inventory;
+- cost;
+- profit;
+- treasury;
+- day close;
+- reversals;
+- idempotency;
+- audit events.
+
+AI is never allowed to invent ledger truth.
+
+### AI Accounting Agent
+Owns orchestration and decision support.
+
+Responsibilities:
+- understand events/context;
+- choose allowed tools;
+- explain decisions;
+- detect anomalies;
+- prepare transactions;
+- execute only within policy.
+
+Rule:
+
+`AI decides what to attempt -> deterministic tool validates and executes -> ledger records result`.
+
+## Autonomy ladder
+
+```ini
+LEVEL_1=OBSERVE
+LEVEL_2=RECOMMEND
+LEVEL_3=APPROVAL
+LEVEL_4=AUTO
+```
+
+Promotion to a higher level requires:
+- deterministic tool contract;
+- server-side policy;
+- idempotency for writes;
+- audit evidence;
+- runtime qualification;
+- rollback/reversal path where applicable.
+
+## Current baseline
+
+Observed/qualified before this book was created:
+
+```ini
+PRODUCT=EasyStore
+VERSION=ES47 V1922 Unified Safe Build
+CURRENT_ARCHITECTURE=HYBRID
+TARGET_ARCHITECTURE=CLOUDFLARE_D1_ZERO_GOOGLE_AI_ACCOUNTING_AGENT
+
+ACCOUNTING_MODE=READONLY
+ACCOUNTING_POLICY_EPOCH=2
+D1_SCHEMA_READY=YES
+D1_AUTHORITATIVE_WRITES=NO
+
+EASYSTORE_ZERO_GOOGLE=NO
+LIVE_APPS_SCRIPT_FALLBACK=YES
+SECURE_PROXY_CONFIGURED=NO
+
+APP_LITERAL_API_ACTIONS=33
+FRONTEND_D1_READ_ACTIONS=3
+
+ACCOUNTING_DATA_RETENTION=NOT_REQUIRED
+ACCOUNTING_DATA_PURGE_AUTHORIZED=YES
+ACCOUNTING_PURGE_SCOPE=ACCOUNTING_DATA_ONLY
+TRENDOS_ORDERS_PRESERVE=YES
+TRENDOS_CUSTOMERS_PRESERVE=YES
+EMPLOYEES_PRESERVE=YES
+```
+
+Previous audit evidence:
+- ES-ZG-001 runtime audit: Run `37233448156` = SUCCESS.
+- D1 Accounting health: READONLY / epoch 2.
+- unauthenticated read fails closed with HTTP 401.
+- write-shaped request fails closed with HTTP 503 while READONLY.
+- Production business-data mutation from the audit = NO.
+
+## Roadmap
+
+### Phase A0 — Accounting-only reset and isolation
+Target duration: 0.5–1 day.
+
+Goals:
+- identify every accounting-only dataset in Google and D1;
+- purge accounting business rows only;
+- preserve schema, code, users, TrendOS orders/customers and non-accounting operational data;
+- verify clean empty accounting baseline;
+- keep Accounting control fail-closed.
+
+Exit criteria:
+```ini
+ACCOUNTING_PURGE=PASS
+D1_ACCOUNTING_BUSINESS_ROWS=0
+GOOGLE_ACCOUNTING_BUSINESS_ROWS=0
+NON_ACCOUNTING_DATA_TOUCHED=NO
+ACCOUNTING_MODE=READONLY_OR_OFF_AS_PLANNED
+```
+
+### Phase A1 — Zero-Google read model
+Target duration: 2–3 days.
+
+Goals:
+- move all accounting reads away from Apps Script;
+- implement customers/suppliers/party balances/reporting/health/search in D1 contracts;
+- remove Google-backed read helpers from normal runtime;
+- unify stable IDs: Party, Item, Order, Line, Department, Profit Center.
+
+Exit criteria:
+```ini
+ACCOUNTING_READS_D1=100_PERCENT_REQUIRED_SCOPE
+APPS_SCRIPT_ACCOUNTING_READS=0
+READ_RECONCILIATION=PASS
+```
+
+### Phase A2 — Deterministic write engine
+Target duration: 4–6 days.
+
+Build and qualify:
+- sales invoices;
+- customer collections;
+- purchases;
+- supplier payments;
+- materials/items;
+- stock movements;
+- BOM/product formation;
+- waste/adjustments;
+- department purchases;
+- custody;
+- day close;
+- reversals;
+- idempotency ledger;
+- immutable audit events.
+
+Each capability is promoted separately.
+
+Exit criteria:
+```ini
+ACCOUNTING_WRITES_D1=QUALIFIED
+IDEMPOTENCY=PASS
+REVERSAL_MODEL=PASS
+AUDIT_LEDGER=PASS
+APPS_SCRIPT_FINANCIAL_WRITE_AUTHORITY=0
+```
+
+### Phase A3 — Remove Google runtime authority
+Target duration: 1–2 days.
+
+Goals:
+- remove Apps Script fallback from EasyStore accounting runtime;
+- prove no accounting Google business calls;
+- run production smoke tests;
+- verify zero hidden spreadsheet authority.
+
+Exit criteria:
+```ini
+EASYSTORE_ZERO_GOOGLE=PASS
+GOOGLE_BUSINESS_CALLS=0
+ACCOUNTING_ENGINE=D1_AUTHORITATIVE
+```
+
+### Phase B1 — Agent Contract + Tool Registry
+Target duration: 2–3 days.
+
+Create typed agent tools for:
+- accounting summary;
+- customer/supplier balance;
+- party ledger;
+- open invoices/payables;
+- sales invoice creation;
+- collections;
+- purchases;
+- supplier payments;
+- stock movement;
+- material consumption;
+- waste;
+- day close;
+- reconciliation;
+- reversals;
+- cost/profit calculation;
+- cash/material forecast;
+- anomaly detection;
+- accounting explanations.
+
+Every tool must define:
+- exact inputs;
+- exact outputs;
+- authorization;
+- autonomy level;
+- idempotency rules;
+- dry-run support if relevant;
+- failure codes;
+- audit event.
+
+Exit criteria:
+```ini
+AGENT_TOOL_REGISTRY=PASS
+DIRECT_AI_DB_WRITE=FORBIDDEN
+DEFAULT_AGENT_MODE=OBSERVE
+AGENT_WRITES=OFF
+```
+
+### Phase B2 — Observe / Recommend Agent
+Target duration: 3–5 days.
+
+Capabilities:
+- daily accounting briefing;
+- anomaly detection;
+- due collections;
+- supplier obligations;
+- stock risk;
+- margin anomalies;
+- cash forecast;
+- material forecast;
+- reconciliation suggestions.
+
+No autonomous financial writes.
+
+Exit criteria:
+```ini
+ACCOUNTING_AGENT_MODE=RECOMMEND
+AUTO_FINANCIAL_WRITES=0
+DAILY_BRIEF=PASS
+ANOMALY_ENGINE=PASS
+```
+
+### Phase B3 — Approval Agent
+Target duration: 3–5 days.
+
+Capabilities:
+- prepare exact financial transaction;
+- show business rationale/reason codes;
+- request approval;
+- execute only after authorized approval;
+- record approver and result.
+
+Exit criteria:
+```ini
+ACCOUNTING_AGENT_MODE=APPROVAL
+APPROVAL_POLICY=PASS
+APPROVED_WRITE_TOOLS=QUALIFIED
+```
+
+### Phase B4 — Controlled AUTO
+Target duration: 1–2 weeks of staged runtime qualification.
+
+Start only with low-risk repetitive actions.
+
+Possible first AUTO candidates:
+- invoice generation from already-approved operational facts;
+- standard material-consumption posting;
+- routine stock movements;
+- zero-difference reconciliations;
+- routine customer receipts when source evidence is authoritative.
+
+High-risk actions remain approval-gated until separately qualified:
+- large supplier payments;
+- write-offs;
+- manual ledger adjustments;
+- reversals;
+- exceptional discounts;
+- day close with discrepancies.
+
+Exit criteria:
+```ini
+ACCOUNTING_AGENT_MODE=AUTO
+AUTO_POLICY_LIMITS=SERVER_SIDE
+AUTO_ACTIONS=WHITELIST_ONLY
+HIGH_RISK_ACTIONS=APPROVAL_ONLY
+```
+
+### Phase B5 — Autonomous accounting operations
+Target: approximately 4–6 weeks from active build start, depending on real-runtime qualification.
+
+Target state:
+```ini
+EASYSTORE_ZERO_GOOGLE=PASS
+ACCOUNTING_ENGINE=D1_AUTHORITATIVE
+ACCOUNTING_AGENT=ACTIVE
+ROUTINE_HUMAN_BOOKKEEPING=MINIMIZED
+HUMAN_WORK=EXCEPTIONS_APPROVALS_PHYSICAL_FACTS
+DAILY_CLOSE=AUTOMATABLE_WHEN_INTEGRITY_GATES_PASS
+```
+
+## Delivery targets
+
+Practical targets:
+
+```ini
+USABLE_ZERO_GOOGLE_ACCOUNTING=10_TO_14_WORKING_DAYS
+AI_OBSERVE_RECOMMEND=AROUND_2_WEEKS
+AI_APPROVAL_WORKFLOWS=AROUND_3_WEEKS
+CONTROLLED_AUTO_ACCOUNTING=AROUND_4_TO_6_WEEKS
+```
+
+These are engineering targets, not automatic completion promises; runtime drift, financial-contract defects, or integration failures may extend them.
+
+## Mandatory execution policy
+
+Every future step must be recorded in this file using this template:
+
+```text
+### Entry <ID> — <title>
+- Date:
+- Goal:
+- Scope:
+- Pre-state:
+- Actions performed:
+- Files/commits:
+- CI/Run evidence:
+- Runtime evidence:
+- Data mutation:
+- Production impact:
+- Result: PASS / FAIL / BLOCKED
+- Rollback/reversal:
+- Post-state:
+- Next gate:
+```
+
+No status may be marked PASS from source code alone when runtime proof is required.
+
+## Separation policy
+
+Accounting project records live here only.
+
+Do not append Accounting execution entries to:
+- `TrendOS_MASTER_BOOK.md`;
+- TrendOS Zero-Google history;
+- unrelated workshop/project books.
+
+TrendOS should contain only the minimum integration contract necessary for its own runtime, while this book owns the accounting program lifecycle.
+
+## Current next gate
+
+```ini
+STATUS=ACCOUNTING_MASTER_BOOK_ESTABLISHED
+ROADMAP=RECORDED
+LOGGING_POLICY=ACCOUNTING_BOOK_ONLY
+NEXT_GATE=A0_ACCOUNTING_ONLY_PURGE
+```
