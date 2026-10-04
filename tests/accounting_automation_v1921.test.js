@@ -103,6 +103,6 @@ assert.doesNotMatch(app, /sales-purchases/);
 assert.match(app, /department:val\('saDept'\)/);
 assert.doesNotMatch(app, /onclick="ES27\.approveDeptInvoice\(\)">✓ اعتماد فاتورة القسم/);
 assert.match(config, /safe-3-minutes-when-clean/);
-assert.match(index, /es47-v1922-unified-safe-build-20260811a/);
+assert.match(index, /entry619-d1-readonly-sso-20261004/);
 
 console.log('accounting semi-automatic V1921 tests passed');
