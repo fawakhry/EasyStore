@@ -387,3 +387,169 @@ ROADMAP=RECORDED
 LOGGING_POLICY=ACCOUNTING_BOOK_ONLY
 NEXT_GATE=A0_ACCOUNTING_ONLY_PURGE
 ```
+
+## Product operating model — locked
+
+The accounting product will be built around an **exception-first AI operating model**.
+
+### Owner experience
+
+The owner is not expected to operate accounting screens routinely.
+
+The primary owner experience is an **Owner Brief** that reports:
+- accounting health;
+- sales today;
+- collections today;
+- customer receivables;
+- supplier obligations;
+- cash forecast;
+- material risk;
+- profit/margin anomalies;
+- automatic accounting movements;
+- reconciliation status;
+- exceptions that require approval.
+
+The owner should drill into detailed screens only when needed.
+
+### Employee experience
+
+Employees should mainly provide facts the system cannot safely infer:
+- physical stock count;
+- actual received quantity;
+- physical waste/scrap;
+- off-system payment evidence;
+- disputed transaction evidence;
+- exception explanation;
+- role-authorized approvals.
+
+Facts already known to TrendOS must not be manually re-entered into EasyStore.
+
+### Evidence rule
+
+The Accounting Agent cannot treat AI inference or a chat message alone as proof of a financial fact.
+
+Accepted evidence classes include:
+- authoritative TrendOS event;
+- deterministic accounting ledger fact;
+- verified payment source;
+- approved purchase receipt;
+- authorized physical count;
+- authorized human approval.
+
+### Integrity Engine
+
+Integrity validation is separate from AI.
+
+Minimum controls:
+```text
+opening_cash + cash_in - cash_out = closing_cash
+invoice_total - paid_amount = remaining_amount
+opening_stock + stock_in - stock_out - waste = closing_stock
+party_opening_balance + debits - credits = party_closing_balance
+```
+
+If an integrity check fails:
+- no silent auto-correction;
+- affected AUTO/day-close action fails closed;
+- an exception is raised;
+- discrepancy evidence is shown;
+- reconciliation or authorized adjustment is required.
+
+### Hard AI safety boundary
+
+```ini
+AI_LEDGER_AUTHORITY=NO
+DIRECT_AI_DB_WRITE=NO
+AI_INFERENCE_ALONE_IS_FINANCIAL_EVIDENCE=NO
+CHAT_MESSAGE_ALONE_PROVES_PAYMENT=NO
+DESTRUCTIVE_FINANCIAL_DELETE_AFTER_GO_LIVE=NO
+```
+
+The Agent always works through deterministic accounting tools.
+
+## Entry ACC-001 — AI Accounting Agent product contract + safety policy
+- Date: 2026-10-05
+- Goal: Convert the agreed product direction into enforceable repo contracts before financial runtime migration.
+- Scope: Repo-only architecture and CI. No Production/D1/Google mutation.
+- Pre-state:
+  - Accounting roadmap already established.
+  - Target direction = AI Accounting Agent.
+  - Default Accounting runtime remains READONLY / epoch 2.
+- Actions performed:
+  - Added machine-readable policy:
+    - `docs/ACCOUNTING_AGENT_POLICY_V1.json`
+  - Added product operating contract:
+    - `docs/ACCOUNTING_AGENT_PRODUCT_CONTRACT_V1.md`
+  - Added policy regression test:
+    - `tests/accounting_agent_policy_v1.test.js`
+  - Added dedicated CI:
+    - `.github/workflows/easystore-accounting-agent-policy-ci.yml`
+  - Locked:
+    - Deterministic Accounting Engine as ledger authority.
+    - AI direct DB write forbidden.
+    - Agent default = OBSERVE.
+    - Agent writes default OFF.
+    - Evidence policy.
+    - Integrity Engine fail-closed behavior.
+    - Owner Brief target.
+    - Human role = exceptions / approvals / physical facts.
+    - Event-driven accounting model.
+    - Initial Agent Tool Registry.
+- Files/commits:
+  - Policy commit: `0e4381cb9e36cf559497937c062ae6df91a517ef`
+  - Product contract commit: `34551a4cef2852b9d48cd4e42f299061b0d0bdb0`
+  - Policy test commit: `805e4911dc57748c5f9bc1bf610d835bcbb87785`
+  - CI commit: `73f4066bcc48956a8dbbb048b8a639cdeac5ec29`
+- CI/Run evidence:
+  - Run: `37240790983`
+  - Job: `111548931151`
+  - Conclusion: **SUCCESS**
+  - Evidence:
+    ```ini
+    ACCOUNTING_AGENT_POLICY_V1=PASS
+    ACCOUNTING_AGENT_PRODUCT_CONTRACT_V1=PASS
+    AI_LEDGER_AUTHORITY=NO
+    DIRECT_AI_DB_WRITE=NO
+    DEFAULT_AGENT_MODE=OBSERVE
+    AGENT_WRITES=OFF
+    PRODUCTION_MUTATION=NO
+    D1_MUTATION=NO
+    GOOGLE_MUTATION=NO
+    ```
+- Runtime evidence:
+  - None required for this repo-only architecture gate.
+  - Existing Production accounting runtime remains unchanged.
+- Data mutation: NO.
+- Production impact: NO.
+- Result: **PASS**
+- Rollback/reversal:
+  - Repo-only; revert the commits if the product contract is intentionally replaced.
+- Post-state:
+  ```ini
+  PRODUCT_DIRECTION=AI_ACCOUNTING_AGENT_LOCKED
+  ACCOUNTING_ENGINE_AUTHORITY=DETERMINISTIC
+  AI_LEDGER_AUTHORITY=NO
+  DIRECT_AI_DB_WRITE=NO
+  DEFAULT_AGENT_MODE=OBSERVE
+  DEFAULT_AGENT_WRITES=OFF
+  INTEGRITY_ENGINE=REQUIRED
+  EVIDENCE_POLICY=REQUIRED
+  OWNER_EXPERIENCE=EXCEPTION_FIRST_BRIEF
+  HUMAN_ROLE=EXCEPTIONS_APPROVALS_PHYSICAL_FACTS
+  ```
+- Next gate:
+  - `A0_ACCOUNTING_ONLY_PURGE`
+  - After clean reset, implement Zero-Google deterministic read model while preserving this Agent contract.
+
+## Updated project target
+
+The finished program should behave like an accounting employee, not merely an accounting database/UI.
+
+Target daily lifecycle:
+
+`Operational facts arrive -> Agent interprets -> deterministic tools post/validate -> integrity checks run -> routine work completes -> only exceptions/approvals reach humans`
+
+Final acceptance target:
+> A normal workshop day completes without the owner manually entering routine accounting data, while every financial result stays deterministic, auditable, evidence-backed, policy-controlled, and reversible where required.
+
+
