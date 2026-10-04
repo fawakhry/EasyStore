@@ -597,3 +597,40 @@ Final acceptance target:
 - Next gate:
   - `A0_GOOGLE_ACCOUNTING_ROWS_PURGE`
 
+## Entry ACC-003 — A0 Google accounting-only business data purge
+- Date: 2026-10-05
+- Goal: Remove authorized accounting data from the production Google spreadsheet while preserving schemas and all non-accounting data.
+- Scope:
+  - 21 sheets prefixed `حسابات -`;
+  - derived accounting sheet `عملاء منع التسليم بالمديونية`;
+  - row 1/header preserved on every target sheet;
+  - sheet tabs, formatting/schema and all out-of-scope sheets preserved.
+- Pre-state:
+  - Target spreadsheet: `TrendOS_Operations_CLEAN_START_CUSTOMERS_ONLY`.
+  - Targeted accounting rows observed: 82.
+- Actions performed:
+  - Cleared `userEnteredValue` for rows below the header on exactly 22 approved target sheets.
+  - No sheet tab was deleted.
+  - No non-accounting sheet was included in the mutation request.
+- Verification:
+  - Re-read all 22 target ranges after mutation.
+  - Remaining targeted accounting data rows: **0**.
+- Data mutation: **YES — authorized accounting-only Google data purge**.
+- Production impact:
+  - Accounting historical/configuration rows in target accounting sheets were reset.
+  - TrendOS orders, order lines, customers, employees/users, attendance, conversations and unrelated platform sheets were not in the mutation scope.
+- Result: **PASS**
+- Post-state:
+  ```ini
+  A0_GOOGLE_ACCOUNTING_BUSINESS_ROWS=0
+  A0_GOOGLE_TARGET_SHEETS=22
+  A0_HEADERS_PRESERVED=YES
+  A0_SHEETS_DELETED=NO
+  A0_NON_ACCOUNTING_MUTATION=NO
+  ```
+- Rollback/reversal:
+  - This was an explicitly authorized destructive reset; no accounting data restore is required.
+  - Google file version history remains provider-managed, but the project target is a clean accounting baseline.
+- Next gate:
+  - `A0_D1_ACCOUNTING_BUSINESS_DATA_PURGE`
+
