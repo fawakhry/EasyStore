@@ -213,3 +213,74 @@ GENERIC_FALLBACK=APPS_SCRIPT
 PRODUCTION_BUSINESS_DATA_MUTATION=NO
 NEXT_GATE=PUBLIC_RUNTIME_HEALTH_AND_FAIL_CLOSED_AUDIT
 ```
+
+## ES-ZG-001 runtime result
+
+Workflow:
+`.github/workflows/easystore-es-zg-001-runtime-audit.yml`
+
+Run:
+`37233448156`
+
+Job:
+`111527773725`
+
+Conclusion: **SUCCESS**
+
+Observed live GitHub Pages:
+```ini
+LIVE_PAGES_BUILD=PASS
+LIVE_D1_READONLY_FLAG=YES
+LIVE_APPS_SCRIPT_FALLBACK=YES
+LIVE_SECURE_PROXY_CONFIGURED=NO
+```
+
+Observed public D1 accounting health:
+```ini
+D1_HEALTH_SUCCESS=true
+D1_SCHEMA_READY=true
+D1_MODE=READONLY
+D1_POLICY_EPOCH=2
+D1_AUTHORITATIVE_WRITES=false
+D1_GOOGLE_BUSINESS_CALLS=0
+D1_APPS_SCRIPT_BUSINESS_AUTHORITY=false
+```
+
+Fail-closed proof:
+```ini
+UNAUTH_GET_ACCOUNTING_HTTP=401
+UNAUTH_GET_ACCOUNTING_CODE=employee-session-rejected
+WRITE_SHAPED_HTTP=503
+WRITE_SHAPED_CODE=employee-accounting-readonly
+PRODUCTION_BUSINESS_DATA_MUTATION=NO
+```
+
+Interpretation:
+- D1 Accounting endpoint is live and schema-ready.
+- Accounting remains correctly READONLY.
+- Unauthenticated reads are rejected.
+- Writes are blocked before authentication while READONLY.
+- EasyStore live Pages still keeps Apps Script as generic fallback.
+- This workflow cannot prove a real authenticated EasyStore `getAccounting` HTTP 200 because it intentionally holds no employee session/token.
+- D1 row counts and Google Sheet row counts remain unverified.
+
+Updated registration:
+```ini
+STATUS=ES_ZG_001_PUBLIC_RUNTIME_AUDIT_PASS
+AUDIT_RUN=37233448156
+AUDIT_JOB=111527773725
+APP_LITERAL_API_ACTIONS=33
+FRONTEND_D1_READ_ACTIONS=3
+D1_SCHEMA_READY=YES
+D1_MODE=READONLY
+D1_POLICY_EPOCH=2
+UNAUTH_READ_FAIL_CLOSED=PASS
+READONLY_WRITE_FAIL_CLOSED=PASS
+AUTHENTICATED_D1_READ_200=PENDING
+D1_ROW_COUNTS=PENDING
+GOOGLE_ROW_COUNTS=PENDING
+DATASET_RECONCILIATION=PENDING
+EASYSTORE_ZERO_GOOGLE=NO
+NEXT_GATE=AUTHENTICATED_D1_READ_200_THEN_READONLY_GOOGLE_VS_D1_DATA_CENSUS
+```
+
