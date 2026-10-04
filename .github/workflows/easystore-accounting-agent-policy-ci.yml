@@ -1,0 +1,38 @@
+name: EasyStore Accounting Agent Policy CI
+
+on:
+  push:
+    branches:
+      - candidate/easystore-zero-google-audit-20261004
+    paths:
+      - 'docs/ACCOUNTING_AGENT_PRODUCT_CONTRACT_V1.md'
+      - 'docs/ACCOUNTING_AGENT_POLICY_V1.json'
+      - 'tests/accounting_agent_policy_v1.test.js'
+      - '.github/workflows/easystore-accounting-agent-policy-ci.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  qualify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: candidate/easystore-zero-google-audit-20261004
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Validate policy and safety defaults
+        shell: bash
+        run: |
+          set -euo pipefail
+          node tests/accounting_agent_policy_v1.test.js
+          grep -Fq 'ACCOUNTING_AGENT_MODE=OBSERVE' docs/ACCOUNTING_AGENT_PRODUCT_CONTRACT_V1.md
+          grep -Fq 'DIRECT_AI_DB_WRITE=false' docs/ACCOUNTING_AGENT_PRODUCT_CONTRACT_V1.md
+          grep -Fq 'AI_LEDGER_AUTHORITY=false' docs/ACCOUNTING_AGENT_PRODUCT_CONTRACT_V1.md
+          echo ACCOUNTING_AGENT_PRODUCT_CONTRACT_V1=PASS
+          echo PRODUCTION_MUTATION=NO
+          echo D1_MUTATION=NO
+          echo GOOGLE_MUTATION=NO
