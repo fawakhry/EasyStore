@@ -1,0 +1,138 @@
+name: EasyStore ES-ZG-001 Public Runtime Read-Only Audit
+
+on:
+  push:
+    branches:
+      - candidate/easystore-zero-google-audit-20261004
+    paths:
+      - 'EASYSTORE_ZERO_GOOGLE_BOOK.md'
+      - 'docs/EASYSTORE_ZERO_GOOGLE_ACTION_INVENTORY_20261004.json'
+      - '.github/workflows/easystore-es-zg-001-runtime-audit.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      PAGES_URL: https://fawakhry.github.io/EasyStore
+      D1_URL: https://trendos-d1-api.trendmall-contact.workers.dev/v1/employee/accounting
+      EXPECTED_CACHE_TAG: entry619-d1-readonly-sso2-20261004
+      EXPECTED_VERSION: ES47 V1922 Unified Safe Build
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: candidate/easystore-zero-google-audit-20261004
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Repository baseline and tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check app.js
+          for f in tests/*.test.js; do
+            echo "RUN $f"
+            node "$f"
+          done
+          grep -Fq "EASYSTORE_ACCOUNTING_D1_READONLY = true" config.js
+          grep -Fq "script.google.com/macros/s/" config.js
+          grep -Fq 'window.MATBAGY_SECURE_API_PROXY_URL = "";' config.js
+          grep -Fq "D1_ACCOUNTING_READ_ACTIONS" app.js
+          grep -Fq "SpreadsheetApp" Code.gs
+          echo ESZG001_REPO_BASELINE=PASS
+
+      - name: Count current frontend API actions
+        shell: bash
+        run: |
+          set -euo pipefail
+          node <<'NODE'
+          const fs=require('fs');
+          const s=fs.readFileSync('app.js','utf8');
+          const actions=[...s.matchAll(/\bapi\(\s*['"]([^'"]+)['"]/g)].map(m=>m[1]);
+          const unique=[...new Set(actions)].sort();
+          const d1=(s.match(/D1_ACCOUNTING_READ_ACTIONS\s*=\s*new Set\(\[([^\]]*)\]\)/)||[])[1]||'';
+          const d1Reads=[...d1.matchAll(/['"]([^'"]+)['"]/g)].map(m=>m[1]).sort();
+          console.log('ESZG001_APP_LITERAL_API_ACTIONS='+unique.length);
+          console.log('ESZG001_FRONTEND_D1_READ_ACTIONS='+d1Reads.length);
+          console.log('ESZG001_FRONTEND_D1_READ_ACTION_LIST='+d1Reads.join(','));
+          if(unique.length!==33) throw new Error('API action baseline drift: '+unique.length);
+          if(d1Reads.join(',')!=='getAccounting,getDeptInvoiceDraftV1887,getPartyAccountV1858') throw new Error('D1 read router drift');
+          NODE
+
+      - name: Verify live GitHub Pages build
+        shell: bash
+        run: |
+          set -euo pipefail
+          suffix="$GITHUB_SHA-$(date +%s)"
+          curl --fail --silent --show-error --location "$PAGES_URL/config.js?eszg001=$suffix" -o /tmp/live-config.js
+          curl --fail --silent --show-error --location "$PAGES_URL/app.js?eszg001=$suffix" -o /tmp/live-app.js
+          curl --fail --silent --show-error --location "$PAGES_URL/index.html?eszg001=$suffix" -o /tmp/live-index.html
+
+          grep -Fq "$EXPECTED_CACHE_TAG" /tmp/live-config.js
+          grep -Fq "$EXPECTED_VERSION" /tmp/live-config.js
+          grep -Fq "EASYSTORE_ACCOUNTING_D1_READONLY = true" /tmp/live-config.js
+          grep -Fq "script.google.com/macros/s/" /tmp/live-config.js
+          grep -Fq 'window.MATBAGY_SECURE_API_PROXY_URL = "";' /tmp/live-config.js
+          grep -Fq "entry619SchedulePostSsoRead" /tmp/live-app.js
+          grep -Fq "D1_ACCOUNTING_READ_ACTIONS" /tmp/live-app.js
+          grep -Fq "$EXPECTED_CACHE_TAG" /tmp/live-index.html
+
+          echo ESZG001_LIVE_PAGES_BUILD=PASS
+          echo ESZG001_LIVE_D1_READONLY_FLAG=YES
+          echo ESZG001_LIVE_APPS_SCRIPT_FALLBACK=YES
+          echo ESZG001_LIVE_SECURE_PROXY_CONFIGURED=NO
+
+      - name: Read public D1 accounting health
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail --silent --show-error             -H 'Origin: https://fawakhry.github.io'             "$D1_URL/health?eszg001=$GITHUB_SHA" -o /tmp/health.json
+          node <<'NODE'
+          const x=require('/tmp/health.json');
+          console.log('ESZG001_D1_HEALTH_SUCCESS='+String(x.success===true));
+          console.log('ESZG001_D1_SCHEMA_READY='+String(x.schemaReady===true));
+          console.log('ESZG001_D1_MODE='+String(x.mode||''));
+          console.log('ESZG001_D1_POLICY_EPOCH='+Number(x.policyEpoch||0));
+          console.log('ESZG001_D1_AUTHORITATIVE_WRITES='+String(x.authoritativeWrites===true));
+          console.log('ESZG001_D1_GOOGLE_BUSINESS_CALLS='+Number(x.googleBusinessCalls||0));
+          console.log('ESZG001_D1_APPS_SCRIPT_BUSINESS_AUTHORITY='+String(x.appsScriptBusinessAuthority===true));
+          if(x.success!==true||x.schemaReady!==true||x.mode!=='READONLY'||Number(x.policyEpoch||0)!==2) throw new Error('D1 accounting health drift');
+          if(x.authoritativeWrites!==false||Number(x.googleBusinessCalls||0)!==0||x.appsScriptBusinessAuthority!==false) throw new Error('D1 accounting authority drift');
+          NODE
+
+      - name: Prove fail-closed request behavior without credentials
+        shell: bash
+        run: |
+          set -euo pipefail
+          read_code="$(curl --silent --show-error --output /tmp/read.json --write-out '%{http_code}'             -H 'Origin: https://fawakhry.github.io'             -H 'Content-Type: application/json'             --data '{"action":"getAccounting","username":"eszg001-noauth"}'             "$D1_URL")"
+          write_code="$(curl --silent --show-error --output /tmp/write.json --write-out '%{http_code}'             -H 'Origin: https://fawakhry.github.io'             -H 'Content-Type: application/json'             --data '{"action":"saveAccountingFinalInvoice","username":"eszg001-noauth"}'             "$D1_URL")"
+          export READ_CODE="$read_code" WRITE_CODE="$write_code"
+          node <<'NODE'
+          const fs=require('fs');
+          const r=JSON.parse(fs.readFileSync('/tmp/read.json','utf8')||'{}');
+          const w=JSON.parse(fs.readFileSync('/tmp/write.json','utf8')||'{}');
+          console.log('ESZG001_UNAUTH_READ_HTTP='+process.env.READ_CODE);
+          console.log('ESZG001_UNAUTH_READ_CODE='+String(r.code||''));
+          console.log('ESZG001_WRITE_SHAPED_HTTP='+process.env.WRITE_CODE);
+          console.log('ESZG001_WRITE_SHAPED_CODE='+String(w.code||''));
+          if(Number(process.env.READ_CODE)!==401||r.code!=='employee-session-rejected') throw new Error('unauth read did not fail closed');
+          if(Number(process.env.WRITE_CODE)!==503||w.code!=='employee-accounting-readonly') throw new Error('readonly write did not fail closed');
+          NODE
+          echo ESZG001_PRODUCTION_BUSINESS_DATA_MUTATION=NO
+
+      - name: Audit classification
+        shell: bash
+        run: |
+          echo ESZG001_RUNTIME_HEALTH_AND_FAIL_CLOSED_AUDIT=PASS
+          echo ESZG001_AUTHENTICATED_D1_READ_200=NOT_PROVEN_BY_THIS_WORKFLOW
+          echo ESZG001_D1_ROW_COUNTS=NOT_VERIFIED
+          echo ESZG001_GOOGLE_ROW_COUNTS=NOT_VERIFIED
+          echo ESZG001_DATASET_RECONCILIATION=PENDING
+          echo ESZG001_EASYSTORE_ZERO_GOOGLE=NO
+          echo ESZG001_NEXT_GATE=AUTHENTICATED_D1_READ_THEN_READONLY_DATA_CENSUS
