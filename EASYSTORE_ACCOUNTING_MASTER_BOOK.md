@@ -693,3 +693,117 @@ Final acceptance target:
 - Next gate:
   - `A0_D1_ACCOUNTING_PURGE_RETRY_3_CONTROLLED`
 
+## Entry ACC-004C — A0 D1 accounting-only purge completed
+- Date: 2026-10-05
+- Goal: Complete the authorized D1 accounting-only reset with fail-closed guards and non-accounting invariance evidence.
+- Controlled workflow:
+  - Dependency repo: `fawakhry/TrendOs`
+  - Workflow: `.github/workflows/easystore-a0-d1-accounting-purge-controlled.yml`
+  - Commit: `06c11f1520564ebe3d4c0eba5bc010696a31d054`
+  - Run: `37242359626`
+  - Job: `111553440473`
+  - Conclusion: **SUCCESS**
+- Preflight evidence:
+  ```ini
+  A0_D1_PREFLIGHT=PASS
+  A0_D1_MODE=READONLY
+  A0_D1_TABLE_DISCOVERY=PASS
+  A0_D1_TABLE_COUNT=77
+  A0_D1_REQUIRED_ACCOUNTING_TABLES=PASS
+  ```
+- Pre-purge accounting data census:
+  ```ini
+  request_ledger=0
+  materials=2
+  templates=1
+  dept_lines=18
+  final_invoices=3
+  party_ledger=7
+  stock_moves=0
+  events=0
+  legacy_accounting_rows=2
+  parity_accounting_rows=0
+  TOTAL=33
+  ```
+- Non-accounting sentinels checked before and after:
+  - customers
+  - orders
+  - t12_customers
+  - employee_auth_users_v1
+  - employee_core_orders_v1
+  - employee_core_lines_v1
+  - employee_attendance_days_v1
+  - employee_hr_employees_v1
+  - employee_zero_google_backfill_runs_v1
+- Actions performed:
+  - deleted authorized rows from the eight native accounting business/ledger tables;
+  - deleted only accounting-source rows from legacy-row retention;
+  - deleted only accounting-family parity rows;
+  - reset `employee_accounting_events_v1` sequence;
+  - reset `next_invoice_number=1`;
+  - preserved the accounting control row, READONLY mode and policy epoch.
+- Post-verification:
+  ```ini
+  A0_D1_ACCOUNTING_ROWS_POST=0
+  A0_D1_NON_ACCOUNTING_SENTINELS_INVARIANT=PASS
+  A0_D1_ACCOUNTING_MODE_PRESERVED=READONLY
+  A0_D1_POLICY_EPOCH_PRESERVED=2
+  A0_D1_NEXT_INVOICE_NUMBER=1
+  A0_D1_PURGE_VERIFICATION=PASS
+  A0_D1_POST_HEALTH=PASS
+  A0_D1_SCHEMA_READY=YES
+  A0_D1_AUTHORITATIVE_WRITES=NO
+  ```
+- Data mutation: **YES — explicitly authorized accounting-only D1 reset**.
+- Production impact:
+  - Accounting D1 business rows were reset to a clean baseline.
+  - Non-accounting sentinel counts were invariant.
+  - Accounting write authority stayed disabled.
+- Result: **PASS**
+- Rollback/reversal:
+  - No data restoration is required; the owner explicitly chose a clean accounting start.
+  - Schema/control remain intact for rebuild.
+- Next gate:
+  - `A0_FINAL_CROSS_STORE_VERIFICATION`
+
+## Entry ACC-005 — Phase A0 accounting reset closed
+- Date: 2026-10-05
+- Goal: Prove the authorized accounting-only reset is complete across Google and D1 before starting the new deterministic read model.
+- Final Google verification:
+  - 22 approved target sheets re-read after the D1 purge.
+  - Remaining accounting data rows below headers: **0**.
+  - Headers/sheets remain present.
+- Final D1 verification:
+  - accounting business data rows: **0**;
+  - schema ready: YES;
+  - mode: READONLY;
+  - policy epoch: 2;
+  - authoritative writes: NO;
+  - non-accounting sentinels invariant.
+- Phase exit criteria:
+  ```ini
+  ACCOUNTING_PURGE=PASS
+  D1_ACCOUNTING_BUSINESS_ROWS=0
+  GOOGLE_ACCOUNTING_BUSINESS_ROWS=0
+  GOOGLE_ACCOUNTING_TARGET_SHEETS=22
+  NON_ACCOUNTING_SENTINEL_DRIFT=NO
+  ACCOUNTING_SCHEMA_PRESERVED=YES
+  ACCOUNTING_MODE=READONLY
+  ACCOUNTING_POLICY_EPOCH=2
+  ACCOUNTING_AUTHORITATIVE_WRITES=NO
+  ```
+- Data mutation:
+  - Google accounting-only reset: YES, authorized.
+  - D1 accounting-only reset: YES, authorized.
+  - Non-accounting mutation: no evidence; bounded sentinel invariance PASS and Google mutation scope was exact.
+- Result: **PASS**
+- Post-state:
+  ```ini
+  PHASE_A0=PASS
+  ACCOUNTING_BASELINE=CLEAN
+  LEGACY_ACCOUNTING_DATA_REQUIRED=NO
+  NEXT_PHASE=A1_ZERO_GOOGLE_READ_MODEL
+  ```
+- Next gate:
+  - `A1_READ_MODEL_CONTRACT_AND_SOURCE_ISOLATION`
+
