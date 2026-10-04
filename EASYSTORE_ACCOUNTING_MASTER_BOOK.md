@@ -807,3 +807,49 @@ Final acceptance target:
 - Next gate:
   - `A1_READ_MODEL_CONTRACT_AND_SOURCE_ISOLATION`
 
+## Entry ACC-006 — A1 Zero-Google read-model contract established
+- Date: 2026-10-05
+- Goal: Start Phase A1 by converting the legacy EasyStore accounting reads into an explicit D1-only migration contract.
+- Scope: Repo-only source contract and CI; no Production/D1/Google mutation in this entry.
+- Actions performed:
+  - Added `docs/ACCOUNTING_READ_MODEL_V1.json`.
+  - Added `tests/accounting_read_model_v1.test.js`.
+  - Extended the Accounting Architecture CI to qualify both Agent policy and A1 read-model coverage.
+- Contract decisions:
+  - D1 is the target authority for every accounting read.
+  - Google/Apps Script business reads must be zero at A1 exit.
+  - customer master source = `t12_customers`;
+  - financial balances source = `employee_accounting_party_ledger_v1`;
+  - stable entity IDs are mandatory;
+  - AI direct database access remains forbidden.
+- Read migration order:
+  ```text
+  A1.1 core customer + health reads
+  A1.2 party master + supplier reads
+  A1.3 deterministic quote calculation
+  A1.4 reports + automation preview reads
+  A1.5 frontend D1-only read router
+  A1.6 Production cutover + Google-read-zero proof
+  ```
+- Files/commits:
+  - Read model: `e2b521c9b153d2e3e0a5b668f516cc3798c30cad`
+  - Coverage test: `0e3d08c99d0ffec3a0e0679d0e20e8df72af4bb9`
+  - CI update: `f5667289b711bf3c1689dd5422d3303016339359`
+- CI/Run evidence:
+  - Run: `37242695802`
+  - Job: `111554396405`
+  - Conclusion: **SUCCESS**
+- Data mutation: NO.
+- Production impact: NO.
+- Result: **PASS**
+- Post-state:
+  ```ini
+  PHASE_A1=STARTED
+  A1_READ_MODEL_CONTRACT=PASS
+  TARGET_READ_AUTHORITY=D1
+  TARGET_APPS_SCRIPT_ACCOUNTING_READS=0
+  TARGET_GOOGLE_BUSINESS_READS=0
+  ```
+- Next gate:
+  - `A1_1_CORE_CUSTOMER_AND_HEALTH_READS`
+
