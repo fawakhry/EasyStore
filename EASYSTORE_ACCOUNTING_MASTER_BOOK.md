@@ -1089,3 +1089,48 @@ This aligns with Autonomous Printshop Build Matrix module:
 - Next gate:
   - `A1_1_FRONTEND_CORE_READ_ROUTER_SOURCE`
 
+## Entry ACC-010 — A1.1 EasyStore frontend core-read router qualified
+- Date: 2026-10-05
+- Goal: Route the four newly qualified A1 core accounting reads through the D1 READONLY path in EasyStore source.
+- Scope: Repo-only frontend routing + regression CI. No Production deployment in this entry.
+- Actions performed:
+  - Expanded `D1_ACCOUNTING_READ_ACTIONS` in `app.js` from 3 to 7 actions.
+  - Added:
+    - `getCustomerAccountV1915`
+    - `getEasyStoreCustomers`
+    - `searchCustomers`
+    - `easyStoreSystemHealth`
+  - Financial write actions remain outside the D1 READONLY set.
+  - Added dedicated source regression test and CI.
+- Files/commits:
+  - Router source: `43f563cd18a57592b7d2a80dec3d9a97c4f99188`
+  - Router test: `2532ea1baa9c23cd491bea7eff3b172a497e7654`
+  - CI: `39c3a5d9a8d54726ba52a28c471a0957d645dcec`
+- CI/Run evidence:
+  - Run: `37245060945`
+  - Job: `111561202621`
+  - Conclusion: **SUCCESS**
+  - Evidence:
+    ```ini
+    EASYSTORE_A1_CORE_READ_ROUTER_SOURCE=PASS
+    D1_READ_ACTION_COUNT=7
+    NEW_A1_CORE_READ_ACTIONS=4
+    FINANCIAL_WRITES_REROUTED=NO
+    PRODUCTION_MUTATION=NO
+    ```
+- Runtime evidence:
+  - Source-qualified only.
+  - Production EasyStore still has the old 3-action D1 read set until controlled cutover.
+- Data mutation: NO.
+- Production impact: NO.
+- Result: **PASS — SOURCE QUALIFIED**
+- Post-state:
+  ```ini
+  A1_1_FRONTEND_ROUTER_SOURCE=PASS
+  A1_1_FRONTEND_PRODUCTION=NOT_YET
+  A1_1_API_SOURCE=PASS
+  ACCOUNTING_RUNTIME=READONLY_EPOCH_2
+  ```
+- Next gate:
+  - `A1_2_PARTY_MASTER_AND_SUPPLIER_READS`
+
