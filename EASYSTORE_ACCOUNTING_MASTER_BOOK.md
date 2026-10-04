@@ -1219,3 +1219,64 @@ This aligns with Autonomous Printshop Build Matrix module:
 - Next gate:
   - `A1_3_DETERMINISTIC_QUOTE_READ_CALC`
 
+## Entry ACC-013A — A1.3 deterministic laser quote CI blocked safely twice
+- Date: 2026-10-05
+- Goal: Qualify the D1 deterministic laser quote implementation.
+- Source already prepared:
+  - material dimensions migration: `0021_employee_accounting_material_dimensions_v1.sql`;
+  - D1 action: `calculateAccountingLaserQuoteV1913`.
+- First CI attempt:
+  - Run: `37245430129`
+  - Result: **FAIL**
+  - Cause: generated test file contained escaped newline text as literal source, causing a JavaScript SyntaxError.
+- Second CI attempt:
+  - Run: `37245528304`
+  - Result: **FAIL**
+  - Cause: first repair converted the newline inside `split('\n')` into a literal line break inside the JavaScript string, still causing SyntaxError.
+- Safety:
+  - both failures occurred in repo CI only;
+  - no D1 migration was applied;
+  - no API/frontend deployment occurred;
+  - no Production or business-data mutation occurred.
+- Result: **BLOCKED_SAFE**
+- Remediation:
+  - replaced the fragile newline literal with `String.fromCharCode(10)`.
+
+## Entry ACC-013B — A1.3 deterministic laser quote source qualified
+- Date: 2026-10-05
+- Goal: Complete A1.3 source qualification and route the quote through the future D1 READONLY lane.
+- D1 source:
+  - Migration commit: `6ec5dc5dd02030bb17795f4292c9f48e039dff2d`
+  - Quote implementation commit: `e089e3e22f13ccaeff107122ae8b2ff9e974cfb5`
+  - Test creation commit: `d816b58100ab10395e6583d822fbb644b75f03d3`
+  - CI workflow commit: `14ce11db0a3575da1a7a6763d2792399fcd9fe83`
+  - Final test repair commit: `2808ddb8ba6036518483e187d8bc9f811db2ebcd`
+- Qualified behavior:
+  - material dimensions are first-class D1 fields: `raw_width`, `raw_height`;
+  - quote accepts stable `materialId` or compatible material name;
+  - piece area, waste-adjusted consumption, layout yield and material cost are deterministic;
+  - full/admin can see costs;
+  - laser role receives quote output without hidden internal cost fields;
+  - no Google business call exists in the native module.
+- Backend CI:
+  - Run: `37245591083`
+  - Conclusion: **SUCCESS**
+- EasyStore integration:
+  - Read-model contract commit: `78e3fca6ebdcc0540d030897ef947a2911f6d068`
+  - Frontend router commit: `680dcf17af67a26869309f3755d1d33543043560`
+  - Router test commit: `588db754b8aa8babe39ad8110e04c32443a0274a`
+  - Router CI Run: `37245642069`
+  - Conclusion: **SUCCESS**
+- Data mutation: NO.
+- Production impact: NO.
+- Result: **PASS — SOURCE QUALIFIED / NOT YET DEPLOYED**
+- Post-state:
+  ```ini
+  A1_3_DETERMINISTIC_QUOTE_SOURCE=PASS
+  A1_D1_READ_ACTIONS_SOURCE=9
+  MIGRATION_0021_PRODUCTION=NOT_APPLIED
+  QUOTE_PRODUCTION_D1_ROUTE=NOT_YET
+  ```
+- Next gate:
+  - `A1_4_REPORT_AND_AUTOMATION_PREVIEW_READS`
+
