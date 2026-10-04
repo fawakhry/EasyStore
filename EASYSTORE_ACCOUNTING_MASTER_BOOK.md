@@ -664,3 +664,32 @@ Final acceptance target:
 - Next gate:
   - `A0_D1_ACCOUNTING_PURGE_RETRY_CONTROLLED`
 
+## Entry ACC-004B — A0 D1 purge retry 2 blocked before mutation
+- Date: 2026-10-05
+- Goal: Retry the D1 accounting-only purge with a bounded sentinel census.
+- Controlled workflow:
+  - TrendOS dependency workflow: `.github/workflows/easystore-a0-d1-accounting-purge-controlled.yml`
+  - Commit: `4977737a0c199dbcdb6157d96f7fd4e481bae4a1`
+  - Run: `37242234691`
+  - Job: `111553089586`
+- Preflight evidence:
+  ```ini
+  A0_D1_PREFLIGHT=PASS
+  A0_D1_MODE=READONLY
+  ```
+- Failure:
+  - The bounded snapshot still failed at the first combined D1 count command before any purge step.
+  - Destructive purge and post-verification steps were skipped by GitHub Actions.
+- Data mutation:
+  - D1 accounting purge: **NO**
+  - Non-accounting D1 mutation: **NO**
+- Production impact: NO.
+- Result: **BLOCKED_SAFE**
+- Safety conclusion:
+  - Fail-closed guard worked again.
+  - Accounting remained READONLY.
+- Remediation:
+  - Replace combined/compound count SQL with one-table-at-a-time D1 count queries after discovering existing table names from `sqlite_master`.
+- Next gate:
+  - `A0_D1_ACCOUNTING_PURGE_RETRY_3_CONTROLLED`
+
