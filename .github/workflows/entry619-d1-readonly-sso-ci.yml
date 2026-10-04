@@ -1,0 +1,37 @@
+name: EasyStore Entry619 D1 READONLY SSO CI
+
+on:
+  push:
+    branches:
+      - candidate/entry619-d1-readonly-sso-20261004
+
+permissions:
+  contents: read
+
+jobs:
+  qualify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: candidate/entry619-d1-readonly-sso-20261004
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Syntax
+        run: node --check app.js
+      - name: Existing EasyStore tests
+        run: |
+          set -euo pipefail
+          for f in tests/*.test.js; do
+            echo "RUN $f"
+            node "$f"
+          done
+      - name: Entry619 qualification markers
+        run: |
+          grep -Fq "entry619-d1-readonly-sso-20261004" index.html
+          grep -Fq "EASYSTORE_ACCOUNTING_D1_READONLY = true" config.js
+          grep -Fq "TRENDOS_EMPLOYEE_SSO_V1" app.js
+          grep -Fq "D1_ACCOUNTING_READ_ACTIONS" app.js
+          echo "ENTRY619_EASYSTORE_SOURCE_QUALIFICATION=PASS"
