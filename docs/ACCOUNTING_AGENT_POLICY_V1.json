@@ -1,0 +1,222 @@
+{
+  "version": "ACCOUNTING_AGENT_POLICY_V1",
+  "status": "REPO_ONLY_DEFAULT_OFF",
+  "product": "EasyStore AI Accounting Agent",
+  "principles": {
+    "aiLedgerAuthority": false,
+    "directAiDatabaseWrite": false,
+    "deterministicEngineAuthority": true,
+    "serverSidePolicyRequired": true,
+    "appendOnlyFinancialHistory": true,
+    "destructiveFinancialDeleteAllowed": false,
+    "idempotencyRequiredForWrites": true,
+    "stableEntityIdsRequired": true,
+    "evidenceRequiredForFinancialFacts": true
+  },
+  "autonomy": {
+    "defaultMode": "OBSERVE",
+    "modes": [
+      "OFF",
+      "OBSERVE",
+      "RECOMMEND",
+      "APPROVAL",
+      "AUTO"
+    ],
+    "writesEnabled": false,
+    "maxAutoAmount": 0,
+    "allowReversals": false,
+    "allowDayClose": false,
+    "allowSupplierPayment": false,
+    "allowCustomerAdjustment": false,
+    "allowWriteOff": false,
+    "allowExceptionalDiscount": false
+  },
+  "humanRole": [
+    "exceptions",
+    "approvals_above_policy",
+    "physical_facts_not_inferable",
+    "legally_or_financially_sensitive_overrides"
+  ],
+  "evidencePolicy": {
+    "acceptedClasses": [
+      "trendos_authoritative_event",
+      "deterministic_accounting_ledger",
+      "verified_payment_source",
+      "approved_purchase_receipt",
+      "physical_count_confirmed_by_authorized_user",
+      "authorized_human_approval"
+    ],
+    "chatMessageAloneCanProvePayment": false,
+    "aiInferenceAloneCanProveFinancialFact": false
+  },
+  "integrityEngine": {
+    "required": true,
+    "rules": [
+      "opening_cash + cash_in - cash_out = closing_cash",
+      "invoice_total - paid_amount = remaining_amount",
+      "opening_stock + stock_in - stock_out - waste = closing_stock",
+      "party_opening_balance + debits - credits = party_closing_balance",
+      "day_close_requires_zero_unresolved_integrity_errors"
+    ],
+    "onFailure": "FAIL_CLOSED_AND_RAISE_EXCEPTION",
+    "autoCorrectionAllowed": false
+  },
+  "agentTools": [
+    {
+      "name": "get_accounting_summary",
+      "kind": "read",
+      "defaultAutonomy": "OBSERVE"
+    },
+    {
+      "name": "get_customer_balance",
+      "kind": "read",
+      "defaultAutonomy": "OBSERVE"
+    },
+    {
+      "name": "get_supplier_balance",
+      "kind": "read",
+      "defaultAutonomy": "OBSERVE"
+    },
+    {
+      "name": "get_party_ledger",
+      "kind": "read",
+      "defaultAutonomy": "OBSERVE"
+    },
+    {
+      "name": "get_open_invoices",
+      "kind": "read",
+      "defaultAutonomy": "OBSERVE"
+    },
+    {
+      "name": "get_open_payables",
+      "kind": "read",
+      "defaultAutonomy": "OBSERVE"
+    },
+    {
+      "name": "create_sales_invoice",
+      "kind": "write",
+      "defaultAutonomy": "APPROVAL"
+    },
+    {
+      "name": "record_customer_payment",
+      "kind": "write",
+      "defaultAutonomy": "APPROVAL"
+    },
+    {
+      "name": "create_purchase",
+      "kind": "write",
+      "defaultAutonomy": "APPROVAL"
+    },
+    {
+      "name": "record_supplier_payment",
+      "kind": "write",
+      "defaultAutonomy": "APPROVAL"
+    },
+    {
+      "name": "post_stock_movement",
+      "kind": "write",
+      "defaultAutonomy": "APPROVAL"
+    },
+    {
+      "name": "post_material_consumption",
+      "kind": "write",
+      "defaultAutonomy": "APPROVAL"
+    },
+    {
+      "name": "post_waste",
+      "kind": "write",
+      "defaultAutonomy": "APPROVAL"
+    },
+    {
+      "name": "close_department_day",
+      "kind": "write",
+      "defaultAutonomy": "APPROVAL"
+    },
+    {
+      "name": "close_accounting_day",
+      "kind": "write",
+      "defaultAutonomy": "APPROVAL"
+    },
+    {
+      "name": "reconcile_customer",
+      "kind": "write",
+      "defaultAutonomy": "APPROVAL"
+    },
+    {
+      "name": "reconcile_supplier",
+      "kind": "write",
+      "defaultAutonomy": "APPROVAL"
+    },
+    {
+      "name": "reconcile_cashbox",
+      "kind": "write",
+      "defaultAutonomy": "APPROVAL"
+    },
+    {
+      "name": "reverse_financial_transaction",
+      "kind": "write",
+      "defaultAutonomy": "APPROVAL"
+    },
+    {
+      "name": "calculate_job_cost",
+      "kind": "calculation",
+      "defaultAutonomy": "OBSERVE"
+    },
+    {
+      "name": "calculate_line_profit",
+      "kind": "calculation",
+      "defaultAutonomy": "OBSERVE"
+    },
+    {
+      "name": "forecast_cash",
+      "kind": "analysis",
+      "defaultAutonomy": "RECOMMEND"
+    },
+    {
+      "name": "forecast_material_needs",
+      "kind": "analysis",
+      "defaultAutonomy": "RECOMMEND"
+    },
+    {
+      "name": "detect_accounting_anomalies",
+      "kind": "analysis",
+      "defaultAutonomy": "OBSERVE"
+    },
+    {
+      "name": "explain_accounting_change",
+      "kind": "analysis",
+      "defaultAutonomy": "OBSERVE"
+    }
+  ],
+  "eventModel": [
+    "order_created",
+    "order_line_approved",
+    "production_started",
+    "material_consumed",
+    "waste_recorded",
+    "purchase_recorded",
+    "purchase_received",
+    "supplier_payment_recorded",
+    "customer_payment_recorded",
+    "invoice_closed",
+    "order_delivered",
+    "refund_or_reversal_requested",
+    "day_close_requested"
+  ],
+  "ownerBrief": {
+    "required": true,
+    "fields": [
+      "accounting_health",
+      "sales_today",
+      "collections_today",
+      "customer_receivables",
+      "supplier_due",
+      "cash_forecast",
+      "material_risk",
+      "profit_margin_anomalies",
+      "automatic_movements_count",
+      "exceptions_requiring_approval",
+      "reconciliation_status"
+    ]
+  }
+}
