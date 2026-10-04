@@ -284,3 +284,348 @@ EASYSTORE_ZERO_GOOGLE=NO
 NEXT_GATE=AUTHENTICATED_D1_READ_200_THEN_READONLY_GOOGLE_VS_D1_DATA_CENSUS
 ```
 
+## Product direction update — EasyStore becomes an AI Accounting Agent
+
+Decision date: 2026-10-05
+
+EasyStore is no longer treated as a conventional accounting UI that depends on humans to enter, review, and close every accounting operation.
+
+The target product is:
+
+`EASYSTORE_AI_ACCOUNTING_AGENT`
+
+The program must be designed so that, over time, AI operates the accounting workflow and humans handle only exceptions, approvals, physical facts that cannot be inferred automatically, and legally/financially sensitive overrides.
+
+### Core architectural rule
+
+AI must **not** be the mathematical or ledger authority.
+
+The system is split into two layers:
+
+1. **Deterministic Accounting Engine**
+   - canonical source of truth for balances, invoices, receivables, payables, stock, cost, profit, treasury and closing;
+   - server-authoritative;
+   - idempotent financial writes;
+   - append-only audit/reversal model where appropriate;
+   - stable entity IDs;
+   - no free-form AI arithmetic as ledger truth.
+
+2. **AI Accounting Agent**
+   - understands events and business context;
+   - chooses allowed accounting tools;
+   - explains recommendations and decisions;
+   - detects anomalies and missing facts;
+   - executes only within explicit policy;
+   - never bypasses Accounting Engine validation.
+
+The controlling rule is:
+
+`AI decides what to do -> deterministic tools decide whether/how it is valid -> ledger records the factual result.`
+
+### Event-driven operating model
+
+TrendOS and workshop operations should emit canonical events such as:
+
+- order_created
+- order_line_approved
+- production_started
+- material_consumed
+- waste_recorded
+- purchase_recorded
+- purchase_received
+- supplier_payment_recorded
+- customer_payment_recorded
+- invoice_closed
+- order_delivered
+- refund_or_reversal_requested
+- day_close_requested
+
+EasyStore consumes these events and turns them into accounting proposals or automatic accounting actions according to policy.
+
+Manual re-entry of facts already known to TrendOS should be eliminated.
+
+### Agent Tool Registry
+
+The Accounting Agent must use explicit tools rather than direct database access.
+
+Initial target tools include:
+
+- get_accounting_summary
+- get_customer_balance
+- get_supplier_balance
+- get_party_ledger
+- get_open_invoices
+- get_open_payables
+- create_sales_invoice
+- record_customer_payment
+- create_purchase
+- record_supplier_payment
+- post_stock_movement
+- post_material_consumption
+- post_waste
+- close_department_day
+- close_accounting_day
+- reconcile_customer
+- reconcile_supplier
+- reconcile_cashbox
+- reverse_financial_transaction
+- calculate_job_cost
+- calculate_line_profit
+- forecast_cash
+- forecast_material_needs
+- detect_accounting_anomalies
+- explain_accounting_change
+
+Each tool must have:
+
+- stable input/output contract;
+- authorization policy;
+- idempotency key where it can write;
+- audit event;
+- dry-run/preview mode where relevant;
+- explicit failure codes;
+- no hidden Google dependency.
+
+### Autonomy Policy
+
+Every Agent tool/action must be assigned an autonomy level.
+
+```ini
+AUTONOMY_OBSERVE=1
+AUTONOMY_RECOMMEND=2
+AUTONOMY_APPROVAL=3
+AUTONOMY_AUTO=4
+```
+
+#### Level 1 — OBSERVE
+AI reads and explains only.
+
+Examples:
+- daily accounting summary;
+- customer/supplier balances;
+- anomaly detection;
+- profit analysis;
+- stock-risk detection.
+
+#### Level 2 — RECOMMEND
+AI proposes an accounting action but does not execute.
+
+Examples:
+- suggested customer collection;
+- suggested supplier payment;
+- suggested stock purchase;
+- suggested classification/reconciliation.
+
+#### Level 3 — APPROVAL
+AI prepares the exact transaction and executes only after authorized human approval.
+
+Examples:
+- high-value supplier payments;
+- reversals;
+- manual ledger corrections;
+- exceptional discounts;
+- write-offs.
+
+#### Level 4 — AUTO
+AI executes automatically within policy limits.
+
+Examples after qualification:
+- invoice generation from approved operational facts;
+- posting material consumption from confirmed production;
+- low-risk routine receipts;
+- standard stock movements;
+- daily reconciliations with no discrepancy;
+- automatic day close when every gate passes.
+
+No capability may move to a higher autonomy level without runtime evidence, limits, rollback/reversal design, and recorded approval policy.
+
+### Financial safety policy
+
+Non-negotiable:
+
+- no silent destructive delete of financial history after production begins;
+- corrections use reversal/adjustment transactions;
+- every write is idempotent;
+- every write has actor/source;
+- AI-generated reasoning is not ledger evidence;
+- ledger rows must be reproducible from tool inputs and deterministic rules;
+- no AI tool may expose or store passwords/session tokens/secrets;
+- high-risk financial actions require policy thresholds;
+- policy engine must be server-side;
+- browser/localStorage/sessionStorage are never financial authority.
+
+### AI accounting control plane
+
+Add a dedicated control plane with at least:
+
+```ini
+ACCOUNTING_AGENT_MODE=OFF|OBSERVE|RECOMMEND|APPROVAL|AUTO
+ACCOUNTING_AGENT_POLICY_EPOCH=<integer>
+ACCOUNTING_AGENT_MAX_AUTO_AMOUNT=<currency amount>
+ACCOUNTING_AGENT_ALLOW_REVERSALS=false
+ACCOUNTING_AGENT_ALLOW_DAY_CLOSE=false
+ACCOUNTING_AGENT_ALLOW_SUPPLIER_PAYMENT=false
+ACCOUNTING_AGENT_ALLOW_CUSTOMER_ADJUSTMENT=false
+```
+
+The default production state must be fail-closed.
+
+Initial target:
+
+```ini
+ACCOUNTING_AGENT_MODE=OBSERVE
+ACCOUNTING_AGENT_WRITES=OFF
+```
+
+Only after the deterministic accounting engine is fully Zero-Google and reconciled may individual tools advance toward APPROVAL/AUTO.
+
+### Agent audit ledger
+
+Every AI decision/execution should create an immutable structured event containing:
+
+- agent_run_id
+- event_id / source_event_id
+- accounting_tool
+- policy_epoch
+- autonomy_level
+- actor/system identity
+- entity IDs
+- request/idempotency key
+- input fact references
+- deterministic validation result
+- approval identity when applicable
+- execution result
+- reversal reference if later reversed
+- timestamp
+
+Do not store raw chain-of-thought. Store concise business rationale / reason codes only.
+
+### Management experience target
+
+The owner should not need to operate accounting screens routinely.
+
+The target daily experience is a compact AI briefing such as:
+
+- accounting status = healthy / attention required;
+- movements posted automatically;
+- invoices created;
+- collections received;
+- supplier obligations due;
+- cash forecast;
+- material purchasing forecast;
+- anomalous stock/cost/profit findings;
+- exceptions requiring approval;
+- unresolved reconciliation differences.
+
+The owner should receive exceptions and decisions, not routine bookkeeping.
+
+### AI Agent relationship with TrendOS
+
+TrendOS remains the operational source for workshop execution facts.
+
+EasyStore AI Accounting Agent owns accounting interpretation and financial ledgers.
+
+Target direction:
+
+`TrendOS operational event -> Accounting Agent -> deterministic accounting tool -> D1 ledger -> Accounting event/result -> TrendOS visibility`
+
+No spreadsheet mirror should be required for runtime operation.
+
+### Revised Zero-Google migration strategy
+
+The migration should now optimize for the future Agent architecture, not merely copy Apps Script actions one-by-one.
+
+For every legacy EasyStore capability:
+
+`Legacy behavior -> canonical accounting command/query -> deterministic D1 tool -> Agent tool wrapper -> policy -> tests -> runtime qualification`
+
+This avoids rebuilding a legacy monolith on Cloudflare.
+
+### Revised implementation phases
+
+#### A1 — Clean accounting foundation
+- purge unwanted historical accounting business data only, preserving schema/code;
+- keep TrendOS orders/customers/employees outside accounting purge;
+- maintain Accounting control fail-closed during reset.
+
+#### A2 — Deterministic read model
+- finish all accounting reads in D1;
+- remove Google-backed read helpers;
+- stable Party/Item/Order/Line/Department IDs;
+- accounting health/integrity endpoints.
+
+#### A3 — Deterministic write engine
+- sales invoices;
+- collections;
+- purchases;
+- supplier payments;
+- stock movements;
+- materials/BOM;
+- waste;
+- custody;
+- day close;
+- reversals;
+- idempotency and audit.
+
+#### A4 — Agent Tool Registry
+- expose every accounting command/query as a typed tool;
+- no direct free-form DB writes;
+- preview/dry-run support;
+- policy tags per tool.
+
+#### A5 — Observe/Recommend Agent
+- daily brief;
+- anomaly detection;
+- forecasts;
+- reconciliation suggestions;
+- no autonomous financial writes initially.
+
+#### A6 — Approval Agent
+- AI prepares safe write transactions;
+- owner/authorized employee approves;
+- execution through deterministic tools.
+
+#### A7 — Controlled Auto Accounting
+- graduate low-risk capabilities one at a time;
+- define amount/frequency/entity thresholds;
+- automatic reconciliation;
+- automatic day close only when all integrity gates pass.
+
+#### A8 — Autonomous accounting operations
+Target state:
+
+```ini
+EASYSTORE_ZERO_GOOGLE=PASS
+ACCOUNTING_ENGINE=D1_AUTHORITATIVE
+GOOGLE_BUSINESS_CALLS=0
+ACCOUNTING_AGENT=ACTIVE
+ROUTINE_HUMAN_BOOKKEEPING=MINIMIZED
+HUMAN_WORK=EXCEPTIONS_APPROVALS_PHYSICAL_FACTS
+```
+
+### Product success criterion
+
+EasyStore is complete only when it can operate as an accounting employee/agent, not merely display accounting screens.
+
+The long-term acceptance criterion is:
+
+> A normal workshop day can complete without the owner manually entering routine accounting data, while every financial result remains deterministic, auditable, reversible where appropriate, and policy-controlled.
+
+## Registration — AI Accounting Agent direction
+
+```ini
+PRODUCT=EasyStore
+PRODUCT_DIRECTION=AI_ACCOUNTING_AGENT
+ACCOUNTING_ENGINE=DETERMINISTIC
+AI_LEDGER_AUTHORITY=NO
+AI_TOOL_ACCESS=POLICY_CONTROLLED
+DEFAULT_AGENT_MODE=OBSERVE
+DEFAULT_AGENT_WRITES=OFF
+TARGET_RUNTIME=CLOUDFLARE_D1
+TARGET_GOOGLE_RUNTIME_DEPENDENCY=ZERO
+TARGET_HUMAN_ROLE=EXCEPTIONS_APPROVALS_PHYSICAL_FACTS
+CURRENT_ACCOUNTING_MODE=READONLY
+CURRENT_ZERO_GOOGLE=NO
+NEXT_ARCHITECTURE_GATE=ACCOUNTING_AGENT_CONTRACT_TOOL_REGISTRY_AND_AUTONOMY_POLICY
+```
+
