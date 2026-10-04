@@ -1,0 +1,225 @@
+{
+  "version": "ACCOUNTING_CONNECTOR_CONTRACT_V1",
+  "connectorId": "EASYSTORE_AUTONOMOUS_PRINTSHOP_FINANCE_CONNECTOR_V1",
+  "status": "REPO_ONLY_DEFAULT_OFF",
+  "date": "2026-10-05",
+  "purpose": "Connect Autonomous Printshop/TrendOS operational truth to EasyStore accounting without merging authorities or allowing direct financial database access.",
+  "upstreamProject": {
+    "name": "Autonomous Printshop",
+    "canonicalBook": "fawakhry/TrendOs/autonomous-printshop/MASTER_BOOK.md",
+    "buildMatrixModule": "M20 EasyStore Finance Adapter"
+  },
+  "authorityBoundaries": {
+    "trendosAndAutonomousPrintshop": [
+      "order_operational_truth",
+      "line_operational_truth",
+      "task_execution_truth",
+      "production_evidence",
+      "physical_material_usage_evidence",
+      "physical_waste_evidence",
+      "delivery_state"
+    ],
+    "easyStore": [
+      "financial_ledger",
+      "invoices",
+      "receivables",
+      "payables",
+      "customer_and_supplier_financial_balances",
+      "financial_stock_valuation",
+      "cashbox_and_treasury",
+      "financial_reconciliation",
+      "day_close",
+      "reversals",
+      "profit_and_cost_accounting"
+    ],
+    "forbidden": [
+      "autonomous_printshop_direct_write_to_accounting_d1",
+      "trendos_direct_financial_ledger_mutation",
+      "easyStore_mutating_trendos_operational_truth_without_connector_contract",
+      "shared_database_tables_as_cross_system_api",
+      "browser_dual_write",
+      "ai_direct_database_write",
+      "chat_message_as_payment_proof"
+    ]
+  },
+  "runtime": {
+    "defaultMode": "OFF",
+    "modes": [
+      "OFF",
+      "SHADOW",
+      "READONLY",
+      "CANARY",
+      "GENERAL"
+    ],
+    "failClosed": true,
+    "directDatabaseAccess": false,
+    "deliverySemantics": "AT_LEAST_ONCE_WITH_IDEMPOTENT_CONSUMER",
+    "orderingScope": "PER_ENTITY_WHEN_REQUIRED",
+    "replaySupported": true,
+    "deadLetterRequired": true,
+    "healthEndpointRequired": true,
+    "versionNegotiationRequired": true
+  },
+  "identity": {
+    "requiredStableIds": [
+      "event_id",
+      "correlation_id",
+      "idempotency_key",
+      "order_id",
+      "line_id",
+      "customer_id_or_party_id"
+    ],
+    "optionalByEvent": [
+      "task_id",
+      "material_id",
+      "supplier_id",
+      "invoice_id",
+      "purchase_id",
+      "payment_id"
+    ],
+    "namesAreNeverPrimaryKeys": true
+  },
+  "inboundOperationalEvents": [
+    {
+      "type": "order_created",
+      "financialAuthority": false,
+      "allowedEffect": "prepare_context_only"
+    },
+    {
+      "type": "order_line_approved",
+      "financialAuthority": false,
+      "allowedEffect": "prepare_invoice_or_cost_candidate"
+    },
+    {
+      "type": "production_started",
+      "financialAuthority": false,
+      "allowedEffect": "cost_tracking_context"
+    },
+    {
+      "type": "production_completed",
+      "financialAuthority": false,
+      "allowedEffect": "cost_and_close_eligibility"
+    },
+    {
+      "type": "material_consumed_confirmed",
+      "financialAuthority": false,
+      "allowedEffect": "propose_or_post_material_consumption_through_policy_tool"
+    },
+    {
+      "type": "waste_confirmed",
+      "financialAuthority": false,
+      "allowedEffect": "propose_or_post_waste_through_policy_tool"
+    },
+    {
+      "type": "purchase_received_confirmed",
+      "financialAuthority": false,
+      "allowedEffect": "prepare_purchase_or_stock_receipt"
+    },
+    {
+      "type": "physical_stock_count_confirmed",
+      "financialAuthority": false,
+      "allowedEffect": "reconciliation_input"
+    },
+    {
+      "type": "order_delivered",
+      "financialAuthority": false,
+      "allowedEffect": "invoice_close_eligibility"
+    },
+    {
+      "type": "customer_payment_reference_received",
+      "financialAuthority": false,
+      "allowedEffect": "verification_required_before_financial_posting"
+    }
+  ],
+  "outboundFinancialEvents": [
+    "accounting_health_changed",
+    "invoice_created",
+    "invoice_status_changed",
+    "customer_balance_changed",
+    "supplier_balance_changed",
+    "payment_verified_and_posted",
+    "financial_hold_changed",
+    "job_cost_updated",
+    "profitability_snapshot_updated",
+    "material_cost_snapshot_updated",
+    "accounting_exception_raised",
+    "accounting_day_closed"
+  ],
+  "queryToolsExposedToAutonomousPrintshop": [
+    "get_accounting_summary",
+    "get_customer_balance",
+    "get_supplier_balance",
+    "get_open_invoices",
+    "get_open_payables",
+    "calculate_job_cost",
+    "calculate_line_profit",
+    "get_financial_hold_status"
+  ],
+  "commandToolsExposedToAutonomousPrintshop": [
+    {
+      "tool": "request_sales_invoice",
+      "directLedgerWrite": false,
+      "defaultAutonomy": "APPROVAL_OR_POLICY_CONTROLLED"
+    },
+    {
+      "tool": "request_material_consumption_post",
+      "directLedgerWrite": false,
+      "defaultAutonomy": "APPROVAL_OR_POLICY_CONTROLLED"
+    },
+    {
+      "tool": "request_waste_post",
+      "directLedgerWrite": false,
+      "defaultAutonomy": "APPROVAL_OR_POLICY_CONTROLLED"
+    },
+    {
+      "tool": "request_reconciliation",
+      "directLedgerWrite": false,
+      "defaultAutonomy": "OBSERVE_OR_RECOMMEND"
+    }
+  ],
+  "envelope": {
+    "requiredFields": [
+      "contract_version",
+      "event_id",
+      "event_type",
+      "occurred_at",
+      "source_system",
+      "source_entity_type",
+      "source_entity_id",
+      "correlation_id",
+      "idempotency_key",
+      "evidence_refs",
+      "payload"
+    ],
+    "prohibitedFields": [
+      "password",
+      "session_token",
+      "api_key",
+      "raw_secret",
+      "chain_of_thought"
+    ]
+  },
+  "evidenceRules": {
+    "aiInferenceAloneIsFinancialEvidence": false,
+    "chatMessageAloneProvesPayment": false,
+    "operationalEventMayTriggerFinancialCandidate": true,
+    "deterministicValidationRequiredBeforePosting": true,
+    "verifiedPaymentSourceRequiredForPaymentPosting": true
+  },
+  "rollout": [
+    "OFF_CONTRACT_ONLY",
+    "SHADOW_RECEIVE_AND_COMPARE_NO_POST",
+    "READONLY_QUERIES_AND_EVENT_OBSERVATION",
+    "CANARY_LOW_RISK_COMMANDS",
+    "GENERAL_QUALIFIED_CONNECTOR"
+  ],
+  "exitCriteria": {
+    "connectorContractTest": "PASS",
+    "directCrossSystemDbAccess": 0,
+    "browserDualWrites": 0,
+    "unversionedFinancialEvents": 0,
+    "nonIdempotentFinancialCommands": 0,
+    "autonomousPrintshopFinancialAuthority": false,
+    "easyStoreFinancialAuthority": true
+  }
+}
