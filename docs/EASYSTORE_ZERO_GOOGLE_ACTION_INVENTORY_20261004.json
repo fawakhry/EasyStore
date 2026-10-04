@@ -1,0 +1,244 @@
+{
+  "generatedAt": "2026-10-04",
+  "repo": "fawakhry/EasyStore",
+  "baselineCommit": "41c522d0d63b1897394bedfe836b975d5119bca2",
+  "easyStoreVersion": "ES47 V1922 Unified Safe Build",
+  "frontend": {
+    "d1ReadonlyFlag": true,
+    "d1Endpoint": "https://trendos-d1-api.trendmall-contact.workers.dev/v1/employee/accounting",
+    "legacyEndpointType": "Google Apps Script",
+    "secureProxyConfigured": false
+  },
+  "d1NativeContractSource": {
+    "repo": "fawakhry/TrendOs",
+    "branch": "candidate/t12-full-cloud-cutover-a56-20260929",
+    "observedCommit": "fe3025ed914a54f339048367af2cde94a5f67e93",
+    "route": "/v1/employee/accounting",
+    "readonlyActions": [
+      "getAccounting",
+      "getDeptInvoiceDraftV1887",
+      "getPartyAccountV1858"
+    ],
+    "supportedWrites": [
+      "approveAccountingDeptInvoice",
+      "saveAccountingDeptLine",
+      "saveAccountingFinalInvoice",
+      "saveAccountingMaterial",
+      "saveAccountingTemplate",
+      "savePartyLedgerTransaction"
+    ]
+  },
+  "appLiteralApiActions": [
+    {
+      "action": "applySuggestedLegacyClassificationsV1921",
+      "kind": "write",
+      "currentRoute": "apps-script",
+      "d1Support": false
+    },
+    {
+      "action": "approveAccountingDeptInvoice",
+      "kind": "write",
+      "currentRoute": "apps-script",
+      "d1Support": true
+    },
+    {
+      "action": "approveDeptDailyPurchasesV1917",
+      "kind": "write",
+      "currentRoute": "apps-script",
+      "d1Support": false
+    },
+    {
+      "action": "archiveAccountingTemplate",
+      "kind": "write",
+      "currentRoute": "apps-script",
+      "d1Support": false
+    },
+    {
+      "action": "calculateAccountingLaserQuoteV1913",
+      "kind": "read-calc",
+      "currentRoute": "apps-script",
+      "d1Support": false
+    },
+    {
+      "action": "classifyLegacyAccountingRowV1920",
+      "kind": "write",
+      "currentRoute": "apps-script",
+      "d1Support": false
+    },
+    {
+      "action": "closeDepartmentDayV1920",
+      "kind": "write",
+      "currentRoute": "apps-script",
+      "d1Support": false
+    },
+    {
+      "action": "closePurchaseCustodyV1920",
+      "kind": "write",
+      "currentRoute": "apps-script",
+      "d1Support": false
+    },
+    {
+      "action": "easyStoreSystemHealth",
+      "kind": "read-health",
+      "currentRoute": "apps-script",
+      "d1Support": false
+    },
+    {
+      "action": "getAccounting",
+      "kind": "read",
+      "currentRoute": "d1-readonly",
+      "d1Support": true
+    },
+    {
+      "action": "getCustomerAccountV1915",
+      "kind": "read",
+      "currentRoute": "apps-script",
+      "d1Support": false
+    },
+    {
+      "action": "getDailyDepartmentReportV1920",
+      "kind": "read",
+      "currentRoute": "apps-script",
+      "d1Support": false
+    },
+    {
+      "action": "getEasyStoreCustomers",
+      "kind": "read",
+      "currentRoute": "apps-script",
+      "d1Support": false
+    },
+    {
+      "action": "getEasyStoreSuppliers",
+      "kind": "read",
+      "currentRoute": "apps-script",
+      "d1Support": false
+    },
+    {
+      "action": "previewAccountingAutomationV1921",
+      "kind": "read-preview",
+      "currentRoute": "apps-script",
+      "d1Support": false
+    },
+    {
+      "action": "recalcAccountingMaterialsCascade",
+      "kind": "write-recalc",
+      "currentRoute": "apps-script",
+      "d1Support": false
+    },
+    {
+      "action": "reconcileLegacyCustomerDebtsV1914",
+      "kind": "write-reconcile",
+      "currentRoute": "apps-script",
+      "d1Support": false
+    },
+    {
+      "action": "rejectDeptDailyPurchaseV1917",
+      "kind": "write",
+      "currentRoute": "apps-script",
+      "d1Support": false
+    },
+    {
+      "action": "reopenAccountingFinalInvoice",
+      "kind": "write",
+      "currentRoute": "apps-script",
+      "d1Support": false
+    },
+    {
+      "action": "reverseApprovedPurchaseV1920",
+      "kind": "write-reversal",
+      "currentRoute": "apps-script",
+      "d1Support": false
+    },
+    {
+      "action": "runAccountingDayAutomationV1921",
+      "kind": "write-automation",
+      "currentRoute": "apps-script",
+      "d1Support": false
+    },
+    {
+      "action": "saveAccountingDeptLine",
+      "kind": "write",
+      "currentRoute": "apps-script",
+      "d1Support": true
+    },
+    {
+      "action": "saveAccountingFinalInvoice",
+      "kind": "write",
+      "currentRoute": "apps-script",
+      "d1Support": true
+    },
+    {
+      "action": "saveAccountingMaterial",
+      "kind": "write",
+      "currentRoute": "apps-script",
+      "d1Support": true
+    },
+    {
+      "action": "saveAccountingTemplate",
+      "kind": "write",
+      "currentRoute": "apps-script",
+      "d1Support": true
+    },
+    {
+      "action": "saveAccountingWaste",
+      "kind": "write",
+      "currentRoute": "apps-script",
+      "d1Support": false
+    },
+    {
+      "action": "saveCustomerAccountMovementV1915",
+      "kind": "write",
+      "currentRoute": "apps-script",
+      "d1Support": false
+    },
+    {
+      "action": "saveDeptDailyPurchaseV1917",
+      "kind": "write",
+      "currentRoute": "apps-script",
+      "d1Support": false
+    },
+    {
+      "action": "saveEasyStorePurchaseV2",
+      "kind": "write",
+      "currentRoute": "apps-script",
+      "d1Support": false
+    },
+    {
+      "action": "saveEasyStoreSaleV2",
+      "kind": "write",
+      "currentRoute": "apps-script",
+      "d1Support": false
+    },
+    {
+      "action": "saveEasyStoreSupplier",
+      "kind": "write",
+      "currentRoute": "apps-script",
+      "d1Support": false
+    },
+    {
+      "action": "savePurchaseCustodyV1920",
+      "kind": "write",
+      "currentRoute": "apps-script",
+      "d1Support": false
+    },
+    {
+      "action": "searchCustomers",
+      "kind": "read",
+      "currentRoute": "apps-script",
+      "d1Support": false
+    }
+  ],
+  "dataTruth": {
+    "d1RowCounts": "NOT_VERIFIED",
+    "googleSheetRowCounts": "NOT_VERIFIED",
+    "historicalAccountingDataExistence": "NOT_VERIFIED",
+    "migrationCompleteness": "NOT_VERIFIED"
+  },
+  "nextGates": [
+    "Prove current live D1 accounting health and fail-closed behavior without credentials.",
+    "Obtain one authenticated getAccounting HTTP 200 from EasyStore runtime.",
+    "Inventory Google Sheets accounting datasets and D1 row counts read-only; reconcile by entity before any write cutover.",
+    "Move remaining read-only EasyStore dependencies off Apps Script.",
+    "Only then qualify D1 writes one capability at a time with idempotency/reconciliation."
+  ]
+}
