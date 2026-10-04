@@ -1,0 +1,145 @@
+{
+  "version": "ACCOUNTING_READ_MODEL_V1",
+  "phase": "A1",
+  "status": "REPO_ONLY_CONTRACT",
+  "authority": "D1",
+  "legacyRuntimeAuthority": "Google Apps Script",
+  "targetLegacyRuntimeAuthority": "NONE",
+  "rules": {
+    "googleBusinessReadsAllowedAtExit": false,
+    "directSpreadsheetReadsAllowedAtExit": false,
+    "aiDirectDatabaseAccess": false,
+    "stableEntityIdsRequired": true,
+    "customerMasterSource": "t12_customers",
+    "financialBalanceSource": "employee_accounting_party_ledger_v1",
+    "accountingSourceOfTruth": "D1"
+  },
+  "actions": [
+    {
+      "action": "getAccounting",
+      "kind": "read",
+      "target": "D1",
+      "status": "NATIVE_EXISTING",
+      "tables": [
+        "employee_accounting_materials_v1",
+        "employee_accounting_templates_v1",
+        "employee_accounting_dept_lines_v1",
+        "employee_accounting_final_invoices_v1"
+      ]
+    },
+    {
+      "action": "getDeptInvoiceDraftV1887",
+      "kind": "read",
+      "target": "D1",
+      "status": "NATIVE_EXISTING",
+      "tables": [
+        "employee_accounting_dept_lines_v1"
+      ]
+    },
+    {
+      "action": "getPartyAccountV1858",
+      "kind": "read",
+      "target": "D1",
+      "status": "NATIVE_EXISTING",
+      "tables": [
+        "employee_accounting_party_ledger_v1"
+      ]
+    },
+    {
+      "action": "getCustomerAccountV1915",
+      "kind": "read",
+      "target": "D1",
+      "status": "A1_CORE_IMPLEMENT",
+      "tables": [
+        "t12_customers",
+        "employee_accounting_party_ledger_v1"
+      ]
+    },
+    {
+      "action": "getEasyStoreCustomers",
+      "kind": "read",
+      "target": "D1",
+      "status": "A1_CORE_IMPLEMENT",
+      "tables": [
+        "t12_customers",
+        "employee_accounting_party_ledger_v1"
+      ]
+    },
+    {
+      "action": "searchCustomers",
+      "kind": "read",
+      "target": "D1",
+      "status": "A1_CORE_IMPLEMENT",
+      "tables": [
+        "t12_customers",
+        "employee_accounting_party_ledger_v1"
+      ]
+    },
+    {
+      "action": "getEasyStoreSuppliers",
+      "kind": "read",
+      "target": "D1",
+      "status": "A1_PARTY_MASTER_REQUIRED",
+      "tables": [
+        "employee_accounting_party_ledger_v1",
+        "employee_accounting_parties_v1"
+      ]
+    },
+    {
+      "action": "easyStoreSystemHealth",
+      "kind": "read-health",
+      "target": "D1",
+      "status": "A1_CORE_IMPLEMENT",
+      "tables": [
+        "employee_accounting_control_v1",
+        "employee_accounting_request_ledger_v1"
+      ]
+    },
+    {
+      "action": "calculateAccountingLaserQuoteV1913",
+      "kind": "read-calc",
+      "target": "D1",
+      "status": "A1_DETERMINISTIC_CALC",
+      "tables": [
+        "employee_accounting_materials_v1",
+        "employee_accounting_templates_v1"
+      ]
+    },
+    {
+      "action": "getDailyDepartmentReportV1920",
+      "kind": "read",
+      "target": "D1",
+      "status": "A1_AFTER_A2_DOMAIN_SCHEMA",
+      "tables": [
+        "A2_PURCHASE_CUSTODY_DAY_CLOSE_TABLES"
+      ]
+    },
+    {
+      "action": "previewAccountingAutomationV1921",
+      "kind": "read-preview",
+      "target": "D1",
+      "status": "A1_AFTER_A2_DOMAIN_SCHEMA",
+      "tables": [
+        "A2_PURCHASE_CUSTODY_DAY_CLOSE_TABLES",
+        "employee_accounting_dept_lines_v1",
+        "employee_accounting_materials_v1"
+      ]
+    }
+  ],
+  "exitCriteria": {
+    "appsScriptAccountingReads": 0,
+    "googleBusinessReads": 0,
+    "frontendReadActionsD1Only": true,
+    "readHealth": "PASS",
+    "authenticatedReadSmoke": "PASS",
+    "stableIds": "PASS"
+  },
+  "implementationOrder": [
+    "A1.1_CORE_CUSTOMER_AND_HEALTH_READS",
+    "A1.2_PARTY_MASTER_AND_SUPPLIER_READS",
+    "A1.3_DETERMINISTIC_QUOTE_READ_CALC",
+    "A1.4_REPORT_AND_AUTOMATION_PREVIEW_READS",
+    "A1.5_FRONTEND_D1_ONLY_READ_ROUTER",
+    "A1.6_PRODUCTION_READ_CUTOVER_AND_GOOGLE_READ_ZERO_PROOF"
+  ]
+}
