@@ -26,7 +26,7 @@ EasyStore is being rebuilt as an **AI Accounting Agent**, not merely a conventio
 
 Target operating model:
 
-`TrendOS operational facts -> Accounting Agent -> deterministic accounting tools -> D1 financial ledgers -> audited result`
+`TrendOS / Autonomous Printshop operational facts -> Finance Connector -> Accounting Agent -> deterministic accounting tools -> D1 financial ledgers -> audited result`
 
 The long-term goal is that AI manages routine accounting work and humans handle only:
 
@@ -915,4 +915,117 @@ Final acceptance target:
   ```
 - Next gate:
   - `A1_1_CORE_READ_API_DEPLOY_CONTROLLED`
+
+## Connector-first integration rule
+
+From this point forward, EasyStore is built on the assumption that **Autonomous Printshop / TrendOS will integrate through a dedicated Finance Connector**.
+
+The connector is a hard system boundary:
+
+```text
+TrendOS / Autonomous Printshop
+        |
+        v
+Versioned Finance Connector
+        |
+        v
+EasyStore Agent + Policy
+        |
+        v
+Deterministic Accounting Tools
+        |
+        v
+D1 Financial Ledger
+```
+
+Rules:
+- EasyStore remains the financial authority.
+- Autonomous Printshop remains operational authority for orders/tasks/production facts.
+- no direct Autonomous Printshop write to EasyStore D1;
+- no shared-table integration as an API;
+- no browser dual-write;
+- no AI direct database write;
+- every event/command is versioned and idempotent;
+- every mutation-capable request goes through EasyStore policy and deterministic tools;
+- connector rollout is `OFF -> SHADOW -> READONLY -> CANARY -> GENERAL`;
+- the Connector may transport a payment reference, but payment is not financially posted until EasyStore verifies acceptable evidence.
+
+Canonical connector contracts:
+- `docs/ACCOUNTING_CONNECTOR_CONTRACT_V1.json`
+- `docs/ACCOUNTING_AUTONOMOUS_PRINTSHOP_CONNECTOR_V1.md`
+
+This aligns with Autonomous Printshop Build Matrix module:
+`M20 — EasyStore Finance Adapter`.
+
+## Entry ACC-008 — Autonomous Printshop Finance Connector boundary locked
+- Date: 2026-10-05
+- Goal: Make the EasyStore build connector-first so it can plug into Autonomous Printshop without merging accounting and operational authorities.
+- Scope: Repo-only architecture contract + regression CI. No Production/D1/Google mutation.
+- Pre-state:
+  - Autonomous Printshop master book defines EasyStore as separate finance authority and M20 as the Finance Adapter.
+  - EasyStore Agent architecture was already deterministic-ledger-first.
+- Actions performed:
+  - Added machine-readable connector contract:
+    - `docs/ACCOUNTING_CONNECTOR_CONTRACT_V1.json`
+  - Added human-readable connector contract:
+    - `docs/ACCOUNTING_AUTONOMOUS_PRINTSHOP_CONNECTOR_V1.md`
+  - Added regression test:
+    - `tests/accounting_connector_contract_v1.test.js`
+  - Extended Accounting Architecture CI to lock the connector boundary.
+  - Updated this book's target flow to include the Finance Connector explicitly.
+- Locked design:
+  ```ini
+  EASYSTORE_FINANCIAL_AUTHORITY=YES
+  AUTONOMOUS_PRINTSHOP_FINANCIAL_AUTHORITY=NO
+  DIRECT_CROSS_SYSTEM_DB_WRITE=NO
+  SHARED_TABLES_AS_CROSS_SYSTEM_API=NO
+  BROWSER_DUAL_WRITE=NO
+  AI_DIRECT_DB_WRITE=NO
+  CONNECTOR_DEFAULT_MODE=OFF
+  CONNECTOR_DELIVERY=AT_LEAST_ONCE_WITH_IDEMPOTENT_CONSUMER
+  CONNECTOR_ROLLOUT=OFF_SHADOW_READONLY_CANARY_GENERAL
+  ```
+- Inbound connector facts include:
+  - order/line lifecycle;
+  - production completion;
+  - confirmed material consumption;
+  - confirmed waste;
+  - purchase receipt evidence;
+  - physical stock count;
+  - delivery state;
+  - payment reference for verification, not automatic proof.
+- Outbound finance facts include:
+  - invoice state;
+  - customer/supplier balance changes;
+  - verified payment postings;
+  - financial holds;
+  - cost/profit snapshots;
+  - accounting exceptions;
+  - day-close result.
+- Files/commits:
+  - Machine contract: `c88037c72ec6aad29cc1a178ff82979d2d22c68c`
+  - Human contract: `3553e030091e2bf27a48f93d416b35e05e35f0b1`
+  - Test: `f1f09b2e03c1b397dc7b40aaa3c23b6df83c084a`
+  - CI: `4fab8503252da11c9a4bdecf50edfffa1790b6a4`
+- CI/Run evidence:
+  - Run: `37244137748`
+  - Job: `111558545079`
+  - Conclusion: **SUCCESS**
+- Runtime evidence:
+  - Not required for this repo-only contract gate.
+  - Connector remains OFF/not deployed.
+- Data mutation: NO.
+- Production impact: NO.
+- Result: **PASS**
+- Post-state:
+  ```ini
+  BUILD_MODEL=CONNECTOR_FIRST
+  FINANCE_CONNECTOR_CONTRACT=PASS
+  CONNECTOR_RUNTIME=OFF
+  EASYSTORE_FINANCIAL_AUTHORITY=YES
+  AUTONOMOUS_PRINTSHOP_FINANCIAL_AUTHORITY=NO
+  ```
+- Next gate:
+  - continue `A1_1_CORE_READ_API_DEPLOY_CONTROLLED`;
+  - every new accounting read/write/event must expose a connector-safe contract where cross-system use is expected.
 
