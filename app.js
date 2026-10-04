@@ -39,6 +39,77 @@
   }
 
   const user = readSso();
+  const TRENDOS_SSO_MESSAGE_V1 = 'TRENDOS_EMPLOYEE_SSO_V1';
+  const EASYSTORE_SSO_ACK_V1 = 'EASYSTORE_EMPLOYEE_SSO_ACK_V1';
+  const TRENDOS_SSO_ALLOWED_ORIGINS = new Set([
+    'https://trendos-ui.trendmall-contact.workers.dev',
+    'https://fawakhry.github.io'
+  ]);
+  let ssoReadyResolve;
+  const ssoReady = new Promise(resolve => { ssoReadyResolve = resolve; });
+  let ssoReadySettled = !!user.token;
+  if(ssoReadySettled) ssoReadyResolve(true);
+
+  function persistTrendosSso(payload){
+    const incoming = payload && payload.user || {};
+    const username = String(incoming.username || incoming.name || '').trim();
+    const token = String(incoming.token || '').trim();
+    if(!username || !token) return false;
+    user.name = String(incoming.name || incoming.username || user.name || '').trim();
+    user.username = username;
+    user.token = token;
+    user.mode = String(incoming.mode || incoming.roleMode || user.mode || '').trim();
+    user.department = String(incoming.department || user.department || '').trim();
+    const handoff = {
+      at: Date.now(),
+      user: {
+        name:user.name,
+        username:user.username,
+        token:user.token,
+        role:incoming.role || '',
+        department:user.department
+      },
+      params: {
+        name:user.name,
+        username:user.username,
+        token:user.token,
+        mode:user.mode,
+        roleMode:user.mode,
+        department:user.department
+      }
+    };
+    try{ sessionStorage.setItem('EASYSTORE_SESSION_V1922', JSON.stringify(handoff)); }catch(e){}
+    if(!ssoReadySettled){ ssoReadySettled = true; ssoReadyResolve(true); }
+    return true;
+  }
+
+  window.addEventListener('message', function(event){
+    const data = event && event.data || {};
+    if(data.type !== TRENDOS_SSO_MESSAGE_V1) return;
+    if(!TRENDOS_SSO_ALLOWED_ORIGINS.has(String(event.origin || ''))) return;
+    if(window.opener && event.source !== window.opener) return;
+    const expectedNonce = String(qs.get('ssoNonce') || '');
+    if(!expectedNonce || String(data.nonce || '') !== expectedNonce) return;
+    const issuedAt = Number(data.issuedAt || 0);
+    if(!issuedAt || Math.abs(Date.now() - issuedAt) > 30000) return;
+    if(!persistTrendosSso(data)) return;
+    try{
+      event.source && event.source.postMessage({
+        type:EASYSTORE_SSO_ACK_V1,
+        nonce:expectedNonce
+      }, event.origin);
+    }catch(e){}
+  });
+
+  async function ensureTrendosSso(){
+    if(user.token) return true;
+    if(qs.get('from') !== 'trendos' || qs.get('employeeSSO') !== '1') return false;
+    await Promise.race([
+      ssoReady,
+      new Promise(resolve => setTimeout(() => resolve(false), 5000))
+    ]);
+    return !!user.token;
+  }
   const roleKey = () => nkey([user.name,user.username,user.mode,user.department].join(' '));
   const isAdmin = () => /ضياء|diaa|admin|full|kitchen|اداره|إدارة/.test(roleKey());
   const isLaser = () => /جابر|gaber|jaber|laser|ليزر/.test(roleKey());
@@ -113,11 +184,37 @@
     ['materials','templates','suppliers','purchases','dailyPurchases','sales','customers','stockMoves','wasteLines','deptLines','finalInvoices','custodyEntries','custodySummary','departmentDayCloses','unclassifiedRows'].forEach(k=>{ if(!Array.isArray(state.data[k])) state.data[k] = []; });
   }
 
+  const D1_ACCOUNTING_READ_ACTIONS = new Set(['getAccounting','getDeptInvoiceDraftV1887','getPartyAccountV1858']);
+
   async function api(action, data){
-    const endpoint=String(window.MATBAGY_SECURE_API_PROXY_URL||window.TREND_API_URL||'').trim();
-    if(!endpoint) throw new Error('رابط API الآمن غير مضبوط في config.js');
+    const useD1Read = window.EASYSTORE_ACCOUNTING_D1_READONLY === true && D1_ACCOUNTING_READ_ACTIONS.has(String(action || ''));
     const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),90000);
     try{
+      if(useD1Read){
+        const hasSession = await ensureTrendosSso();
+        if(!hasSession) throw new Error('انتهت الجلسة، سجل الدخول من TrendOS ثم افتح الحسابات مرة أخرى.');
+        const endpoint=String(window.EASYSTORE_ACCOUNTING_D1_URL||'').trim();
+        if(!endpoint) throw new Error('رابط D1 للحسابات غير مضبوط في config.js');
+        const response=await fetch(endpoint,{
+          method:'POST',
+          headers:{
+            'Content-Type':'application/json',
+            'Authorization':'Bearer '+user.token
+          },
+          body:JSON.stringify(Object.assign({action,username:user.username,name:user.name,_ts:Date.now()},data||{})),
+          signal:controller.signal,
+          credentials:'omit',
+          redirect:'follow'
+        });
+        const raw=await response.text();
+        let parsed={};
+        try{ parsed=JSON.parse(raw||'{}'); }catch(e){ throw new Error('رد D1 للحسابات غير صالح.'); }
+        if(!response.ok || parsed.success === false) throw new Error(parsed.message || ('فشل اتصال D1 بالحسابات ('+response.status+')'));
+        return parsed;
+      }
+
+      const endpoint=String(window.MATBAGY_SECURE_API_PROXY_URL||window.TREND_API_URL||'').trim();
+      if(!endpoint) throw new Error('رابط API الآمن غير مضبوط في config.js');
       const response=await fetch(endpoint,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(Object.assign({action,username:user.username,name:user.name,token:user.token,_ts:Date.now()},data||{})),signal:controller.signal,credentials:'omit',redirect:'follow'});
       if(!response.ok) throw new Error('فشل الاتصال بالسيرفر ('+response.status+')');
       const text=await response.text();
