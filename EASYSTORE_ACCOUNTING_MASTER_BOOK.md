@@ -1746,3 +1746,51 @@ This aligns with Autonomous Printshop Build Matrix module:
   - it is allowed to proceed only while accounting remains `READONLY` and the accounting business baseline is zero;
   - it must prove non-accounting sentinel counts invariant and preserve accounting policy epoch/mode.
 
+## Entry ACC-025B — A2 Production schema remediation completed safely
+- Date: 2026-10-05
+- Goal: Remove the ACC-025A schema blocker without enabling accounting writes.
+- Production schema apply:
+  - Workflow: `fawakhry/TrendOs/.github/workflows/easystore-a2-schema-apply-controlled.yml`
+  - Run: `37360907203`
+  - Job: `111934961976`
+  - Result: **SUCCESS**
+  - A2 tables/columns from migrations `0020..0027` verified present.
+  - accounting business rows remained exactly zero after migration.
+  - non-accounting sentinel tables were invariant.
+  - accounting mode remained `READONLY`.
+  - accounting policy epoch remained `2`.
+  - next invoice counter remained unchanged.
+- Default-deny write-canary guard:
+  - Migration: `0028_employee_accounting_write_canary_v1.sql`
+  - Apply Run: `37361761352`
+  - Job: `111937832871`
+  - Result: **SUCCESS**
+  - default policy has zero allowed users/actions and cannot authorize a business write.
+- Cross-family post-schema audit:
+  - Run: `37361827776`
+  - Job: `111938045812`
+  - Result: **SUCCESS**
+  - accounting: `READONLY / epoch 2`;
+  - ops: `GENERAL / epoch 7`;
+  - content: `OFF / epoch 1`;
+  - comms: `OFF / epoch 1`;
+  - core: `OFF / epoch 0`;
+  - auth remained on its independent transitional track.
+  - no non-accounting business mutation from the accounting migration.
+- Source branch was re-synced with the shared TrendOS branch and all A2 source tests passed after the merge.
+- Safety:
+  ```ini
+  A2_SCHEMA_READY=YES
+  A2_CANARY_GUARD_SCHEMA=YES
+  CANARY_DEFAULT_DENY=YES
+  ACCOUNTING_RUNTIME_MODE=READONLY
+  ACCOUNTING_POLICY_EPOCH=2
+  ACCOUNTING_BUSINESS_ROWS=0
+  NON_ACCOUNTING_SENTINELS=INVARIANT
+  PRODUCTION_FINANCIAL_WRITES=NO
+  ```
+- Current execution state:
+  - write-canary preflight rerun: `37365748394` — **QUEUED**
+  - shared-base resync rerun: `37365910966` — **QUEUED**
+  - GitHub Actions runner queue is the current external execution blocker; no user decision is required.
+
