@@ -1379,3 +1379,50 @@ This aligns with Autonomous Printshop Build Matrix module:
   - `A1_6_CONTROLLED_PRODUCTION_READ_CUTOVER`
   - In parallel, begin `A2_DETERMINISTIC_WRITE_MODEL` while the controlled cutover package is prepared against exact live Production truth.
 
+## Entry ACC-016 — A2 deterministic write-model contract established
+- Date: 2026-10-05
+- Goal: Start Phase A2 with a complete deterministic classification of every active EasyStore accounting write before expanding D1 write authority.
+- Scope: Repo-only architecture + coverage CI. No Production/D1/Google mutation.
+- Actions performed:
+  - Added `docs/ACCOUNTING_WRITE_MODEL_V1.json`.
+  - Added `tests/accounting_write_model_v1.test.js`.
+  - Added `.github/workflows/easystore-a2-write-model-ci.yml`.
+  - Classified every non-read action from the audited EasyStore action inventory.
+  - Explicitly retired legacy-cleanup actions made obsolete by the A0 clean baseline:
+    - `classifyLegacyAccountingRowV1920`
+    - `applySuggestedLegacyClassificationsV1921`
+    - `reconcileLegacyCustomerDebtsV1914`
+  - Locked correction policy: reversal/adjustment, never destructive financial deletion.
+  - Locked connector rule: Autonomous Printshop can request commands but cannot bypass EasyStore policy or write D1 directly.
+- Write-model sequence:
+  ```text
+  A2.1 idempotency + command foundation
+  A2.2 party/customer/supplier writes
+  A2.3 purchases/daily purchases/custody
+  A2.4 waste/stock/material recalc
+  A2.5 final invoice reversal + day close
+  A2.6 frontend write router default READONLY
+  A2.7 canary one write family at a time
+  ```
+- Files/commits:
+  - Contract: `2eb8da5f56a29ffdcd6ff7a072e75a2f6f053b9c`
+  - Coverage test: `c7843f563e1e034a22d09c6728ebb1efcd28d203`
+  - CI: `07c6e8abab2c1ade1c225c07c0a961dcedfc9fe8`
+- CI evidence:
+  - Run: `37246370386`
+  - Conclusion: **SUCCESS**
+- Data mutation: NO.
+- Production impact: NO.
+- Result: **PASS**
+- Post-state:
+  ```ini
+  PHASE_A2=STARTED
+  A2_WRITE_MODEL=PASS
+  TARGET_APPS_SCRIPT_FINANCIAL_WRITE_AUTHORITY=0
+  TARGET_GOOGLE_BUSINESS_WRITES=0
+  REVERSAL_INSTEAD_OF_DELETE=YES
+  CONNECTOR_DIRECT_LEDGER_WRITE=NO
+  ```
+- Next gate:
+  - `A2_1_IDEMPOTENCY_AND_COMMAND_FOUNDATION`
+
