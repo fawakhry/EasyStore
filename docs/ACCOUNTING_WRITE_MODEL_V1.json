@@ -1,7 +1,7 @@
 {
   "version": "ACCOUNTING_WRITE_MODEL_V1",
   "phase": "A2",
-  "status": "REPO_ONLY_CONTRACT",
+  "status": "A2_SOURCE_FAMILY_COMPLETE_ROUTER_FAIL_CLOSED",
   "date": "2026-10-05",
   "authority": "D1_DETERMINISTIC",
   "connector": "EASYSTORE_AUTONOMOUS_PRINTSHOP_FINANCE_CONNECTOR_V1",
@@ -23,7 +23,7 @@
       "action": "saveAccountingMaterial",
       "class": "master-write",
       "target": "D1",
-      "status": "NATIVE_EXISTING_HARDEN",
+      "status": "A2_SOURCE_QUALIFIED_D1_ROUTER_READY",
       "entity": "material",
       "idempotency": "REQUIRED_OR_STABLE_UPSERT_GUARD"
     },
@@ -31,7 +31,7 @@
       "action": "saveAccountingTemplate",
       "class": "master-write",
       "target": "D1",
-      "status": "NATIVE_EXISTING_HARDEN",
+      "status": "A2_SOURCE_QUALIFIED_D1_ROUTER_READY",
       "entity": "template",
       "idempotency": "REQUIRED_OR_STABLE_UPSERT_GUARD"
     },
@@ -39,7 +39,7 @@
       "action": "archiveAccountingTemplate",
       "class": "master-write",
       "target": "D1",
-      "status": "A2_IMPLEMENT_SOFT_ARCHIVE",
+      "status": "A2_SOURCE_QUALIFIED_D1_ROUTER_READY",
       "entity": "template",
       "idempotency": "REQUIRED"
     },
@@ -47,7 +47,7 @@
       "action": "recalcAccountingMaterialsCascade",
       "class": "deterministic-recalc",
       "target": "D1",
-      "status": "A2_IMPLEMENT",
+      "status": "A2_SOURCE_QUALIFIED_D1_ROUTER_READY",
       "entity": "material/template-costs",
       "idempotency": "REQUIRED"
     },
@@ -55,7 +55,7 @@
       "action": "saveAccountingDeptLine",
       "class": "operational-finance-write",
       "target": "D1",
-      "status": "NATIVE_EXISTING_HARDEN",
+      "status": "A2_SOURCE_QUALIFIED_D1_ROUTER_READY",
       "entity": "department-line",
       "idempotency": "REQUIRED"
     },
@@ -63,7 +63,7 @@
       "action": "approveAccountingDeptInvoice",
       "class": "financial-write",
       "target": "D1",
-      "status": "NATIVE_EXISTING_HARDEN",
+      "status": "A2_SOURCE_QUALIFIED_D1_ROUTER_READY",
       "entity": "department-approval+stock",
       "idempotency": "REQUIRED"
     },
@@ -71,7 +71,7 @@
       "action": "saveAccountingFinalInvoice",
       "class": "financial-write",
       "target": "D1",
-      "status": "NATIVE_EXISTING_HARDEN",
+      "status": "A2_SOURCE_QUALIFIED_D1_ROUTER_READY",
       "entity": "sales-invoice+party-ledger",
       "idempotency": "REQUIRED"
     },
@@ -79,7 +79,7 @@
       "action": "saveCustomerAccountMovementV1915",
       "class": "financial-write",
       "target": "D1",
-      "status": "A2_ALIAS_PARTY_LEDGER",
+      "status": "A2_SOURCE_QUALIFIED_D1_ROUTER_READY",
       "entity": "customer-ledger",
       "idempotency": "REQUIRED"
     },
@@ -87,7 +87,7 @@
       "action": "saveEasyStoreSupplier",
       "class": "party-master-write",
       "target": "D1",
-      "status": "A2_IMPLEMENT",
+      "status": "A2_SOURCE_QUALIFIED_D1_ROUTER_READY",
       "entity": "supplier-party",
       "idempotency": "REQUIRED"
     },
@@ -95,7 +95,7 @@
       "action": "saveEasyStorePurchaseV2",
       "class": "financial-write",
       "target": "D1",
-      "status": "A2_IMPLEMENT",
+      "status": "A2_SOURCE_QUALIFIED_D1_ROUTER_READY",
       "entity": "purchase-invoice+supplier-ledger+stock/cash",
       "idempotency": "REQUIRED"
     },
@@ -103,7 +103,7 @@
       "action": "saveEasyStoreSaleV2",
       "class": "financial-write",
       "target": "D1",
-      "status": "A2_IMPLEMENT",
+      "status": "A2_SOURCE_QUALIFIED_D1_ROUTER_READY",
       "entity": "sales-invoice+customer-ledger+cash",
       "idempotency": "REQUIRED"
     },
@@ -111,7 +111,7 @@
       "action": "saveDeptDailyPurchaseV1917",
       "class": "financial-workflow-write",
       "target": "D1",
-      "status": "A2_IMPLEMENT",
+      "status": "A2_SOURCE_QUALIFIED_D1_ROUTER_READY",
       "entity": "daily-purchase-pending",
       "idempotency": "REQUIRED"
     },
@@ -119,7 +119,7 @@
       "action": "approveDeptDailyPurchasesV1917",
       "class": "financial-workflow-write",
       "target": "D1",
-      "status": "A2_IMPLEMENT",
+      "status": "A2_SOURCE_QUALIFIED_D1_ROUTER_READY",
       "entity": "purchase+stock+supplier-ledger+custody",
       "idempotency": "REQUIRED"
     },
@@ -127,7 +127,7 @@
       "action": "rejectDeptDailyPurchaseV1917",
       "class": "financial-workflow-write",
       "target": "D1",
-      "status": "A2_IMPLEMENT",
+      "status": "A2_SOURCE_QUALIFIED_D1_ROUTER_READY",
       "entity": "daily-purchase-status",
       "idempotency": "REQUIRED"
     },
@@ -135,7 +135,7 @@
       "action": "reverseApprovedPurchaseV1920",
       "class": "reversal",
       "target": "D1",
-      "status": "A2_IMPLEMENT",
+      "status": "A2_SOURCE_QUALIFIED_D1_ROUTER_READY",
       "entity": "purchase+stock+supplier-ledger+custody",
       "idempotency": "REQUIRED"
     },
@@ -143,7 +143,7 @@
       "action": "savePurchaseCustodyV1920",
       "class": "financial-write",
       "target": "D1",
-      "status": "A2_IMPLEMENT",
+      "status": "A2_SOURCE_QUALIFIED_D1_ROUTER_READY",
       "entity": "custody+cashbox",
       "idempotency": "REQUIRED"
     },
@@ -151,7 +151,7 @@
       "action": "closePurchaseCustodyV1920",
       "class": "financial-close",
       "target": "D1",
-      "status": "A2_IMPLEMENT",
+      "status": "A2_SOURCE_QUALIFIED_D1_ROUTER_READY",
       "entity": "custody-close+cashbox",
       "idempotency": "REQUIRED"
     },
@@ -159,7 +159,7 @@
       "action": "saveAccountingWaste",
       "class": "inventory-finance-write",
       "target": "D1",
-      "status": "A2_IMPLEMENT",
+      "status": "A2_SOURCE_QUALIFIED_D1_ROUTER_READY",
       "entity": "waste+stock",
       "idempotency": "REQUIRED"
     },
@@ -167,7 +167,7 @@
       "action": "closeDepartmentDayV1920",
       "class": "financial-close",
       "target": "D1",
-      "status": "A2_IMPLEMENT_INTEGRITY_GATED",
+      "status": "A2_SOURCE_QUALIFIED_D1_ROUTER_READY",
       "entity": "day-close",
       "idempotency": "REQUIRED"
     },
@@ -175,7 +175,7 @@
       "action": "runAccountingDayAutomationV1921",
       "class": "orchestrator",
       "target": "D1_TOOLS",
-      "status": "A2_IMPLEMENT_TOOL_ORCHESTRATOR",
+      "status": "A2_SOURCE_QUALIFIED_D1_ROUTER_READY",
       "entity": "qualified-close-tools",
       "idempotency": "REQUIRED",
       "directLedgerWrite": false
@@ -184,7 +184,7 @@
       "action": "reopenAccountingFinalInvoice",
       "class": "reversal",
       "target": "D1",
-      "status": "A2_IMPLEMENT_REVERSAL_NOT_DELETE",
+      "status": "A2_SOURCE_QUALIFIED_D1_ROUTER_READY",
       "entity": "final-invoice+party-ledger",
       "idempotency": "REQUIRED"
     },
@@ -256,5 +256,13 @@
     "A2.5_FINAL_INVOICE_REVERSAL_AND_DAY_CLOSE",
     "A2.6_FRONTEND_WRITE_ROUTER_DEFAULT_READONLY",
     "A2.7_CANARY_WRITE_QUALIFICATION_ONE_FAMILY_AT_A_TIME"
-  ]
+  ],
+  "router": {
+    "readFlag": "EASYSTORE_ACCOUNTING_D1_READONLY=true",
+    "writeFlag": "EASYSTORE_ACCOUNTING_D1_WRITES=false",
+    "writeActionCount": 21,
+    "silentLegacyFallbackWhenD1WriteEnabled": false,
+    "productionWriteAuthority": "NOT_ENABLED"
+  },
+  "nextGate": "A2_7_CONTROLLED_WRITE_CANARY_PREFLIGHT"
 }
