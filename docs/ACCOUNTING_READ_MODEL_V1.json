@@ -15,7 +15,9 @@
     "accountingSourceOfTruth": "D1",
     "supplierMasterSource": "employee_accounting_parties_v1",
     "partyLedgerStableIdField": "party_id",
-    "materialQuoteAuthority": "D1_DETERMINISTIC"
+    "materialQuoteAuthority": "D1_DETERMINISTIC",
+    "dayOpsReadAuthority": "D1_DETERMINISTIC",
+    "unclassifiedFutureWritesPolicy": "FAIL_VALIDATION_OR_EXCEPTION_NOT_SILENT_ACCEPT"
   },
   "actions": [
     {
@@ -119,21 +121,35 @@
       "action": "getDailyDepartmentReportV1920",
       "kind": "read",
       "target": "D1",
-      "status": "A1_AFTER_A2_DOMAIN_SCHEMA",
+      "status": "A1_DAY_OPS_SOURCE_QUALIFIED",
       "tables": [
-        "A2_PURCHASE_CUSTODY_DAY_CLOSE_TABLES"
-      ]
+        "employee_accounting_final_invoices_v1",
+        "employee_accounting_dept_lines_v1",
+        "employee_accounting_purchase_invoices_v1",
+        "employee_accounting_waste_v1",
+        "employee_accounting_cashbox_v1",
+        "employee_accounting_custody_events_v1",
+        "employee_accounting_custody_closes_v1",
+        "employee_accounting_day_closes_v1"
+      ],
+      "migration": "0022_employee_accounting_day_ops_v1.sql"
     },
     {
       "action": "previewAccountingAutomationV1921",
       "kind": "read-preview",
       "target": "D1",
-      "status": "A1_AFTER_A2_DOMAIN_SCHEMA",
+      "status": "A1_DAY_OPS_SOURCE_QUALIFIED",
       "tables": [
-        "A2_PURCHASE_CUSTODY_DAY_CLOSE_TABLES",
+        "employee_accounting_daily_purchases_v1",
         "employee_accounting_dept_lines_v1",
+        "employee_accounting_custody_events_v1",
+        "employee_accounting_custody_closes_v1",
+        "employee_accounting_purchase_invoices_v1",
+        "employee_accounting_final_invoices_v1",
+        "employee_accounting_day_closes_v1",
         "employee_accounting_materials_v1"
-      ]
+      ],
+      "migration": "0022_employee_accounting_day_ops_v1.sql"
     }
   ],
   "exitCriteria": {
