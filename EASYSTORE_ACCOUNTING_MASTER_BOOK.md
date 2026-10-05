@@ -1473,3 +1473,43 @@ This aligns with Autonomous Printshop Build Matrix module:
 - Next gate:
   - `A2_3_PURCHASES_DAILY_PURCHASES_CUSTODY`
 
+## Entry ACC-019 — A2.3 daily purchases, direct purchases and custody source qualified
+- Date: 2026-10-05
+- Backend branch: `candidate/easystore-accounting-a2-20261005`
+- Goal: Move the next financial workflow family off Apps Script without enabling Production writes.
+- Implemented D1 source:
+  - department daily purchase creation with immediate stock increase;
+  - rejected daily purchase reverses the stock increase;
+  - purchase-custody handoff writes custody event + cashbox movement;
+  - custody close computes settlement and writes return/extra-payment + close row;
+  - direct purchase invoice writes purchase fact + stock + supplier ledger + supplier payment/cashbox when paid;
+  - daily purchase financial approval reuses the purchase command with `stockAlreadyApplied` so inventory is not doubled;
+  - approved cash daily purchases settle against custody instead of creating a second central cashbox payment.
+- Source commits:
+  - daily purchase + custody: `fb16ddee387eff9d98be26130139098a0d7f5747`
+  - purchase invoice + daily approval: `a9f656369fe6ec170606883dc8848efb8fe2ec8a`
+- Tests/CI:
+  - daily purchase/custody test: `348347b87ae08f128e6d5d0165bf610b3ae4c4eb`
+  - daily purchase/custody CI: `7f5a48631772f1a3c02ba0ff351046f75d6bea2c`
+  - Run: `37300299902` — **SUCCESS**
+  - purchase invoice test: `91d9014f055a1c642440dff11341fb39dbfb7776`
+  - purchase invoice CI: `be38caa15334b9458af61aebb8eac2d029d58f13`
+  - Run: `37300506343` / Job `111731829814` — **SUCCESS**
+- Safety:
+  ```ini
+  DAILY_PURCHASE_STOCK_IMMEDIATE=YES
+  REJECT_REVERSES_STOCK=YES
+  PURCHASE_SUPPLIER_LEDGER_COUPLED=YES
+  DAILY_APPROVAL_NO_DOUBLE_STOCK=YES
+  DIRECT_PURCHASE_CASHBOX=YES
+  DAILY_PURCHASE_CUSTODY_SETTLEMENT=YES
+  ACCOUNTING_RUNTIME_MODE=READONLY
+  PRODUCTION_MUTATION=NO
+  ```
+- Result: **PASS — SOURCE QUALIFIED / NOT DEPLOYED**
+- Remaining in A2.3:
+  - approved-purchase reversal;
+  - then proceed to waste/stock/recalc.
+- Next gate:
+  - `A2_3_APPROVED_PURCHASE_REVERSAL`
+
