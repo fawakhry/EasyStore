@@ -1,0 +1,33 @@
+name: EasyStore A2 Write Model CI
+
+on:
+  push:
+    branches:
+      - candidate/easystore-zero-google-audit-20261004
+    paths:
+      - 'docs/ACCOUNTING_WRITE_MODEL_V1.json'
+      - 'docs/EASYSTORE_ZERO_GOOGLE_ACTION_INVENTORY_20261004.json'
+      - 'tests/accounting_write_model_v1.test.js'
+      - '.github/workflows/easystore-a2-write-model-ci.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  qualify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Validate A2 deterministic write model
+        shell: bash
+        run: |
+          set -euo pipefail
+          node tests/accounting_write_model_v1.test.js
+          echo EASYSTORE_A2_WRITE_MODEL_CI=PASS
+          echo PRODUCTION_MUTATION=NO
