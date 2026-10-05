@@ -1513,3 +1513,35 @@ This aligns with Autonomous Printshop Build Matrix module:
 - Next gate:
   - `A2_3_APPROVED_PURCHASE_REVERSAL`
 
+## Entry ACC-020 — A2.3 approved-purchase reversal source qualified
+- Date: 2026-10-05
+- Backend branch: `candidate/easystore-accounting-a2-20261005`
+- Goal: Complete the A2.3 purchase family with reversal semantics instead of destructive deletion.
+- Implemented:
+  - `reverseApprovedPurchaseV1920` native D1 source;
+  - stock quantity is reversed under a material version guard;
+  - supplier balance is reversed under a Party-balance version guard;
+  - supplier ledger records explicit reversal movements;
+  - daily-purchase origin receives a custody reversal when applicable;
+  - direct paid purchase receives a cashbox reversal receipt;
+  - original purchase row changes to `REVERSED`; it is never deleted.
+- Source commit: `2013c0794e3bab995a2afba4261cd91f51bb148f`
+- Test commit: `0040dbdcc6acf6d519ad85f16767766869aa44e5`
+- CI workflow commit: `bafab3b2436f95c3997e3ae93e3f0d5a1616c8f6`
+- CI evidence:
+  - Run: `37300727068`
+  - Conclusion: **SUCCESS**
+- Safety:
+  ```ini
+  REVERSAL_NOT_DELETE=YES
+  STOCK_REVERSAL=VERSION_GUARDED
+  SUPPLIER_LEDGER_REVERSAL=YES
+  DAILY_PURCHASE_CUSTODY_REVERSAL=YES
+  DIRECT_PURCHASE_CASHBOX_REVERSAL=YES
+  ACCOUNTING_RUNTIME_MODE=READONLY
+  PRODUCTION_MUTATION=NO
+  ```
+- Result: **PASS — A2.3 PURCHASE FAMILY SOURCE QUALIFIED**
+- Next gate:
+  - `A2_4_WASTE_STOCK_MATERIAL_RECALC`
+
