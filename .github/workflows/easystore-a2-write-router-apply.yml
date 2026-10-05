@@ -1,0 +1,123 @@
+name: EasyStore A2 Write Router Apply
+
+on:
+  push:
+    branches:
+      - candidate/easystore-zero-google-audit-20261004
+    paths:
+      - '.github/workflows/easystore-a2-write-router-apply.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: candidate/easystore-zero-google-audit-20261004
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Apply fail-closed D1 write router
+        shell: python
+        run: |
+          from pathlib import Path
+
+          app=Path('app.js')
+          s=app.read_text()
+
+          read_line="const D1_ACCOUNTING_READ_ACTIONS = new Set(['getAccounting','getDeptInvoiceDraftV1887','getPartyAccountV1858','getCustomerAccountV1915','getEasyStoreCustomers','searchCustomers','getEasyStoreSuppliers','easyStoreSystemHealth','calculateAccountingLaserQuoteV1913','getDailyDepartmentReportV1920','previewAccountingAutomationV1921']);"
+          write_set="""const D1_ACCOUNTING_WRITE_ACTIONS = new Set([
+              'saveAccountingMaterial','saveAccountingTemplate','archiveAccountingTemplate','recalcAccountingMaterialsCascade',
+              'saveAccountingDeptLine','approveAccountingDeptInvoice','saveAccountingFinalInvoice','reopenAccountingFinalInvoice',
+              'saveCustomerAccountMovementV1915','saveEasyStoreSupplier','saveEasyStorePurchaseV2','saveEasyStoreSaleV2',
+              'saveDeptDailyPurchaseV1917','approveDeptDailyPurchasesV1917','rejectDeptDailyPurchaseV1917','reverseApprovedPurchaseV1920',
+              'savePurchaseCustodyV1920','closePurchaseCustodyV1920','saveAccountingWaste','closeDepartmentDayV1920',
+              'runAccountingDayAutomationV1921'
+            ]);"""
+          if 'const D1_ACCOUNTING_WRITE_ACTIONS' not in s:
+              if read_line not in s: raise SystemExit('read action set anchor missing')
+              s=s.replace(read_line,read_line+'\n  '+write_set)
+
+          old="""  async function api(action, data){
+              const useD1Read = window.EASYSTORE_ACCOUNTING_D1_READONLY === true && D1_ACCOUNTING_READ_ACTIONS.has(String(action || ''));
+              const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),90000);
+              try{
+                if(useD1Read){"""
+          new="""  async function api(action, data){
+              const actionName=String(action||'');
+              const useD1Read = window.EASYSTORE_ACCOUNTING_D1_READONLY === true && D1_ACCOUNTING_READ_ACTIONS.has(actionName);
+              const useD1Write = window.EASYSTORE_ACCOUNTING_D1_WRITES === true && D1_ACCOUNTING_WRITE_ACTIONS.has(actionName);
+              const useD1Accounting = useD1Read || useD1Write;
+              const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),90000);
+              try{
+                if(useD1Accounting){"""
+          if old in s: s=s.replace(old,new)
+          elif 'const useD1Write = window.EASYSTORE_ACCOUNTING_D1_WRITES === true' not in s: raise SystemExit('api router anchor missing')
+
+          helper_anchor="  function msg(t,bad){"
+          helper="""  function requestFingerprint(value){
+              let h=2166136261;
+              const x=String(value||'');
+              for(let i=0;i<x.length;i++){h^=x.charCodeAt(i);h=Math.imul(h,16777619);}
+              return (h>>>0).toString(36);
+            }
+            function newAccountingRequestId(prefix){return String(prefix||'REQ')+'-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,10);}
+            function stableAccountingRequestId(prefix,seed){return String(prefix||'REQ')+'-'+requestFingerprint(seed);}
+          """
+          if 'function requestFingerprint(value)' not in s:
+              if helper_anchor not in s: raise SystemExit('helper anchor missing')
+              s=s.replace(helper_anchor,helper+helper_anchor)
+
+          replacements={
+            "api('saveEasyStoreSupplier',s)":"api('saveEasyStoreSupplier',Object.assign({requestId:newAccountingRequestId('SUP')},s))",
+            "api('saveAccountingMaterial',Object.assign({upsert:'1'},p))":"api('saveAccountingMaterial',Object.assign({upsert:'1',requestId:newAccountingRequestId('MAT')},p))",
+            "api('saveAccountingTemplate',Object.assign({upsert:'1'},p))":"api('saveAccountingTemplate',Object.assign({upsert:'1',requestId:newAccountingRequestId('TPL')},p))",
+            "api('archiveAccountingTemplate',{itemName:templateName(r),department:matDept(r)})":"api('archiveAccountingTemplate',{itemName:templateName(r),department:matDept(r),requestId:newAccountingRequestId('TPL-ARCH')})",
+            "api('recalcAccountingMaterialsCascade',{})":"api('recalcAccountingMaterialsCascade',{requestId:newAccountingRequestId('RECALC')})",
+            "api('rejectDeptDailyPurchaseV1917',{id,reason:'مرفوض من ضياء بعد المراجعة'})":"api('rejectDeptDailyPurchaseV1917',{id,reason:'مرفوض من ضياء بعد المراجعة',requestId:stableAccountingRequestId('DPP-REJECT',id)})",
+            "api('reverseApprovedPurchaseV1920',{id,invoiceNo,reason})":"api('reverseApprovedPurchaseV1920',{id,invoiceNo,reason,requestId:stableAccountingRequestId('PUR-REV',id+'|'+invoiceNo)})",
+            "api('reopenAccountingFinalInvoice',{invoiceNo:no,orderId:finalInvoiceOrder(inv),reason:'مراجعة ضياء'})":"api('reopenAccountingFinalInvoice',{invoiceNo:no,orderId:finalInvoiceOrder(inv),reason:'مراجعة ضياء',requestId:stableAccountingRequestId('FINAL-REOPEN',no)})"
+          }
+          for a,b in replacements.items():
+              if a in s: s=s.replace(a,b)
+
+          old_approve="const res=await api('approveAccountingDeptInvoice',{orderId:order,department:d,customerName:val('dlCustomer')});"
+          new_approve="if(!state.deptApprovalRequestId) state.deptApprovalRequestId=newAccountingRequestId('DAPP'); const res=await api('approveAccountingDeptInvoice',{orderId:order,department:d,customerName:val('dlCustomer'),requestId:state.deptApprovalRequestId});"
+          if old_approve in s: s=s.replace(old_approve,new_approve)
+          success_approve="saveLocal(); shell(); flash(res.message||'تم اعتماد فاتورة القسم.');"
+          if success_approve in s and "state.deptApprovalRequestId=''; saveLocal();" not in s:
+              s=s.replace(success_approve,"state.deptApprovalRequestId=''; saveLocal(); shell(); flash(res.message||'تم اعتماد فاتورة القسم.');")
+
+          old_waste="async saveWaste(){ const p={department:userDept(),orderId:val('waOrder'),reason:val('waReason'),amount:num(val('waAmount')),paid:num(val('waPaid')),notes:'',date:new Date().toISOString()};"
+          new_waste="async saveWaste(){ if(!state.wasteRequestId) state.wasteRequestId=newAccountingRequestId('WASTE'); const p={requestId:state.wasteRequestId,department:userDept(),orderId:val('waOrder'),reason:val('waReason'),amount:num(val('waAmount')),paid:num(val('waPaid')),notes:'',date:new Date().toISOString()};"
+          if old_waste in s: s=s.replace(old_waste,new_waste)
+          old_waste_success="p.id=reply.id||''; p.user=user.name; state.data.wasteLines.unshift(p); saveLocal(); shell(); flash('تم حفظ الهالك على السيرفر');"
+          if old_waste_success in s:
+              s=s.replace(old_waste_success,"p.id=reply.id||''; p.user=user.name; state.data.wasteLines.unshift(p); state.wasteRequestId=''; saveLocal(); shell(); flash('تم حفظ الهالك على السيرفر');")
+
+          app.write_text(s)
+
+          cfg=Path('config.js')
+          c=cfg.read_text()
+          anchor="window.EASYSTORE_ACCOUNTING_D1_READONLY = true;"
+          if "window.EASYSTORE_ACCOUNTING_D1_WRITES" not in c:
+              if anchor not in c: raise SystemExit('config D1 anchor missing')
+              c=c.replace(anchor,anchor+"\nwindow.EASYSTORE_ACCOUNTING_D1_WRITES = false; // fail-closed until controlled GENERAL cutover")
+          cfg.write_text(c)
+      - name: Validate patched source
+        run: |
+          node --check app.js
+          grep -F "EASYSTORE_ACCOUNTING_D1_WRITES = false" config.js
+          grep -F "D1_ACCOUNTING_WRITE_ACTIONS" app.js
+          grep -F "useD1Write" app.js
+      - name: Commit router patch
+        run: |
+          git config user.name "fawakhry"
+          git config user.email "87904105+fawakhry@users.noreply.github.com"
+          git add app.js config.js
+          git commit -m "accounting: add A2 fail-closed D1 write router"
+          git push origin HEAD:candidate/easystore-zero-google-audit-20261004
