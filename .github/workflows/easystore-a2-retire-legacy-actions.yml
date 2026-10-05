@@ -1,0 +1,57 @@
+name: EasyStore A2 Retire Legacy Accounting Actions
+
+on:
+  push:
+    branches:
+      - candidate/easystore-zero-google-audit-20261004
+    paths:
+      - '.github/workflows/easystore-a2-retire-legacy-actions.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: candidate/easystore-zero-google-audit-20261004
+      - name: Remove legacy accounting fallback surface
+        shell: python
+        run: |
+          from pathlib import Path
+          p=Path('app.js')
+          s=p.read_text()
+          anchor="const D1_ACCOUNTING_WRITE_ACTIONS = new Set(["
+          if anchor not in s:
+              raise SystemExit('write action set missing')
+          end=s.find("]);",s.find(anchor))
+          end=end+3
+          retired="""
+  const RETIRED_ACCOUNTING_ACTIONS = new Set([
+    'classifyLegacyAccountingRowV1920',
+    'applySuggestedLegacyClassificationsV1921',
+    'reconcileLegacyCustomerDebtsV1914'
+  ]);"""
+          if 'const RETIRED_ACCOUNTING_ACTIONS' not in s:
+              s=s[:end]+retired+s[end:]
+          needle="    const actionName=String(action||'');"
+          replacement=needle+"\n    if(RETIRED_ACCOUNTING_ACTIONS.has(actionName)) throw new Error('تم إيقاف أداة الترحيل القديمة بعد بدء الحسابات من قاعدة نظيفة.');"
+          if "RETIRED_ACCOUNTING_ACTIONS.has(actionName)" not in s:
+              if needle not in s: raise SystemExit('api actionName anchor missing')
+              s=s.replace(needle,replacement,1)
+          p.write_text(s)
+      - name: Validate
+        run: |
+          node --check app.js
+          grep -F "RETIRED_ACCOUNTING_ACTIONS.has(actionName)" app.js
+          grep -F "reconcileLegacyCustomerDebtsV1914" app.js
+      - name: Commit patch
+        run: |
+          git config user.name "fawakhry"
+          git config user.email "87904105+fawakhry@users.noreply.github.com"
+          git add app.js
+          git commit -m "accounting: fail closed retired legacy accounting actions"
+          git push origin HEAD:candidate/easystore-zero-google-audit-20261004
