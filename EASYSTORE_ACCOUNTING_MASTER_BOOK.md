@@ -1713,3 +1713,36 @@ This aligns with Autonomous Printshop Build Matrix module:
 - Next gate:
   - `A2_7_CONTROLLED_WRITE_CANARY_PREFLIGHT`
 
+## Entry ACC-025A — A2.7 Production write-canary preflight blocked safely on missing A2 schema
+- Date: 2026-10-05
+- Goal: Read Production truth before any accounting write canary.
+- Workflow:
+  - `fawakhry/TrendOs/.github/workflows/easystore-a2-write-canary-preflight.yml`
+  - commit: `8ecea39ff162f3c4ca613542ae17e976e342dd16`
+  - backend branch: `candidate/easystore-accounting-a2-20261005`
+- Run:
+  - `37360622868`
+  - Job: `111934022547`
+  - Result: **FAIL — EXPECTED SAFE BLOCK**
+- Production truth proven before failure:
+  ```ini
+  ACCOUNTING_RUNTIME_MODE=READONLY
+  ACCOUNTING_AUTHORITATIVE_WRITES=NO
+  LIVE_EASYSTORE_D1_WRITE_FLAG=ABSENT_SAFE
+  D1_ACCOUNTING_GOOGLE_BUSINESS_CALLS=0
+  ```
+- Blocking evidence:
+  - required A2 table check expected `10`;
+  - Production returned `0`;
+  - therefore migrations `0020..0027` are not yet present as the complete A2 schema.
+- Safety:
+  - failure occurred before canary or financial write;
+  - no accounting runtime-mode change;
+  - no business-data mutation;
+  - no frontend cutover.
+- Result: **BLOCKED_SAFE**
+- Remediation started:
+  - controlled additive schema apply workflow created;
+  - it is allowed to proceed only while accounting remains `READONLY` and the accounting business baseline is zero;
+  - it must prove non-accounting sentinel counts invariant and preserve accounting policy epoch/mode.
+
