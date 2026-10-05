@@ -1582,3 +1582,53 @@ This aligns with Autonomous Printshop Build Matrix module:
 - Next gate:
   - `A2_5_FINAL_INVOICE_REVERSAL_AND_DAY_CLOSE`
 
+## Entry ACC-022 — A2.5 final invoice reversal and integrity-gated day close qualified
+- Date: 2026-10-05
+- Backend branch: `candidate/easystore-accounting-a2-20261005`
+- Goal: Make final invoicing and day close deterministic, reversible, idempotent, and safe for future AI/Connector operation.
+- Schema:
+  - `0025_employee_accounting_final_reversal_day_close_v1.sql`
+    - stable customer Party ID on final invoices;
+    - invoice version/reversal metadata;
+    - held-payment / replacement-invoice linkage;
+    - day-close report hash + blocker snapshot fields.
+  - `0026_employee_accounting_tx_guard_v1.sql`
+    - transactional guard with `CHECK(actual_count=expected_count)`;
+    - converts failed optimistic sub-writes inside D1 batch into a hard transaction rollback.
+- Source implementation:
+  - hardened `saveAccountingDeptLine` with explicit `work_date`, idempotency and optimistic version checks;
+  - hardened `approveAccountingDeptInvoice` with guarded stock deduction + atomic approval count;
+  - `saveAccountingFinalInvoice` now creates invoice, customer balance, ledger, cashbox and line close as one guarded unit;
+  - `reopenAccountingFinalInvoice` is reversal/review semantics, never delete;
+  - old paid cash can be held for the replacement invoice so it is not received twice;
+  - `closeDepartmentDayV1920` blocks on pending purchases, open invoice lines, open custody, or unclassified same-day financial facts;
+  - total-day close requires laser + print close first;
+  - close stores deterministic report hash;
+  - `runAccountingDayAutomationV1921` only closes zero-balance custody automatically, then laser, print, total, and stops safely on any blocker.
+- Commits:
+  - migration 0025: `1a675bda5ccb41726e28959157b2789790c40c87`
+  - transaction guard 0026: `5c376be7d1e811bc46bf4fd904148095d5ac68ea`
+  - A2.5 source: `a5294405c9744ddb3e61b28fd5efcceb196518c6`
+  - test: `cfbda154c6b2f26bafd684f4af99f44eef0e318e`
+  - CI: `650f7b92715ced9fb7c0c1488fdd4dbf25d9ded9`
+- CI evidence:
+  - Run: `37358946477`
+  - Job: `111928379691`
+  - Conclusion: **SUCCESS**
+- Safety:
+  ```ini
+  DEPT_LINE_WORK_DATE=YES
+  DEPT_APPROVAL_TX_GUARD=YES
+  FINAL_INVOICE_TX_GUARD=YES
+  FINAL_REOPEN_REVERSAL_NOT_DELETE=YES
+  HELD_PAYMENT_NO_DOUBLE_CASH=YES
+  DAY_CLOSE_BLOCKERS=YES
+  SAFE_DAY_AUTOMATION=YES
+  ACCOUNTING_RUNTIME_MODE=READONLY
+  PRODUCTION_MUTATION=NO
+  ```
+- Result: **PASS — A2.5 SOURCE QUALIFIED / NOT DEPLOYED**
+- Next gate:
+  - `A2_5B_DIRECT_SALE_WRITE`
+  - then `A2_6_FRONTEND_WRITE_ROUTER_DEFAULT_READONLY`
+
