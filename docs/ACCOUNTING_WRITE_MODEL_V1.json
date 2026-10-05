@@ -1,0 +1,260 @@
+{
+  "version": "ACCOUNTING_WRITE_MODEL_V1",
+  "phase": "A2",
+  "status": "REPO_ONLY_CONTRACT",
+  "date": "2026-10-05",
+  "authority": "D1_DETERMINISTIC",
+  "connector": "EASYSTORE_AUTONOMOUS_PRINTSHOP_FINANCE_CONNECTOR_V1",
+  "principles": {
+    "googleBusinessWritesAllowedAtExit": false,
+    "appsScriptFinancialWriteAuthorityAtExit": 0,
+    "directAiDatabaseWrite": false,
+    "directConnectorDatabaseWrite": false,
+    "idempotencyRequired": true,
+    "appendOnlyAuditRequired": true,
+    "destructiveFinancialDelete": false,
+    "reversalInsteadOfDelete": true,
+    "stableEntityIdsRequired": true,
+    "serverSideValidationRequired": true,
+    "financialWritesFailClosedUntilGeneral": true
+  },
+  "actions": [
+    {
+      "action": "saveAccountingMaterial",
+      "class": "master-write",
+      "target": "D1",
+      "status": "NATIVE_EXISTING_HARDEN",
+      "entity": "material",
+      "idempotency": "REQUIRED_OR_STABLE_UPSERT_GUARD"
+    },
+    {
+      "action": "saveAccountingTemplate",
+      "class": "master-write",
+      "target": "D1",
+      "status": "NATIVE_EXISTING_HARDEN",
+      "entity": "template",
+      "idempotency": "REQUIRED_OR_STABLE_UPSERT_GUARD"
+    },
+    {
+      "action": "archiveAccountingTemplate",
+      "class": "master-write",
+      "target": "D1",
+      "status": "A2_IMPLEMENT_SOFT_ARCHIVE",
+      "entity": "template",
+      "idempotency": "REQUIRED"
+    },
+    {
+      "action": "recalcAccountingMaterialsCascade",
+      "class": "deterministic-recalc",
+      "target": "D1",
+      "status": "A2_IMPLEMENT",
+      "entity": "material/template-costs",
+      "idempotency": "REQUIRED"
+    },
+    {
+      "action": "saveAccountingDeptLine",
+      "class": "operational-finance-write",
+      "target": "D1",
+      "status": "NATIVE_EXISTING_HARDEN",
+      "entity": "department-line",
+      "idempotency": "REQUIRED"
+    },
+    {
+      "action": "approveAccountingDeptInvoice",
+      "class": "financial-write",
+      "target": "D1",
+      "status": "NATIVE_EXISTING_HARDEN",
+      "entity": "department-approval+stock",
+      "idempotency": "REQUIRED"
+    },
+    {
+      "action": "saveAccountingFinalInvoice",
+      "class": "financial-write",
+      "target": "D1",
+      "status": "NATIVE_EXISTING_HARDEN",
+      "entity": "sales-invoice+party-ledger",
+      "idempotency": "REQUIRED"
+    },
+    {
+      "action": "saveCustomerAccountMovementV1915",
+      "class": "financial-write",
+      "target": "D1",
+      "status": "A2_ALIAS_PARTY_LEDGER",
+      "entity": "customer-ledger",
+      "idempotency": "REQUIRED"
+    },
+    {
+      "action": "saveEasyStoreSupplier",
+      "class": "party-master-write",
+      "target": "D1",
+      "status": "A2_IMPLEMENT",
+      "entity": "supplier-party",
+      "idempotency": "REQUIRED"
+    },
+    {
+      "action": "saveEasyStorePurchaseV2",
+      "class": "financial-write",
+      "target": "D1",
+      "status": "A2_IMPLEMENT",
+      "entity": "purchase-invoice+supplier-ledger+stock/cash",
+      "idempotency": "REQUIRED"
+    },
+    {
+      "action": "saveEasyStoreSaleV2",
+      "class": "financial-write",
+      "target": "D1",
+      "status": "A2_IMPLEMENT",
+      "entity": "sales-invoice+customer-ledger+cash",
+      "idempotency": "REQUIRED"
+    },
+    {
+      "action": "saveDeptDailyPurchaseV1917",
+      "class": "financial-workflow-write",
+      "target": "D1",
+      "status": "A2_IMPLEMENT",
+      "entity": "daily-purchase-pending",
+      "idempotency": "REQUIRED"
+    },
+    {
+      "action": "approveDeptDailyPurchasesV1917",
+      "class": "financial-workflow-write",
+      "target": "D1",
+      "status": "A2_IMPLEMENT",
+      "entity": "purchase+stock+supplier-ledger+custody",
+      "idempotency": "REQUIRED"
+    },
+    {
+      "action": "rejectDeptDailyPurchaseV1917",
+      "class": "financial-workflow-write",
+      "target": "D1",
+      "status": "A2_IMPLEMENT",
+      "entity": "daily-purchase-status",
+      "idempotency": "REQUIRED"
+    },
+    {
+      "action": "reverseApprovedPurchaseV1920",
+      "class": "reversal",
+      "target": "D1",
+      "status": "A2_IMPLEMENT",
+      "entity": "purchase+stock+supplier-ledger+custody",
+      "idempotency": "REQUIRED"
+    },
+    {
+      "action": "savePurchaseCustodyV1920",
+      "class": "financial-write",
+      "target": "D1",
+      "status": "A2_IMPLEMENT",
+      "entity": "custody+cashbox",
+      "idempotency": "REQUIRED"
+    },
+    {
+      "action": "closePurchaseCustodyV1920",
+      "class": "financial-close",
+      "target": "D1",
+      "status": "A2_IMPLEMENT",
+      "entity": "custody-close+cashbox",
+      "idempotency": "REQUIRED"
+    },
+    {
+      "action": "saveAccountingWaste",
+      "class": "inventory-finance-write",
+      "target": "D1",
+      "status": "A2_IMPLEMENT",
+      "entity": "waste+stock",
+      "idempotency": "REQUIRED"
+    },
+    {
+      "action": "closeDepartmentDayV1920",
+      "class": "financial-close",
+      "target": "D1",
+      "status": "A2_IMPLEMENT_INTEGRITY_GATED",
+      "entity": "day-close",
+      "idempotency": "REQUIRED"
+    },
+    {
+      "action": "runAccountingDayAutomationV1921",
+      "class": "orchestrator",
+      "target": "D1_TOOLS",
+      "status": "A2_IMPLEMENT_TOOL_ORCHESTRATOR",
+      "entity": "qualified-close-tools",
+      "idempotency": "REQUIRED",
+      "directLedgerWrite": false
+    },
+    {
+      "action": "reopenAccountingFinalInvoice",
+      "class": "reversal",
+      "target": "D1",
+      "status": "A2_IMPLEMENT_REVERSAL_NOT_DELETE",
+      "entity": "final-invoice+party-ledger",
+      "idempotency": "REQUIRED"
+    },
+    {
+      "action": "classifyLegacyAccountingRowV1920",
+      "class": "legacy-cleanup",
+      "target": "RETIRED",
+      "status": "DEPRECATED_AFTER_CLEAN_BASELINE",
+      "reason": "A0 purged historical accounting data; new writes must be classified at creation."
+    },
+    {
+      "action": "applySuggestedLegacyClassificationsV1921",
+      "class": "legacy-cleanup",
+      "target": "RETIRED",
+      "status": "DEPRECATED_AFTER_CLEAN_BASELINE",
+      "reason": "A0 purged historical accounting data; no legacy classifier authority remains."
+    },
+    {
+      "action": "reconcileLegacyCustomerDebtsV1914",
+      "class": "legacy-cleanup",
+      "target": "RETIRED",
+      "status": "DEPRECATED_AFTER_CLEAN_BASELINE",
+      "reason": "A0 clean baseline removed historical debt reconciliation scope."
+    }
+  ],
+  "nativeSupportOutsideLiteralInventory": [
+    {
+      "action": "savePartyLedgerTransaction",
+      "target": "D1",
+      "status": "NATIVE_EXISTING_HARDEN",
+      "entity": "party-ledger",
+      "idempotency": "REQUIRED"
+    }
+  ],
+  "writeLifecycle": [
+    "RECEIVED",
+    "VALIDATED",
+    "PREPARED",
+    "COMMITTED",
+    "VERIFIED"
+  ],
+  "failureStates": [
+    "REJECTED",
+    "FAILED",
+    "REVERSED"
+  ],
+  "connectorCommandRules": {
+    "sourceSystemRequired": true,
+    "correlationIdRequired": true,
+    "idempotencyKeyRequired": true,
+    "evidenceRefsRequiredForEvidenceDependentActions": true,
+    "connectorMayRequestButNotBypassPolicy": true
+  },
+  "exitCriteria": {
+    "everyActiveWriteClassified": true,
+    "appsScriptFinancialWriteAuthority": 0,
+    "googleBusinessWrites": 0,
+    "allFinancialWritesIdempotent": true,
+    "allFinancialWritesAudited": true,
+    "reversalModel": "PASS",
+    "integrityGatedClose": "PASS",
+    "connectorSafeCommands": "PASS"
+  },
+  "implementationOrder": [
+    "A2.1_IDEMPOTENCY_AND_COMMAND_FOUNDATION",
+    "A2.2_PARTY_CUSTOMER_SUPPLIER_WRITES",
+    "A2.3_PURCHASES_DAILY_PURCHASES_CUSTODY",
+    "A2.4_WASTE_STOCK_AND_MATERIAL_RECALC",
+    "A2.5_FINAL_INVOICE_REVERSAL_AND_DAY_CLOSE",
+    "A2.6_FRONTEND_WRITE_ROUTER_DEFAULT_READONLY",
+    "A2.7_CANARY_WRITE_QUALIFICATION_ONE_FAMILY_AT_A_TIME"
+  ]
+}
