@@ -4,6 +4,7 @@ window.TREND_API_URL = "https://script.google.com/macros/s/AKfycbwGHOduL0BHvH-o4
 window.MATBAGY_SECURE_API_PROXY_URL = "";
 
 window.EASYSTORE_ACCOUNTING_D1_READONLY = true;
+window.EASYSTORE_ACCOUNTING_D1_WRITES = false; // fail-closed until controlled GENERAL cutover
 window.EASYSTORE_ACCOUNTING_D1_URL = "https://trendos-d1-api.trendmall-contact.workers.dev/v1/employee/accounting";
 window.EASYSTORE_TRENDOS_SSO_HANDOFF_V1 = true;
 

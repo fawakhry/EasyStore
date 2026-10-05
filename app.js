@@ -210,12 +210,23 @@
   }
 
   const D1_ACCOUNTING_READ_ACTIONS = new Set(['getAccounting','getDeptInvoiceDraftV1887','getPartyAccountV1858','getCustomerAccountV1915','getEasyStoreCustomers','searchCustomers','getEasyStoreSuppliers','easyStoreSystemHealth','calculateAccountingLaserQuoteV1913','getDailyDepartmentReportV1920','previewAccountingAutomationV1921']);
+  const D1_ACCOUNTING_WRITE_ACTIONS = new Set([
+    'saveAccountingMaterial','saveAccountingTemplate','archiveAccountingTemplate','recalcAccountingMaterialsCascade',
+    'saveAccountingDeptLine','approveAccountingDeptInvoice','saveAccountingFinalInvoice','reopenAccountingFinalInvoice',
+    'saveCustomerAccountMovementV1915','saveEasyStoreSupplier','saveEasyStorePurchaseV2','saveEasyStoreSaleV2',
+    'saveDeptDailyPurchaseV1917','approveDeptDailyPurchasesV1917','rejectDeptDailyPurchaseV1917','reverseApprovedPurchaseV1920',
+    'savePurchaseCustodyV1920','closePurchaseCustodyV1920','saveAccountingWaste','closeDepartmentDayV1920',
+    'runAccountingDayAutomationV1921'
+  ]);
 
   async function api(action, data){
-    const useD1Read = window.EASYSTORE_ACCOUNTING_D1_READONLY === true && D1_ACCOUNTING_READ_ACTIONS.has(String(action || ''));
+    const actionName=String(action||'');
+    const useD1Read = window.EASYSTORE_ACCOUNTING_D1_READONLY === true && D1_ACCOUNTING_READ_ACTIONS.has(actionName);
+    const useD1Write = window.EASYSTORE_ACCOUNTING_D1_WRITES === true && D1_ACCOUNTING_WRITE_ACTIONS.has(actionName);
+    const useD1Accounting = useD1Read || useD1Write;
     const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),90000);
     try{
-      if(useD1Read){
+      if(useD1Accounting){
         const hasSession = await ensureTrendosSso();
         if(!hasSession) throw new Error('انتهت الجلسة، سجل الدخول من TrendOS ثم افتح الحسابات مرة أخرى.');
         const endpoint=String(window.EASYSTORE_ACCOUNTING_D1_URL||'').trim();
@@ -247,6 +258,14 @@
     }catch(e){if(e&&e.name==='AbortError')throw new Error('انتهت مهلة الاتصال بالسيرفر');throw e;}finally{clearTimeout(timer);}
   }
 
+  function requestFingerprint(value){
+    let h=2166136261;
+    const x=String(value||'');
+    for(let i=0;i<x.length;i++){h^=x.charCodeAt(i);h=Math.imul(h,16777619);}
+    return (h>>>0).toString(36);
+  }
+  function newAccountingRequestId(prefix){return String(prefix||'REQ')+'-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,10);}
+  function stableAccountingRequestId(prefix,seed){return String(prefix||'REQ')+'-'+requestFingerprint(seed);}
   function msg(t,bad){ const m=$('mainMsg'); if(m){ m.className = 'msg ' + (bad ? 'bad' : ''); m.textContent = t || ''; } }
   function flash(t,bad){ msg(t,bad); setTimeout(()=>msg('',false), 4500); }
 
@@ -1156,10 +1175,10 @@
       if(!isAdmin())return deny('عكس المشتريات عند ضياء فقط.');let id='',invoiceNo='';try{id=decodeURIComponent(String(encodedId||''));invoiceNo=decodeURIComponent(String(encodedInvoice||''));}catch(e){id=String(encodedId||'');invoiceNo=String(encodedInvoice||'');}
       const reason=prompt('اكتب سبب عكس المشتريات. لن يتم حذف الفاتورة:','تم الاعتماد بالخطأ');if(!reason)return;
       if(!confirm('تنفيذ عكس حركة المشتريات؟\nسيتم فحص المخزون ثم عكس المورد والخزنة أو العهدة.'))return;
-      try{const reply=await api('reverseApprovedPurchaseV1920',{id,invoiceNo,reason});if(!reply||reply.success===false)throw new Error((reply&&reply.message)||'تعذر عكس المشتريات.');await load(true);flash(reply.message||'تم عكس المشتريات.');}catch(e){flash(e.message||'تعذر عكس المشتريات.',true);}
+      try{const reply=await api('reverseApprovedPurchaseV1920',{id,invoiceNo,reason,requestId:stableAccountingRequestId('PUR-REV',id+'|'+invoiceNo)});if(!reply||reply.success===false)throw new Error((reply&&reply.message)||'تعذر عكس المشتريات.');await load(true);flash(reply.message||'تم عكس المشتريات.');}catch(e){flash(e.message||'تعذر عكس المشتريات.',true);}
     },
     quickSearch(q){ q=nkey(q); if(!q) return; const found = templates().find(r=>nkey(templateName(r)).includes(q)) || materials().find(r=>nkey(materialName(r)).includes(q)); if(found) flash('تم العثور على: ' + (templateName(found)||materialName(found))); },
-    async saveSupplier(){ if(!canManageAccounting()) return deny(); const s={name:val('supName'),phone:val('supPhone'),opening:num(val('supOpening')),address:val('supAddress')}; if(!s.name) return flash('اكتب اسم المورد',true); try{ const reply=await api('saveEasyStoreSupplier',s); if(!reply||reply.success===false) throw new Error((reply&&reply.message)||'تعذر حفظ المورد'); const i=state.data.suppliers.findIndex(x=>nkey(x.name||x.supplier)===nkey(s.name)); if(i>=0) state.data.suppliers[i]=s; else state.data.suppliers.unshift(s); saveLocal(); shell(); flash('تم حفظ المورد على السيرفر'); }catch(e){ flash('لم يتم حفظ المورد: '+(e.message||e),true); } },
+    async saveSupplier(){ if(!canManageAccounting()) return deny(); const s={name:val('supName'),phone:val('supPhone'),opening:num(val('supOpening')),address:val('supAddress')}; if(!s.name) return flash('اكتب اسم المورد',true); try{ const reply=await api('saveEasyStoreSupplier',Object.assign({requestId:newAccountingRequestId('SUP')},s)); if(!reply||reply.success===false) throw new Error((reply&&reply.message)||'تعذر حفظ المورد'); const i=state.data.suppliers.findIndex(x=>nkey(x.name||x.supplier)===nkey(s.name)); if(i>=0) state.data.suppliers[i]=s; else state.data.suppliers.unshift(s); saveLocal(); shell(); flash('تم حفظ المورد على السيرفر'); }catch(e){ flash('لم يتم حفظ المورد: '+(e.message||e),true); } },
     editSupplier(i){ const s=state.data.suppliers[i]; if(!s) return; set('supName',s.name||s.supplier); set('supPhone',s.phone); set('supOpening',s.opening||s.openingBalance); set('supAddress',s.address); },
     filterCustomers(){ const q=nkey(val('custSearch')); const rows=(state.data.customers||[]).filter(c=>nkey([c.name,c.customerName,c.phone,c.mobile].join(' ')).includes(q)); const box=$('custTable'); if(box) box.innerHTML=customersTable(rows); },
     resetCustomerAccountRequest(){ state.customerAccountRequestId=''; },
@@ -1277,10 +1296,10 @@
     async copySaleText(){ closeFloatingPanels(); const t=this.invoicePlainText(); try{ await navigator.clipboard.writeText(t); flash('تم نسخ نص الفاتورة'); }catch(e){ prompt('انسخ نص الفاتورة',t); } },
     openSaleWhatsApp(){ closeFloatingPanels(); const t=this.invoicePlainText(); window.open('https://wa.me/?text='+encodeURIComponent(t),'_blank'); },
     downloadSaleImage(){ closeFloatingPanels(); const canvas=document.createElement('canvas'); canvas.width=1200; canvas.height=900; const ctx=canvas.getContext('2d'); ctx.fillStyle='#fff'; ctx.fillRect(0,0,1200,900); ctx.fillStyle='#0f766e'; ctx.fillRect(0,0,1200,120); ctx.fillStyle='#fff'; ctx.font='bold 44px Arial'; ctx.textAlign='right'; ctx.fillText('فاتورة مطبعجي',1120,75); ctx.fillStyle='#111827'; ctx.font='28px Arial'; const lines=this.invoicePlainText().split('\n'); let y=170; lines.forEach(l=>{ ctx.fillText(l,1120,y); y+=42; }); const a=document.createElement('a'); a.download='matbagy-sale-'+(val('saNo')||Date.now())+'.png'; a.href=canvas.toDataURL('image/png'); a.click(); },
-    async saveItem(){ if(!canManageAccounting()) return deny(); const p={department:val('itDept'),itemName:val('itName'),category:val('itType')||'صنف بيع',size:val('itSize'),salePrice:num(val('itSale')),fixedCost:num(val('itCost')),computedUnitCost:num(val('itCost')),active:'نعم',recordType:'template'}; if(!p.itemName) return flash('اكتب اسم الصنف',true); try{ const reply=await api('saveAccountingTemplate',Object.assign({upsert:'1'},p)); if(!reply||reply.success===false) throw new Error((reply&&reply.message)||'تعذر حفظ الصنف'); p.fixedCost=num(reply.calculatedCost); p.computedUnitCost=p.fixedCost; const res=upsertByNameDept(state.data.templates,p,templateName,matDept); saveLocal(); state.active='items'; shell(); flash(reply.message||(res.updated?'الصنف موجود وتم تحديثه في الكتالوج':'تم حفظ الصنف في الكتالوج')); }catch(e){ flash('لم يتم حفظ الصنف: '+(e.message||e),true); } },
+    async saveItem(){ if(!canManageAccounting()) return deny(); const p={department:val('itDept'),itemName:val('itName'),category:val('itType')||'صنف بيع',size:val('itSize'),salePrice:num(val('itSale')),fixedCost:num(val('itCost')),computedUnitCost:num(val('itCost')),active:'نعم',recordType:'template'}; if(!p.itemName) return flash('اكتب اسم الصنف',true); try{ const reply=await api('saveAccountingTemplate',Object.assign({upsert:'1',requestId:newAccountingRequestId('TPL')},p)); if(!reply||reply.success===false) throw new Error((reply&&reply.message)||'تعذر حفظ الصنف'); p.fixedCost=num(reply.calculatedCost); p.computedUnitCost=p.fixedCost; const res=upsertByNameDept(state.data.templates,p,templateName,matDept); saveLocal(); state.active='items'; shell(); flash(reply.message||(res.updated?'الصنف موجود وتم تحديثه في الكتالوج':'تم حفظ الصنف في الكتالوج')); }catch(e){ flash('لم يتم حفظ الصنف: '+(e.message||e),true); } },
     editItem(i){ const r=productTemplates()[i]; if(!r) return; set('itDept',matDept(r)); set('itName',templateName(r)); set('itType',r.category||matType(r)); set('itSize',r.size); set('itSale',matSale(r)); set('itCost',matCost(r)); },
     clearItemForm(){ ['itName','itSize','itSale','itCost'].forEach(id=>set(id,'')); },
-    archiveItem(i){ if(!canManageAccounting()) return deny(); const r=productTemplates()[i]; if(!r || !confirm('إيقاف الصنف ' + templateName(r) + '؟')) return; r.active='لا'; r['مفعل']='لا'; saveLocal(); api('archiveAccountingTemplate',{itemName:templateName(r),department:matDept(r)}).catch(()=>{}); shell(); },
+    archiveItem(i){ if(!canManageAccounting()) return deny(); const r=productTemplates()[i]; if(!r || !confirm('إيقاف الصنف ' + templateName(r) + '؟')) return; r.active='لا'; r['مفعل']='لا'; saveLocal(); api('archiveAccountingTemplate',{itemName:templateName(r),department:matDept(r),requestId:newAccountingRequestId('TPL-ARCH')}).catch(()=>{}); shell(); },
     resetDailyPurchaseRequest(){ state.dailyPurchaseRequestId=''; },
     calcDailyPurchase(){ const total=num(val('dpQty'))*num(val('dpUnit')); const payment=nkey(val('dpPayment')); set('dpTotal',total.toFixed(2)); set('dpPaid',(/اجل|آجل/.test(payment)?0:total).toFixed(2)); },
     async saveDailyPurchase(){
@@ -1321,7 +1340,7 @@
       if(!isAdmin()) return deny('رفض مشتريات الأقسام عند ضياء فقط.');
       let id=''; try{id=decodeURIComponent(String(encodedId||''));}catch(e){id=String(encodedId||'');}
       if(!id||!confirm('رفض بند المشتريات هذا؟\nسيتم عكس الكمية من المخزون. إذا كان القسم استهلكها فلن يسمح النظام بالرفض.')) return;
-      try{ const reply=await api('rejectDeptDailyPurchaseV1917',{id,reason:'مرفوض من ضياء بعد المراجعة'}); if(!reply||reply.success===false) throw new Error((reply&&reply.message)||'تعذر رفض البند.'); await load(true); flash(reply.message||'تم رفض البند.'); }catch(e){ flash(e.message||'تعذر رفض البند.',true); }
+      try{ const reply=await api('rejectDeptDailyPurchaseV1917',{id,reason:'مرفوض من ضياء بعد المراجعة',requestId:stableAccountingRequestId('DPP-REJECT',id)}); if(!reply||reply.success===false) throw new Error((reply&&reply.message)||'تعذر رفض البند.'); await load(true); flash(reply.message||'تم رفض البند.'); }catch(e){ flash(e.message||'تعذر رفض البند.',true); }
     },
     calcPurchase(){ const total=num(val('puQty'))*num(val('puUnit')); set('puTotal',total.toFixed(2)); set('puRemain',Math.max(0,total-num(val('puPaid'))).toFixed(2)); },
     refreshPurchaseMaterials(){ const select=$('puMat'); if(select) select.innerHTML='<option value="">اختار الخامة</option>'+purchaseMaterialOptions(val('puDept')); state.purchaseRequestId=''; },
@@ -1382,11 +1401,11 @@
       const p={department:val('rawDept'),materialName:val('rawName'),materialKind:materialKindLabel(val('rawKind')),materialClass:val('rawClass'),operationExpense:val('rawClass')==='مصروف تشغيل'?'نعم':'لا',operatingBand:val('rawOperatingBand'),operatingCalcMethod:val('rawOpMethod'),operatingUnitCost:num(val('rawOpCost')),unitCost:num(val('rawCost')),salePrice:num(val('rawSale')),stockQty:num(val('rawStock')),minStock:num(val('rawMin')),width:num(val('rawW')),height:num(val('rawH')),notes:val('rawNotes'),active:val('rawClass')==='متوقفة'?'لا':'نعم',recordType:'material'};
       if(!p.materialName) return flash('اكتب اسم الخامة',true);
       try{
-        const reply=await api('saveAccountingMaterial',Object.assign({upsert:'1'},p));
+        const reply=await api('saveAccountingMaterial',Object.assign({upsert:'1',requestId:newAccountingRequestId('MAT')},p));
         if(!reply||reply.success===false) throw new Error((reply&&reply.message)||'تعذر حفظ الخامة');
         const res=upsertByNameDept(state.data.materials,p,materialName,matDept);
         recalcTemplatesLocal(); saveLocal();
-        api('recalcAccountingMaterialsCascade',{}).catch(()=>{});
+        api('recalcAccountingMaterialsCascade',{requestId:newAccountingRequestId('RECALC')}).catch(()=>{});
         state.active='kitchen'; shell(); flash(res.updated?'تم تحديث الخامة على السيرفر وإعادة حساب الأصناف المرتبطة':'تم حفظ الخامة على السيرفر');
       }catch(e){ flash('لم يتم حفظ الخامة: '+(e.message||e),true); }
     },
@@ -1399,8 +1418,8 @@
     clearComps(){ state.recipeComps=[]; const c=$('compList'); if(c) c.innerHTML=compTable(); this.calcRecipe(); },
     clearRecipeForm(){ state.recipeComps=[]; ['recName','recSize','recSale','recCost','recProfit','compQty','compAiPieces','compManualPieces','compWaste','compCost'].forEach(id=>set(id,'')); set('compQty','1'); const c=$('compList'); if(c) c.innerHTML=compTable(); },
     calcRecipe(){ const current = val('compMat') && !state.recipeComps.length ? num(val('compCost')) : 0; const cost=state.recipeComps.reduce((s,c)=>s+num(c.cost),0) + current; set('recCost',cost.toFixed(2)); const g=gp(cost,num(val('recSale'))); set('recProfit',g.profit.toFixed(2)); return cost; },
-    async saveRecipe(){ if(!canManageAccounting()) return deny(); if(val('compMat') && !state.recipeComps.length) this.addComp(); const cost=this.calcRecipe(); const p={department:val('recDept'),itemName:val('recName'),size:val('recSize'),salePrice:num(val('recSale')),fixedCost:cost,computedUnitCost:cost,calculatedUnitCost:cost,componentsJson:JSON.stringify(state.recipeComps),category:'صنف بمكونات',recordType:'template',active:'نعم'}; if(!p.itemName) return flash('اكتب اسم الصنف',true); if(!state.recipeComps.length) return flash('أضف مكونًا واحدًا على الأقل للصنف.',true); try{ const reply=await api('saveAccountingTemplate',Object.assign({upsert:'1'},p)); if(!reply||reply.success===false) throw new Error((reply&&reply.message)||'تعذر حفظ الصنف بمكوناته'); p.fixedCost=num(reply.calculatedCost); p.computedUnitCost=p.fixedCost; p.calculatedUnitCost=p.fixedCost; if(reply.componentsJson) p.componentsJson=reply.componentsJson; const res=upsertByNameDept(state.data.templates,p,templateName,matDept); saveLocal(); state.active='kitchen'; shell(); flash(reply.message||(res.updated?'الصنف موجود وتم تحديثه في الكتالوج':'تم حفظ الصنف بمكوناته في الكتالوج')); }catch(e){ flash('لم يتم حفظ الصنف بمكوناته: '+(e.message||e),true); } },
-    recalcCascade(){ if(!canManageAccounting()) return deny(); recalcTemplatesLocal(); saveLocal(); render(); flash('تم تحديث الأسعار المرتبطة محليًا.'); api('recalcAccountingMaterialsCascade',{}).catch(()=>{}); },
+    async saveRecipe(){ if(!canManageAccounting()) return deny(); if(val('compMat') && !state.recipeComps.length) this.addComp(); const cost=this.calcRecipe(); const p={department:val('recDept'),itemName:val('recName'),size:val('recSize'),salePrice:num(val('recSale')),fixedCost:cost,computedUnitCost:cost,calculatedUnitCost:cost,componentsJson:JSON.stringify(state.recipeComps),category:'صنف بمكونات',recordType:'template',active:'نعم'}; if(!p.itemName) return flash('اكتب اسم الصنف',true); if(!state.recipeComps.length) return flash('أضف مكونًا واحدًا على الأقل للصنف.',true); try{ const reply=await api('saveAccountingTemplate',Object.assign({upsert:'1',requestId:newAccountingRequestId('TPL')},p)); if(!reply||reply.success===false) throw new Error((reply&&reply.message)||'تعذر حفظ الصنف بمكوناته'); p.fixedCost=num(reply.calculatedCost); p.computedUnitCost=p.fixedCost; p.calculatedUnitCost=p.fixedCost; if(reply.componentsJson) p.componentsJson=reply.componentsJson; const res=upsertByNameDept(state.data.templates,p,templateName,matDept); saveLocal(); state.active='kitchen'; shell(); flash(reply.message||(res.updated?'الصنف موجود وتم تحديثه في الكتالوج':'تم حفظ الصنف بمكوناته في الكتالوج')); }catch(e){ flash('لم يتم حفظ الصنف بمكوناته: '+(e.message||e),true); } },
+    recalcCascade(){ if(!canManageAccounting()) return deny(); recalcTemplatesLocal(); saveLocal(); render(); flash('تم تحديث الأسعار المرتبطة محليًا.'); api('recalcAccountingMaterialsCascade',{requestId:newAccountingRequestId('RECALC')}).catch(()=>{}); },
     applyDeptItem(){ const r=selectedDeptTemplate(); if(!r) return; state.laserQuote=null; set('dlItem',templateName(r)); set('dlItemDept',matDept(r)); set('dlSystemSale',matSale(r).toFixed(2)); set('dlSale',matSale(r).toFixed(2)); const sh=$('dlSharedLine'); if(sh){ sh.checked=isSharedDeptName(matDept(r)); sh.disabled=isSharedDeptName(matDept(r)); } this.calcDept(); refreshDeptContextUi(); },
     calcDept(){ const q=num(val('dlQty'))||1, sys=num(val('dlSystemSale')), sale=num(val('dlSale')); set('dlDiff',((sale-sys)*q).toFixed(2)); },
     renderDeptSharedLines(){ const b=$('deptSharedBox'); if(b) b.innerHTML=deptSharedTable(); },
@@ -1417,10 +1436,10 @@
       if(!confirm('اعتماد فاتورة قسم '+d+' للأوردر '+order+'؟')) return;
       flash('جاري اعتماد فاتورة القسم على السيرفر...');
       try{
-        const res=await api('approveAccountingDeptInvoice',{orderId:order,department:d,customerName:val('dlCustomer')});
+        if(!state.deptApprovalRequestId) state.deptApprovalRequestId=newAccountingRequestId('DAPP'); const res=await api('approveAccountingDeptInvoice',{orderId:order,department:d,customerName:val('dlCustomer'),requestId:state.deptApprovalRequestId});
         if(!res || res.success===false) throw new Error((res&&res.message)||'تعذر اعتماد الفاتورة على السيرفر.');
         rows.forEach(r=>{ r.approvalStatus='معتمد من القسم'; r.billingStatus='معتمد من القسم'; r.closeStatus='معتمد من القسم'; r['حالة اعتماد القسم']='معتمد من القسم'; r['حالة الفوترة']='معتمد من القسم'; r['حالة التقفيل']='معتمد من القسم'; r.approvedBy=user.name; r.approvedAt=new Date().toISOString(); });
-        saveLocal(); shell(); flash(res.message||'تم اعتماد فاتورة القسم.');
+        state.deptApprovalRequestId=''; saveLocal(); shell(); flash(res.message||'تم اعتماد فاتورة القسم.');
       }catch(e){ flash(e.message||'تعذر اعتماد الفاتورة على السيرفر.',true); }
     },
     toggleLaserCalc(){ const b=$('laserCalcBox'); if(b) b.classList.toggle('hidden'); },
@@ -1440,7 +1459,7 @@
         const a=$('aiMsg'); if(a) a.textContent='ناتج تقريبي '+quote.estimatedPiecesPerSheet+' / سعر الوحدة المقترح '+money(quote.suggestedUnitSale);
       }catch(e){ state.laserQuote=null; flash('تعذر حساب الليزر: '+(e.message||e),true); }
     },
-    async saveWaste(){ const p={department:userDept(),orderId:val('waOrder'),reason:val('waReason'),amount:num(val('waAmount')),paid:num(val('waPaid')),notes:'',date:new Date().toISOString()}; if(!p.orderId||!p.reason||p.amount<=0||p.paid<0) return flash('رقم الأوردر ونوع الهالك وقيمة تالف أكبر من صفر مطلوبة.',true); try{ const reply=await api('saveAccountingWaste',p); if(!reply||reply.success===false) throw new Error((reply&&reply.message)||'تعذر حفظ الهالك'); p.id=reply.id||''; p.user=user.name; state.data.wasteLines.unshift(p); saveLocal(); shell(); flash('تم حفظ الهالك على السيرفر'); }catch(e){ flash('لم يتم حفظ الهالك: '+(e.message||e),true); } },
+    async saveWaste(){ if(!state.wasteRequestId) state.wasteRequestId=newAccountingRequestId('WASTE'); const p={requestId:state.wasteRequestId,department:userDept(),orderId:val('waOrder'),reason:val('waReason'),amount:num(val('waAmount')),paid:num(val('waPaid')),notes:'',date:new Date().toISOString()}; if(!p.orderId||!p.reason||p.amount<=0||p.paid<0) return flash('رقم الأوردر ونوع الهالك وقيمة تالف أكبر من صفر مطلوبة.',true); try{ const reply=await api('saveAccountingWaste',p); if(!reply||reply.success===false) throw new Error((reply&&reply.message)||'تعذر حفظ الهالك'); p.id=reply.id||''; p.user=user.name; state.data.wasteLines.unshift(p); state.wasteRequestId=''; saveLocal(); shell(); flash('تم حفظ الهالك على السيرفر'); }catch(e){ flash('لم يتم حفظ الهالك: '+(e.message||e),true); } },
     collectDeptLines(){
       const order=val('fiOrder');
       const rows=(state.data.deptLines||[]).filter(isUnbilledDeptLine).filter(isDeptApprovedForFinal).filter(r=>String(rowOrderId(r)||'')===String(order||''));
@@ -1494,7 +1513,7 @@
       if(!confirm('إرجاع الفاتورة '+no+' للمراجعة؟ سيتم فتح بنود الأقسام للتقفيل من جديد وعمل عكس مالي للفاتورة القديمة.')) return;
       flash('جاري إرجاع الفاتورة للمراجعة على السيرفر...');
       try{
-        const res=await api('reopenAccountingFinalInvoice',{invoiceNo:no,orderId:finalInvoiceOrder(inv),reason:'مراجعة ضياء'});
+        const res=await api('reopenAccountingFinalInvoice',{invoiceNo:no,orderId:finalInvoiceOrder(inv),reason:'مراجعة ضياء',requestId:stableAccountingRequestId('FINAL-REOPEN',no)});
         if(!res || res.success===false) throw new Error((res&&res.message)||'تعذر إرجاع الفاتورة للمراجعة.');
         if(res.ledgerWarning) return flash((res.message||res.ledgerWarning)+' اضغط إرجاع للمراجعة مرة أخرى لإكمال العكس المالي الناقص دون تكراره.',true);
         inv.status='تحت مراجعة ضياء'; inv['الحالة']='تحت مراجعة ضياء';
