@@ -1545,3 +1545,40 @@ This aligns with Autonomous Printshop Build Matrix module:
 - Next gate:
   - `A2_4_WASTE_STOCK_MATERIAL_RECALC`
 
+## Entry ACC-021 — A2.4 waste, stock and deterministic material-cost cascade qualified
+- Date: 2026-10-05
+- Backend branch: `candidate/easystore-accounting-a2-20261005`
+- Goal: Qualify the stock/waste/material-cost family before final-invoice and day-close work.
+- Implemented:
+  - deterministic recursive material-cost graph with explicit cycle detection;
+  - missing/invalid component guards for composite materials and templates;
+  - cascade recalculation of material and template computed costs;
+  - material writes now persist laser/raw dimensions `raw_width` / `raw_height`;
+  - material/template writes use the A2 idempotent command foundation and optimistic version guards;
+  - template archive is soft archive (`active=0`) and never destructive delete;
+  - `saveAccountingWaste` is native D1 with financial waste/recovery facts;
+  - when a waste movement contains a material + quantity, stock deduction and waste fact are coupled under a material version guard.
+- Source commits:
+  - material/template hardening + cost graph: `6457390da8d7bf43b9b522ec9f1c1160753a54fc`
+  - waste/archive/recalc routes: `6f2276cbf70322260b1cb88159430eab26de2db9`
+- Test/CI:
+  - test: `7e3d6842022ddf8f929a27c1eb61fb230171510f`
+  - CI workflow: `ede1519c304fe060042fde7e91908c026be6a09d`
+  - Run: `37357957044`
+  - Job: `111925064692`
+  - Conclusion: **SUCCESS**
+- Safety:
+  ```ini
+  MATERIAL_RECALC_CYCLE_GUARD=YES
+  MATERIAL_DIMENSIONS_WRITE=YES
+  TEMPLATE_SOFT_ARCHIVE=YES
+  WASTE_LEDGER_D1=YES
+  OPTIONAL_WASTE_STOCK_DEDUCTION=VERSION_GUARDED
+  ACCOUNTING_RUNTIME_MODE=READONLY
+  GOOGLE_BUSINESS_WRITES=0
+  PRODUCTION_MUTATION=NO
+  ```
+- Result: **PASS — A2.4 SOURCE QUALIFIED / NOT DEPLOYED**
+- Next gate:
+  - `A2_5_FINAL_INVOICE_REVERSAL_AND_DAY_CLOSE`
+
