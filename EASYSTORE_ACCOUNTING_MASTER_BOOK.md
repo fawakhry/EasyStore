@@ -1672,3 +1672,44 @@ This aligns with Autonomous Printshop Build Matrix module:
 - Next gate:
   - `A2_6_FRONTEND_WRITE_ROUTER_DEFAULT_READONLY`
 
+## Entry ACC-024 — A2.6 fail-closed D1 write router qualified
+- Date: 2026-10-05
+- Goal: Make every active accounting write D1-routable from EasyStore without enabling Production financial writes.
+- One-shot source patch:
+  - workflow: `.github/workflows/easystore-a2-write-router-apply.yml`
+  - creation commit: `6d73a15105a315b5e738c468c9f1322a27dffd0c`
+  - Run: `37360025047`
+  - Conclusion: **SUCCESS**
+  - resulting candidate head after patch: `e030b3b635b1fb00a2973db032336c3116eb4b82`
+- Frontend changes:
+  - added `D1_ACCOUNTING_WRITE_ACTIONS` covering all **21 active accounting writes**;
+  - added `window.EASYSTORE_ACCOUNTING_D1_WRITES = false`;
+  - D1 write routing is activated only when that exact flag is `true`;
+  - once an action enters the D1 accounting branch, it has no silent Apps Script / legacy proxy fallback;
+  - missing request IDs were added for supplier/material/template/archive/recalc, department approval, waste, reject/reverse/reopen flows.
+- Backend compatibility correction:
+  - existing UI request keys can contain Arabic text;
+  - one-shot backend workflow changed A2 idempotency validation to Unicode-safe letters/numbers;
+  - workflow Run: `37359767659`, Job `111931136630` — **SUCCESS**;
+  - resulting backend branch head: `cc10953ad3433dd0dd9e01177a1a8b66b8315a30`.
+- Qualification:
+  - router test: `tests/easystore_a2_write_router.test.js`
+  - test commit: `78a505efae8f001ce59d3ff96b329746ecd599c3`
+  - CI workflow commit: `5f8823925d3f9b3f1f9f813ba6703d981162b9d4`
+  - Run: `37360307803`
+  - Conclusion: **SUCCESS**
+  - architecture state update: `ea65aeb9c2f5b309fc585a5737f5c1d490a9f385`
+- Safety:
+  ```ini
+  A2_ACTIVE_WRITE_ACTIONS=21
+  D1_WRITE_ROUTER_SOURCE=PASS
+  D1_WRITE_FLAG_DEFAULT=false
+  D1_WRITE_SILENT_LEGACY_FALLBACK=NO
+  D1_READ_FLAG=true
+  PRODUCTION_FINANCIAL_WRITE_AUTHORITY=NOT_ENABLED
+  PRODUCTION_MUTATION=NO
+  ```
+- Result: **PASS — A2.6 COMPLETE / FAIL-CLOSED**
+- Next gate:
+  - `A2_7_CONTROLLED_WRITE_CANARY_PREFLIGHT`
+
