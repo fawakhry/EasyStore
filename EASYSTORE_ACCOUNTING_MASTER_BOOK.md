@@ -1426,3 +1426,50 @@ This aligns with Autonomous Printshop Build Matrix module:
 - Next gate:
   - `A2_1_IDEMPOTENCY_AND_COMMAND_FOUNDATION`
 
+## Entry ACC-017 — A2 backend isolated from concurrent TrendOS Production work
+- Date: 2026-10-05
+- Trigger: Concurrent Autonomous Printshop / TrendOS deployment activity advanced the shared TrendOS candidate branch while EasyStore accounting work was in progress.
+- Safety action:
+  - created dedicated backend branch `candidate/easystore-accounting-a2-20261005`;
+  - base SHA: `7b6afe74674f12503b05fed29f01c0722aa81641`;
+  - all further EasyStore A2 backend work is isolated there unless explicitly promoted.
+- Production mutation caused by this isolation step: NO.
+- Result: **PASS — CONCURRENCY RISK ISOLATED**
+
+## Entry ACC-018 — A2.2 stable Party/Supplier/Customer write source qualified
+- Date: 2026-10-05
+- Backend branch: `candidate/easystore-accounting-a2-20261005`
+- Goal: Harden Party writes before purchase/custody migration.
+- Qualified design:
+  - authoritative per-party balance table: `employee_accounting_party_balances_v1`;
+  - customer stable Party ID = existing `t12_customers.customer_id`;
+  - supplier stable Party ID = `employee_accounting_parties_v1.party_id`;
+  - financial ledger resolves and stores stable `party_id`;
+  - optimistic balance-version guard blocks concurrent stale writes;
+  - payment writes create deterministic cashbox movements;
+  - `saveEasyStoreSupplier` is native D1 source;
+  - `saveCustomerAccountMovementV1915` is native D1 source via the Party ledger tool;
+  - `savePartyLedgerTransaction` remains the canonical native Party-ledger command;
+  - customer/supplier reads now use stable Party IDs and the authoritative balance table rather than names as identity.
+- Backend commits:
+  - balance guard migration already present: `0024_employee_accounting_party_balances_v1.sql`;
+  - hardening commit: `16692d23bd92877a5d8b3da3d07f0163ff4c227f`;
+  - qualification test: `d15bed992a7a007062a141215119ba36a3d30521`;
+  - CI workflow: `a430487a3d7042c18f53577e489744981e128a0e`.
+- CI evidence:
+  - Run: `37299777404`
+  - Job: `111729482337`
+  - Conclusion: **SUCCESS**
+- Safety:
+  ```ini
+  STABLE_PARTY_IDS=YES
+  AUTHORITATIVE_PARTY_BALANCE_GUARD=YES
+  OPTIMISTIC_VERSION_GUARD=YES
+  READONLY_FAIL_CLOSED=YES
+  GOOGLE_BUSINESS_WRITES=0
+  PRODUCTION_MUTATION=NO
+  ```
+- Result: **PASS — SOURCE QUALIFIED / NOT DEPLOYED**
+- Next gate:
+  - `A2_3_PURCHASES_DAILY_PURCHASES_CUSTODY`
+
