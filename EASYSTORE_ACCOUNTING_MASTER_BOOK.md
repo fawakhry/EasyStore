@@ -1632,3 +1632,43 @@ This aligns with Autonomous Printshop Build Matrix module:
   - `A2_5B_DIRECT_SALE_WRITE`
   - then `A2_6_FRONTEND_WRITE_ROUTER_DEFAULT_READONLY`
 
+## Entry ACC-023 — A2.5B direct-sale write source qualified
+- Date: 2026-10-05
+- Backend branch: `candidate/easystore-accounting-a2-20261005`
+- Goal: Complete the active write inventory by moving `saveEasyStoreSaleV2` to the deterministic D1 accounting model.
+- Schema:
+  - `0027_employee_accounting_direct_sale_cost_v1.sql`
+  - adds `manual_cost` to final invoices so direct/manual sales participate in day-profit reporting.
+- Implemented:
+  - direct sale stored as an authoritative final-invoice fact with no department-line IDs;
+  - stable customer Party ID + authoritative customer balance;
+  - invoice and payment ledger movements;
+  - cashbox receipt for paid amount;
+  - template/material lookup for direct-sale stock requirements;
+  - guarded inventory deduction with stock-move facts;
+  - computed material cost saved as `manual_cost`;
+  - daily report now includes manual/direct sale cost in actual job cost;
+  - entire sale/stock/customer/cash group protected by the A2 transaction guard.
+- Commits:
+  - migration 0027: `65871694a90ec1cf2dc2ee885bd7eba60ec58dd1`
+  - source: `aa344f87a56d665e8926e56fc3578b0bdef320a8`
+  - test: `4418badeb3ba6d615a045bfb000414f2b0510959`
+  - CI: `f0d4c2a6b81f165221de9b2b135d730b511c4f86`
+- CI evidence:
+  - Run: `37359410053`
+  - Job: `111929937967`
+  - Conclusion: **SUCCESS**
+- Safety:
+  ```ini
+  DIRECT_SALE_STOCK_COST=YES
+  DIRECT_SALE_CUSTOMER_LEDGER=YES
+  DIRECT_SALE_CASHBOX=YES
+  DIRECT_SALE_TX_GUARD=YES
+  DAY_REPORT_MANUAL_COST=YES
+  ACCOUNTING_RUNTIME_MODE=READONLY
+  PRODUCTION_MUTATION=NO
+  ```
+- Result: **PASS — ACTIVE D1 WRITE SOURCE FAMILY COMPLETE**
+- Next gate:
+  - `A2_6_FRONTEND_WRITE_ROUTER_DEFAULT_READONLY`
+
