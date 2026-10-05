@@ -32,8 +32,14 @@ for(const action of [
 const apiBlock=app.slice(app.indexOf('async function api('),app.indexOf('function msg('));
 assert.ok(apiBlock.includes('if(useD1Read)'));
 assert.ok(apiBlock.includes("Authorization':'Bearer '+user.token"));
-assert.ok(!/if\s*\([^)]*useD1Read[^)]*\)[\s\S]*catch[\s\S]*TREND_API_URL/.test(apiBlock),
-  'D1 read path must not silently fall back to Apps Script');
+const d1Start=apiBlock.indexOf('if(useD1Read){');
+const legacyStart=apiBlock.indexOf("const endpoint=String(window.MATBAGY_SECURE_API_PROXY_URL||window.TREND_API_URL||'').trim();");
+assert.ok(d1Start>=0 && legacyStart>d1Start,'D1 and legacy branches missing');
+const d1Branch=apiBlock.slice(d1Start,legacyStart);
+assert.ok(d1Branch.includes('return parsed;'),'D1 branch must return its own result');
+assert.ok(!d1Branch.includes('TREND_API_URL'),'D1 read branch must not contain Apps Script endpoint');
+assert.ok(!d1Branch.includes('MATBAGY_SECURE_API_PROXY_URL'),'D1 read branch must not contain legacy proxy');
+
 
 console.log('EASYSTORE_A1_ALL_ACCOUNTING_READS_D1_ONLY_SOURCE=PASS');
 console.log('D1_MODELED_READ_ACTIONS='+model.actions.length);
