@@ -29,12 +29,7 @@ jobs:
               raise SystemExit('write action set missing')
           end=s.find("]);",s.find(anchor))
           end=end+3
-          retired="""
-  const RETIRED_ACCOUNTING_ACTIONS = new Set([
-    'classifyLegacyAccountingRowV1920',
-    'applySuggestedLegacyClassificationsV1921',
-    'reconcileLegacyCustomerDebtsV1914'
-  ]);"""
+          retired="\\n  const RETIRED_ACCOUNTING_ACTIONS = new Set([\\n    'classifyLegacyAccountingRowV1920',\\n    'applySuggestedLegacyClassificationsV1921',\\n    'reconcileLegacyCustomerDebtsV1914'\\n  ]);"
           if 'const RETIRED_ACCOUNTING_ACTIONS' not in s:
               s=s[:end]+retired+s[end:]
           needle="    const actionName=String(action||'');"
