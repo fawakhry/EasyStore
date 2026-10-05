@@ -1280,3 +1280,102 @@ This aligns with Autonomous Printshop Build Matrix module:
 - Next gate:
   - `A1_4_REPORT_AND_AUTOMATION_PREVIEW_READS`
 
+## Entry ACC-014A — A1.4 day-operations read model blocked safely once
+- Date: 2026-10-05
+- Goal: Qualify D1 daily reporting and day-close preview reads.
+- Source prepared:
+  - Migration `0022_employee_accounting_day_ops_v1.sql`;
+  - D1 reads `getDailyDepartmentReportV1920` and `previewAccountingAutomationV1921`.
+- First CI:
+  - Run: `37245830298`
+  - Result: **FAIL**
+  - Cause: escaped template-literal backticks were committed as literal `\`` characters in the generated module source.
+  - Failure occurred at syntax-check before runtime execution.
+- Secondary historical CI noise:
+  - Entry614 business coverage source checks themselves passed, then its runtime assertion failed on the known current Bridge state because that historical workflow still expects `secretConfigured=false / policyCount=0`.
+  - Current runtime truth is Bridge disabled, secret configured, 17 policies; this is already recorded in ACC-009.
+- Data mutation: NO.
+- Production impact: NO.
+- Result: **BLOCKED_SAFE**
+- Remediation:
+  - normalized the 28 escaped template-literal backticks to valid JavaScript template literals.
+
+## Entry ACC-014B — A1.4 daily report and automation preview D1 source qualified
+- Date: 2026-10-05
+- Goal: Finish the accounting read model needed for daily reports, AI day review, and future deterministic day close.
+- Schema:
+  - Migration: `cloudflare-d1/migrations/0022_employee_accounting_day_ops_v1.sql`
+  - Commit: `edfdd22b63352f585c09c89e104f529d66f6375b`
+  - Adds deterministic day-operation entities:
+    - `employee_accounting_purchase_invoices_v1`
+    - `employee_accounting_daily_purchases_v1`
+    - `employee_accounting_cashbox_v1`
+    - `employee_accounting_waste_v1`
+    - `employee_accounting_custody_events_v1`
+    - `employee_accounting_custody_closes_v1`
+    - `employee_accounting_day_closes_v1`
+  - Adds explicit `work_date` to department lines and final invoices.
+- D1 source:
+  - implementation commit: `da03e8a6302a7e95f2d9ac3f35589bdc5ed2e001`
+  - syntax repair: `8dd9c61d00e9bdd3611de72897c6ba5465d944e2`
+  - test commit: `623df5207c29ac449020f518cb28feeefde2f9d8`
+  - CI workflow commit: `311f910a703b53f3c74f7cd42efb8b5aeee6db1c`
+- Qualified reads:
+  - `getDailyDepartmentReportV1920`
+  - `previewAccountingAutomationV1921`
+- Read behavior:
+  - daily report derives sales/cost/profit/purchases/waste/cash/custody from D1 facts;
+  - preview exposes pending purchases, open department lines, open custody, settlement-required custody, unclassified rows, closed departments, low-stock and blockers;
+  - day readiness is deterministic: `ready = blockers.length === 0`;
+  - date normalization uses Africa/Cairo business date when an explicit date is absent.
+- CI evidence:
+  - Run: `37245883848`
+  - Conclusion: **SUCCESS**
+  - Existing A1 Core Reads, Party Master and Laser Quote CIs returned green after syntax repair.
+- Data mutation: NO.
+- Production impact: NO.
+- Result: **PASS — SOURCE QUALIFIED / MIGRATION NOT APPLIED**
+- Next gate:
+  - `A1_5_FRONTEND_ALL_READS_D1_ONLY`
+
+## Entry ACC-015 — A1.5 all accounting reads D1-only in candidate source
+- Date: 2026-10-05
+- Goal: Prove every modeled/known EasyStore accounting read is routed to the D1 READONLY path with no silent Google fallback.
+- EasyStore changes:
+  - Read-model update commit: `d92e750c0f60f8a0376f515f038160a79ae52203`
+  - Frontend route commit: `9f0f231fd70ca58847b62dcce05f1cf5d14d6dac`
+  - Router test update: `4ad209e7d16c8d91b4a18a901df2d9e407ebd70b`
+  - D1-only coverage test: `88800fd927bfc9490f68cf57879f0543aec3a163`
+  - D1-only CI workflow: `5913c4efe7bcd7f880218a9d920156cd944b7e0a`
+- First D1-only CI attempt:
+  - Run: `37246037940`
+  - Result: **FAIL**
+  - Cause: test regex incorrectly treated the separate legacy-write branch later in `api()` as a D1-read fallback.
+  - Source routing itself already returned from the D1 branch and did not silently fall back.
+- Test correction:
+  - Commit: `78d597bf1a3cc2e865d7f0e682db5b24e2047c66`
+  - Test now scopes the assertion to the D1 branch only and proves the D1 branch contains neither `TREND_API_URL` nor `MATBAGY_SECURE_API_PROXY_URL`.
+- Final CI:
+  - Run: `37246088672`
+  - Conclusion: **SUCCESS**
+- Candidate source state:
+  ```ini
+  A1_MODELED_READ_ACTIONS=11
+  A1_D1_ROUTED_READ_ACTIONS=11
+  SILENT_GOOGLE_READ_FALLBACK=NO
+  WRITE_FALLBACK_STILL_LEGACY=YES
+  ```
+- Data mutation: NO.
+- Production impact: NO.
+- Result: **PASS — CANDIDATE READ ROUTER COMPLETE**
+- Post-state:
+  ```ini
+  A1_READ_SOURCE_IMPLEMENTATION=COMPLETE
+  A1_FRONTEND_D1_ONLY_READ_SOURCE=PASS
+  A1_PRODUCTION_CUTOVER=NOT_YET
+  MIGRATIONS_0020_0021_0022_PRODUCTION=NOT_APPLIED
+  ```
+- Next gate:
+  - `A1_6_CONTROLLED_PRODUCTION_READ_CUTOVER`
+  - In parallel, begin `A2_DETERMINISTIC_WRITE_MODEL` while the controlled cutover package is prepared against exact live Production truth.
+
