@@ -2651,3 +2651,27 @@ This aligns with Autonomous Printshop Build Matrix module:
 - This is a rollback/disable of the temporary frontend canary route; it does not delete or reverse the successful inactive zero-value test template.
 - Result: **DEPLOYED — FRONTEND WRITE ROUTING RETURNED TO DEFAULT OFF**.
 - Next: live propagation audit must prove frontend OFF + backend READONLY/server canary cleared + exact post-canary D1 evidence unchanged.
+
+
+## Entry ACC-053 — First bounded Production write canary closed and final runtime verified
+- Date: 2026-10-06
+- Final live audit source commit: `8fbb27c0efcb72f913203609a21891824df5a579`.
+- Audit Run `37506588393`, Job `112416697629`: **SUCCESS**.
+- Final Production state:
+  - frontend write mode = `OFF`;
+  - frontend canary action list = empty;
+  - legacy D1 write flag = false;
+  - D1 READONLY reads remain enabled;
+  - backend accounting mode = `READONLY`;
+  - authoritativeWrites=false;
+  - server canary user/action allowlists empty;
+  - server maxCommands/commandsStarted cleared to 0;
+  - `GENERAL_OPENED=NO`.
+- Persisted canary evidence only:
+  - templates=1: `TPL-69C7D9A49828`, inactive and zero-value;
+  - requestLedger=1: `A27-TPL-muwyw80u-1fuz9v20`, COMMITTED;
+  - events=1: matching immutable template create event;
+  - all other tracked accounting business/financial tables remain 0.
+- No destructive cleanup was performed; the inactive zero-value template remains as audit evidence.
+- Result: **PASS — A2.7 FIRST BOUNDED PRODUCTION WRITE CANARY COMPLETED, VERIFIED, AND FULLY CLOSED**.
+- Next gate: qualify the next lowest-risk write family read-only/repo-only; any second Production write family requires a new explicit owner decision and must again be one user / one action family / bounded / auto-disable.
