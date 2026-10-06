@@ -2015,3 +2015,95 @@ This aligns with Autonomous Printshop Build Matrix module:
   - `A2_7_ARM_ONE_LOW_RISK_WRITE_CANARY_FAMILY`
   - requires an explicit bounded canary user/action scope before any financial write is permitted.
 
+
+
+## Entry ACC-029 — Resume requalification + first bounded write-canary candidate
+- Date: 2026-10-06
+- Goal: Resume from ACC-028 without replaying completed work, re-prove the current safe state from GitHub evidence, and qualify the lowest-risk first A2.7 write family without arming Production writes.
+- Scope:
+  - read-only GitHub/runtime evidence review;
+  - source-level canary candidate qualification;
+  - no Production mode/allowlist/frontend-write change;
+  - no financial or business-data mutation.
+- Branch/HEAD verification:
+  - EasyStore branch `candidate/easystore-zero-google-audit-20261004` is still exactly `ddc6bfad5ec64ac5e45cc982f97fa77933f9c3ca`;
+  - Accounting backend branch `candidate/easystore-accounting-a2-20261005` is still exactly `20b3879a3ebb679b41dcac43ccf87ead672e2827`;
+  - both comparisons are identical: ahead=0 / behind=0.
+- Runtime evidence re-read directly from the completed checkpoint audit:
+  - Run `37488946599`;
+  - Job `112356256909`;
+  - Job conclusion: **SUCCESS**;
+  - log evidence:
+    ```ini
+    ACCOUNTING_CHECKPOINT_API_VERSION=39883cad-1223-4e48-9728-b514f7b56a8d
+    ACCOUNTING_CHECKPOINT_MODE=READONLY
+    ACCOUNTING_CHECKPOINT_POLICY_EPOCH=2
+    ACCOUNTING_CHECKPOINT_SCHEMA_READY=true
+    ACCOUNTING_CHECKPOINT_AUTHORITATIVE_WRITES=false
+    ACCOUNTING_CHECKPOINT_GOOGLE_BUSINESS_CALLS=0
+    ACCOUNTING_CHECKPOINT_WRITE_CANARY_READY=true
+    ACCOUNTING_CHECKPOINT_WRITE_CANARY_ENABLED=true
+    ACCOUNTING_CHECKPOINT_CANARY_USERS=0
+    ACCOUNTING_CHECKPOINT_CANARY_ACTIONS=0
+    ACCOUNTING_CHECKPOINT_LIVE_WRITE_FLAG=ABSENT_SAFE
+    ACCOUNTING_CHECKPOINT_TOTAL_BUSINESS_ROWS=0
+    ACCOUNTING_RUNTIME_CHECKPOINT=PASS
+    PRODUCTION_MUTATION=NO
+    ```
+- Architecture cross-check:
+  - Autonomous Printshop book still defines EasyStore as finance/accounting authority;
+  - TrendOS/Autonomous Printshop remains operational authority;
+  - direct cross-system financial DB writes remain forbidden;
+  - Connector/AI may request commands but cannot bypass EasyStore policy or deterministic tools.
+- First canary candidate qualification:
+  - reviewed all 21 active D1 write actions from `docs/ACCOUNTING_WRITE_MODEL_V1.json`;
+  - recommended first family: `saveAccountingTemplate` only;
+  - class: master-data write, not cash/party-ledger/invoice/purchase/waste/day-close;
+  - backend requires full/admin accounting authority;
+  - source is idempotent via `beginCommandV1` / `commitCommandV1`;
+  - template upsert uses optimistic version protection;
+  - audit is appended through `auditEventV1`;
+  - no destructive delete is used.
+- Proposed canary payload shape:
+  - one dedicated synthetic template;
+  - `active=لا` from creation;
+  - zero cost;
+  - zero sale price;
+  - no material components;
+  - unique canary name/request ID;
+  - this avoids cash, party, stock, invoice and operational pricing effects.
+- Exact expected D1 mutation for one successful canary command:
+  - one row in `employee_accounting_templates_v1` (inactive synthetic canary template);
+  - one idempotency/command record in `employee_accounting_request_ledger_v1`;
+  - one immutable audit/event record in `employee_accounting_events_v1`;
+  - expected mutation to cashbox, party ledger/balances, purchases, final invoices, custody, waste, day-close, materials/stock: **0**.
+- Proposed user:
+  - **Diaa / the production account that authenticates as full/admin accounting mode**;
+  - reason: both frontend and backend explicitly restrict material/template master writes to the full/admin accounting role; using a department/finalization user would require broader or mismatched permissions.
+  - exact runtime username must be used in the server-side canary allowlist; no guessed alias is acceptable.
+- Disable/rollback design:
+  1. immediate authority kill: restore canary allowed users/actions to empty arrays;
+  2. keep EasyStore Production `EASYSTORE_ACCOUNTING_D1_WRITES=false` until the bounded canary execution window is explicitly opened;
+  3. keep GENERAL closed;
+  4. if the test template is created, it is already inactive; no financial reversal is required and no destructive delete is permitted;
+  5. repeat the same idempotency key must replay without duplicate business rows;
+  6. post-canary runtime verification must prove only the expected template/request/event deltas and zero deltas in every financial ledger family.
+- Data mutation: NO.
+- Production impact: NO.
+- Result: **PASS — FIRST CANARY FAMILY QUALIFIED, NOT ARMED**
+- Post-state:
+  ```ini
+  FIRST_CANARY_RECOMMENDED_ACTION=saveAccountingTemplate
+  FIRST_CANARY_SCOPE=ONE_USER_ONE_ACTION
+  FIRST_CANARY_TEST_OBJECT=INACTIVE_ZERO_VALUE_SYNTHETIC_TEMPLATE
+  CASH_LEDGER_TOUCH=NO
+  PARTY_LEDGER_TOUCH=NO
+  STOCK_TOUCH=NO
+  INVOICE_TOUCH=NO
+  PRODUCTION_WRITE_AUTHORITY=OFF
+  CANARY_ALLOWED_USERS=0
+  CANARY_ALLOWED_ACTIONS=0
+  ```
+- Next gate:
+  - prepare and qualify the fail-closed arm/disable workflow and post-write invariant checks without executing ARM;
+  - then request the owner's explicit choice of canary user/action before any Production financial write authority is opened.
