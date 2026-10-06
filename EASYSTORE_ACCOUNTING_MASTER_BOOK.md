@@ -3212,3 +3212,57 @@ This aligns with Autonomous Printshop Build Matrix module:
   - return Production EasyStore frontend write routing to default OFF/empty action list;
   - keep `EASYSTORE_ACCOUNTING_D1_READONLY=true`;
   - wait for Pages deployment and verify live frontend OFF + backend READONLY + exact D1 baseline unchanged.
+
+
+## Entry ACC-092 — A2.9 frontend returned to OFF and final live closure verified
+- Date: 2026-10-07
+- Goal: Close the temporary A2.9 frontend CANARY route after the successful third bounded Production canary.
+- Production frontend change:
+  - Repository: `fawakhry/EasyStore`
+  - Branch: `main`
+  - `config.js` commit: `c86015194b41cd8914a5ec2b4f0739c3659abe44`
+  - GitHub Pages Run: `37549123620` — **SUCCESS**
+  - `EASYSTORE_ACCOUNTING_D1_WRITE_MODE='OFF'`
+  - `EASYSTORE_ACCOUNTING_D1_WRITE_CANARY_ACTIONS=[]`
+  - `EASYSTORE_ACCOUNTING_D1_WRITES=false`
+  - `EASYSTORE_ACCOUNTING_D1_READONLY=true`
+- Independent live closure audit:
+  - Backend audit Run: `37549191341`
+  - Result: `A29_FRONTEND_OFF_CLOSURE=PASS`
+- Final live runtime:
+  ```ini
+  FRONTEND_MODE=OFF
+  FRONTEND_CANARY_ACTIONS=[]
+  D1_READONLY=true
+  LEGACY_D1_WRITES=false
+  BACKEND_MODE=READONLY
+  POLICY_EPOCH=10
+  SERVER_USERS_ACTIONS=0/0
+  COMMAND_BUDGET=0/0
+  GOOGLE_BUSINESS_CALLS=0
+  GENERAL_OPENED=NO
+  ```
+- Final persisted A2.9 baseline:
+  ```ini
+  materials=1
+  templates=1
+  requestLedger=3
+  events=3
+  all_other_tracked_accounting_tables=0
+  activeMaterials=0
+  activeTemplates=0
+  ```
+- Exact A2.9 request remains `A29-RECALC-muxaasiz-yihe2m4t`; its matching immutable event remains `material-cost-cascade/all/recalculate`; recalc result remains all zero.
+- Data mutation:
+  - Production frontend config: YES — authority reduced from frontend CANARY to OFF.
+  - Accounting business/D1 data: NO.
+- Production impact:
+  - temporary A2.9 frontend write route is fully closed;
+  - no canary artifacts were deleted;
+  - backend and server-side canary authority remain closed.
+- Result: **PASS — A2.9 THIRD CANARY COMPLETED, VERIFIED, AND FULLY CLOSED**.
+- Next gate:
+  - update central runtime checkpoint, schema safety baseline, and deploy safety baseline to three-canary truth:
+    `materials=1, templates=1, requestLedger=3, events=3`, all other protected accounting tables zero;
+  - then perform read-only/repo-only qualification for the next lowest-risk write family;
+  - do not execute a fourth Production canary before a new explicit owner decision gate.
