@@ -3102,3 +3102,13 @@ This aligns with Autonomous Printshop Build Matrix module:
 - Backend remains READONLY with server canary cleared; A2.9 backend guard is not yet deployed.
 - No business write occurred and GENERAL was not opened.
 - Result: **BLOCKED_SAFE checkpoint cleared by fresh owner approval to continue**.
+
+
+## Entry ACC-086 — A2.9 resume checkpoint after tool block
+- Date: 2026-10-07
+- Production `app.js` A2.9 code is live at EasyStore main `5922a87d19ac431a581bd504ff5a0c0d57d041fc`.
+- Production `config.js` remains `OFF` with no canary actions; `index.html` cache tag is still pre-A2.9.
+- Backend candidate remains `0f264bdb29c51126da70605d14308a7192bee677`; A2.9 guard not yet deployed.
+- Fresh runtime: accounting READONLY, authoritativeWrites=false, server canary users/actions=0/0, command budget=0, Google business calls=0.
+- Business write: NO. GENERAL: NO.
+- Result: **BLOCKED_SAFE RESOLVED FOR RESUME — AUTHORITY STILL CLOSED**.
