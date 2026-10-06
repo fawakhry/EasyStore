@@ -2836,3 +2836,13 @@ This aligns with Autonomous Printshop Build Matrix module:
 - Business write executed: NO. GENERAL opened: NO.
 - Result: **DEPLOYED — LIVE PROPAGATION NOT YET CLAIMED**.
 - Next: verify Pages propagation plus backend READONLY/server-empty state before any server ARM.
+
+
+## Entry ACC-064 — A2.8 live frontend armed; backend/server still closed
+- Date: 2026-10-06
+- Pages Run `37510348607`: **SUCCESS** for Production config commit `0c22fc83283e0eb2f95f6da2e5e0b2fb0502f69f`.
+- Fresh live fetch verified: write mode `CANARY`; allowed frontend action exactly `saveAccountingMaterial`; legacy D1 write flag=false; A2.8 material-only app code is live.
+- Fresh accounting health: mode `READONLY`, policy epoch 6, authoritativeWrites=false, Google business calls=0, server canary users/actions=0/0, maxCommands=0, commandsStarted=0.
+- Business write executed: NO. GENERAL opened: NO.
+- Result: **PASS — FRONTEND ARMED LOCALLY, SERVER AUTHORITY STILL FAIL-CLOSED**.
+- Next: start the already CI-qualified A2.8 execution workflow; its preflight must re-prove exact D1 baseline before server ARM.
