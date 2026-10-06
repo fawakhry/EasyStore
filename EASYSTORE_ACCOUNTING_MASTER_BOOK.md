@@ -2878,3 +2878,14 @@ This aligns with Autonomous Printshop Build Matrix module:
 - Business write: NO. GENERAL opened: NO.
 - Result: **BLOCKED_SAFE — BROWSER EXECUTION CHANNEL UNAVAILABLE DUE TO BALANCE**.
 - Next: either top up the browser wallet and resume assistant-driven dispatch, or owner performs the single GitHub `Run workflow` click manually; after dispatch the assistant resumes monitoring and execution.
+
+
+## Entry ACC-068 — Manual-dispatch workflow visibility root cause confirmed
+- Date: 2026-10-06
+- User opened the direct Actions URL and GitHub showed `This workflow does not exist`.
+- Repository default branch verified as `main` at `992b955eeb465558d03b93af16f8f504bd548fb5`.
+- A2.8 execution workflow exists only on `candidate/easystore-accounting-a2-20261005`; therefore GitHub does not expose the manual-dispatch workflow page from the default branch.
+- Browser screenshot also shows the user is currently signed out of GitHub (`Sign in` visible), but that is separate from the missing-workflow page issue.
+- No server ARM occurred. No accounting business write occurred. Backend remains READONLY.
+- Result: **BLOCKED_SAFE — WORKFLOW MUST EXIST ON DEFAULT BRANCH FOR MANUAL DISPATCH UI**.
+- Next: copy only the already-qualified manual A2.8 workflow file to `main` without merging the accounting candidate or changing runtime authority, then verify the Actions page exists.
