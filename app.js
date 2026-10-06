@@ -228,7 +228,13 @@
     const actionName=String(action||'');
     if(RETIRED_ACCOUNTING_ACTIONS.has(actionName)) throw new Error('تم إيقاف أداة الترحيل القديمة بعد بدء الحسابات من قاعدة نظيفة.');
     const useD1Read = window.EASYSTORE_ACCOUNTING_D1_READONLY === true && D1_ACCOUNTING_READ_ACTIONS.has(actionName);
-    const useD1Write = window.EASYSTORE_ACCOUNTING_D1_WRITES === true && D1_ACCOUNTING_WRITE_ACTIONS.has(actionName);
+    const writeActionRequested = D1_ACCOUNTING_WRITE_ACTIONS.has(actionName);
+    const configuredWriteMode = String(window.EASYSTORE_ACCOUNTING_D1_WRITE_MODE || (window.EASYSTORE_ACCOUNTING_D1_WRITES === true ? 'GENERAL' : 'OFF')).trim().toUpperCase();
+    const configuredCanaryActions = new Set((Array.isArray(window.EASYSTORE_ACCOUNTING_D1_WRITE_CANARY_ACTIONS) ? window.EASYSTORE_ACCOUNTING_D1_WRITE_CANARY_ACTIONS : []).map(String));
+    if(writeActionRequested && !['OFF','CANARY','GENERAL'].includes(configuredWriteMode)) throw new Error('وضع كتابة D1 للحسابات غير صالح؛ تم منع الحركة.');
+    if(writeActionRequested && configuredWriteMode === 'OFF') throw new Error('كتابة D1 للحسابات غير مفعلة.');
+    if(writeActionRequested && configuredWriteMode === 'CANARY' && !configuredCanaryActions.has(actionName)) throw new Error('هذه الحركة خارج نطاق كاناري الحسابات المسموح.');
+    const useD1Write = writeActionRequested && (configuredWriteMode === 'GENERAL' || (configuredWriteMode === 'CANARY' && configuredCanaryActions.has(actionName)));
     const useD1Accounting = useD1Read || useD1Write;
     const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),90000);
     try{
