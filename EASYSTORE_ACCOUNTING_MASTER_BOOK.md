@@ -2314,3 +2314,14 @@ This aligns with Autonomous Printshop Build Matrix module:
   - recommended user: exact canonical user `ضياء`;
   - test object: one unique inactive synthetic template with zero price/cost and no components;
   - no ARM, migration apply, Production source deploy, frontend canary enablement or financial write may occur until the owner explicitly chooses the user/action canary.
+
+
+## Entry ACC-033 — A2.7 migration 0029 preflight
+- Date: 2026-10-06
+- Approved canary scope remains: user `ضياء`, action `saveAccountingTemplate`, GENERAL forbidden.
+- Read-only preflight workflow: `.github/workflows/easystore-a27-migration-0029-preflight.yml`.
+- Source commit: `713f02959864757814f593f697ea4a8355cb8146`.
+- Run `37494986864`, Job `112377117228`: **SUCCESS**.
+- Evidence: `A27_PRE_RUNTIME=READONLY_DEFAULT_DENY`, `A27_PENDING_MIGRATION=0029_employee_accounting_canary_mode_v1.sql`, `PRODUCTION_MUTATION=NO`.
+- Result: **PASS**. Migration 0029 is the qualified next schema step; no write authority has been opened.
+- Next: apply 0029 with the existing controlled schema workflow and require READONLY/business-row invariance.
