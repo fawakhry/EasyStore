@@ -2531,3 +2531,19 @@ This aligns with Autonomous Printshop Build Matrix module:
 - GENERAL opened: NO.
 - Result: **DEPLOYED — FRONTEND ONE-ACTION CANARY ROUTING PUBLISHED; SERVER ARM NOT YET EXECUTED**.
 - Next: live audit must prove config propagation + backend READONLY + empty server allowlists before server ARM.
+
+
+## Entry ACC-045 — Live frontend CANARY verified while server authority remained closed
+- Date: 2026-10-06
+- Read-only audit workflow commit: `349ca32a559064a093669fd876d6c76b99c44701`.
+- Run `37498211230`, Job `112388109320`: **SUCCESS**.
+- Live evidence:
+  - `A27_LIVE_FRONTEND_MODE=CANARY`
+  - `A27_LIVE_FRONTEND_ACTION=saveAccountingTemplate`
+  - `A27_LIVE_SYNTHETIC_ZERO_VALUE_GUARD=PASS`
+  - `A27_BACKEND_MODE=READONLY`
+  - `A27_SERVER_ALLOWLISTS=EMPTY`
+  - `A27_SERVER_COMMAND_BUDGET=UNARMED`
+  - `PRODUCTION_BUSINESS_MUTATION=NO`
+- Result: **PASS — FRONTEND ARMED LOCALLY, SERVER STILL FAIL-CLOSED**.
+- Next: arm server-side CANARY only for canonical user `ضياء`, action `saveAccountingTemplate`, max_commands=1, zero-value, short TTL; GENERAL remains forbidden.
