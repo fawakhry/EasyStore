@@ -3166,3 +3166,49 @@ This aligns with Autonomous Printshop Build Matrix module:
 - EasyStore Production `main` current head `a6c9ddd74c98dbddb91bb1b4d0ddcb811a9eca37`; current config remains frontend CANARY for `recalcAccountingMaterialsCascade`, so frontend closure to OFF is still pending.
 - Backend candidate head `599f4f38009b0312a69a7edbe43deb6f4c934a0a`; A2.9 recalc guard is live.
 - Result: **PASS — THIRD BOUNDED PRODUCTION CANARY SUCCEEDED; SERVER CLOSED, FRONTEND OFF CLEANUP + POST-AUDIT STILL PENDING**.
+
+
+## Entry ACC-091 — A2.9 independent post-canary read-only verification PASS
+- Date: 2026-10-07
+- Goal: Independently verify the exact Production backend/D1 state after ACC-090 before any frontend cleanup.
+- Scope: Read-only Production audit only. No canary, no authority change, no business mutation.
+- Audit workflow:
+  - Backend branch: `candidate/easystore-accounting-a2-20261005`
+  - Workflow commit: `36ee3d773fd94d96be23c5d30a746dadb84ea484`
+  - Run: `37549030409`
+  - Persisted evidence file: `.github/a29-post-canary-audit-result.txt`
+- Runtime evidence:
+  ```ini
+  A29_POST_AUDIT=PASS
+  BACKEND_MODE=READONLY
+  POLICY_EPOCH=10
+  AUTHORITATIVE_WRITES=false
+  SERVER_USERS_ACTIONS=0/0
+  COMMAND_BUDGET=0/0
+  GOOGLE_BUSINESS_CALLS=0
+  FRONTEND_MODE=CANARY
+  GENERAL_OPENED=NO
+  ```
+- Exact D1 baseline:
+  ```ini
+  materials=1
+  templates=1
+  requestLedger=3
+  events=3
+  all_other_tracked_accounting_tables=0
+  activeMaterials=0
+  activeTemplates=0
+  ```
+- Exact A2.9 evidence:
+  - request key: `A29-RECALC-muxaasiz-yihe2m4t`
+  - request operation/status/actor: `material-cost-cascade / COMMITTED / ضياء`
+  - immutable event: `material-cost-cascade / all / recalculate`
+  - event actor: `ضياء`
+  - recalc result: `materialCount=0`, `templateCount=0`, `changedMaterials=0`, `changedTemplates=0`
+- Data mutation: NO.
+- Production impact: NO.
+- Result: **PASS — POST-A2.9 BACKEND/D1 TRUTH VERIFIED; ONLY FRONTEND CANARY CLEANUP REMAINS**.
+- Next gate:
+  - return Production EasyStore frontend write routing to default OFF/empty action list;
+  - keep `EASYSTORE_ACCOUNTING_D1_READONLY=true`;
+  - wait for Pages deployment and verify live frontend OFF + backend READONLY + exact D1 baseline unchanged.
