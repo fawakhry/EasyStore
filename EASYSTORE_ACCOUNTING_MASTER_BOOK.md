@@ -2560,3 +2560,16 @@ This aligns with Autonomous Printshop Build Matrix module:
 - Exact success evidence required before PASS: templates +1, requestLedger +1, events +1; all financial/stock/party/cash/purchase/custody/day-close tables remain 0; actor and request/audit linkage must match.
 - Production mutation in qualification: NO.
 - Result: **PASS — EXECUTION WINDOW READY, NOT YET STARTED**.
+
+
+## Entry ACC-047 — Owner-approved first CANARY execution window started
+- Date: 2026-10-06
+- Execution trigger commit: `47c0c42ee15dc1ec70c2d7715c1aed80b1a5dcee`.
+- Execution Run: `37498874051`, Job `112390399447`.
+- Preflight exact approved scope: **SUCCESS**.
+- Current workflow state at checkpoint: `Arm one command, wait for Diaa, then auto-disable` = **IN_PROGRESS**.
+- Approved scope remains exactly: canonical user `ضياء`, action `saveAccountingTemplate`, zero-value, max one new command, no GENERAL.
+- User-authenticated action required: Diaa must press the EasyStore Items `حفظ / تحديث الصنف` button once; no business form values are required because the live canary code generates the synthetic inactive zero-value template.
+- Workflow safety: automatic server disable to READONLY on success, error, or timeout; TTL is an additional fail-closed backstop.
+- Final PASS/FAIL and exact D1 deltas are not yet claimed in this entry.
+- Result: **IN_PROGRESS — WAITING FOR AUTHENTICATED DIAA CLICK**.
