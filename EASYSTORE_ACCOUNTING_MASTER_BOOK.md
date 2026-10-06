@@ -2760,3 +2760,23 @@ This aligns with Autonomous Printshop Build Matrix module:
 - Schema Apply was not executed; Production mutation=NO.
 - Result: **PASS — SCHEMA APPLY IS MANUAL-ONLY AND POST-CANARY-BASELINE AWARE**.
 - Next: qualify a completely isolated frontend and execution path for the proposed second low-risk family `saveAccountingMaterial`; keep Production frontend OFF and backend READONLY.
+
+
+## Entry ACC-059 — Second low-risk family fully qualified repo-only; not armed
+- Date: 2026-10-06
+- Proposed second Canary family: `saveAccountingMaterial` only, canonical user `ضياء` only.
+- Isolated frontend branch: `candidate/easystore-a28-material-canary-prodpatch-20261006`, HEAD `4da5ddf8106fdfa600e621b12805a0ecc62370c9`.
+- Frontend CI Run `37508505262`, Job `112423216299`: **SUCCESS**.
+- Frontend evidence:
+  - `A28_MATERIAL_CANARY_FRONTEND=PASS`;
+  - D1 write action exactly `saveAccountingMaterial`;
+  - all other accounting writes fail closed during CANARY;
+  - synthetic Material is inactive, zero stock, zero value, no components;
+  - Production mutation=NO.
+- Manual-only execution workflow prepared in backend branch; workflow commit `c4735357ad2b4342531bfea2e00c42bb555e3475`, invariant test `9f29051c3e6f54f0e3c8f9f306d0f491015c4371`, CI commit `486dff61283a5558bc031b4de0302c20b3f20348`.
+- Execution CI Run `37508729647`, Job `112423992697`: **SUCCESS**.
+- Execution contract locked: one user / one action / one command / zero-value, preserve first-canary evidence, auto-disable on success/error/timeout, no GENERAL transition.
+- Production EasyStore `main` remains `235374e0d36244cb52ce8b0731715565d444fea4` with write mode OFF; this isolated candidate was not deployed.
+- Production mutation in this qualification: NO.
+- Result: **PASS — A2.8 MATERIAL CANARY READY FOR FINAL LIVE READ-ONLY RECHECK; NOT ARMED / NOT DEPLOYED**.
+- Next: refresh Production runtime truth after the connection interruption; only if still closed may the owner be asked for a fresh explicit decision to deploy/arm this second family.
