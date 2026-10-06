@@ -2993,3 +2993,12 @@ This aligns with Autonomous Printshop Build Matrix module:
 - Production mutation: NO.
 - Result: **PASS — SCHEMA SAFETY WORKFLOW MATCHES POST-A2.8 TRUTH**.
 - Next: remove the temporary one-shot dispatcher marker from TrendOs main; keep the dispatcher itself manual-only.
+
+
+## Entry ACC-079 — One-shot dispatcher cleanup completed
+- Date: 2026-10-07
+- Temporary TrendOs `main` marker `.github/a28-one-shot-trigger` deleted at commit `1713e9580dc66ca2739b60ee95c96f882ba8c67a`.
+- Default-branch A2.8 dispatcher remains `workflow_dispatch` / manual-only and contains control-plane dispatch logic only; no accounting/D1 mutation logic.
+- No Production runtime or business data mutation occurred in this cleanup.
+- Result: **PASS — TEMPORARY AUTO-TRIGGER REMOVED; MANUAL-ONLY DISPATCH RESTORED**.
+- Current completed milestone: A2.8 second bounded Production write canary is verified and fully closed; central runtime and schema safety baselines match two-canary truth.
