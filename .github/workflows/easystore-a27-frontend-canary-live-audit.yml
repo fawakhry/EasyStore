@@ -1,0 +1,49 @@
+name: EasyStore A2.7 Frontend Canary Live Audit
+
+on:
+  push:
+    branches:
+      - candidate/easystore-zero-google-audit-20261004
+    paths:
+      - '.github/workflows/easystore-a27-frontend-canary-live-audit.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      DATABASE: trendos-main
+      API_CONFIG: /tmp/no-use
+    steps:
+      - uses: actions/checkout@v4
+      - name: Audit live frontend armed while server remains closed
+        shell: bash
+        run: |
+          set -euo pipefail
+          BASE="https://fawakhry.github.io/EasyStore"
+          API="https://trendos-d1-api.trendmall-contact.workers.dev"
+          curl --fail --silent --show-error --location "$BASE/config.js?a27live=$GITHUB_RUN_ID" > /tmp/config.js
+          curl --fail --silent --show-error --location "$BASE/app.js?a27live=$GITHUB_RUN_ID" > /tmp/app.js
+          curl --fail --silent --show-error "$API/v1/employee/accounting/health?a27live=$GITHUB_RUN_ID" > /tmp/health.json
+          node <<'NODE'
+          const fs=require('fs');
+          const config=fs.readFileSync('/tmp/config.js','utf8');
+          const app=fs.readFileSync('/tmp/app.js','utf8');
+          const h=JSON.parse(fs.readFileSync('/tmp/health.json','utf8'));
+          if(!/EASYSTORE_ACCOUNTING_D1_WRITE_MODE\s*=\s*'CANARY'/.test(config)) throw new Error('frontend CANARY mode not live');
+          if(!/EASYSTORE_ACCOUNTING_D1_WRITE_CANARY_ACTIONS\s*=\s*\['saveAccountingTemplate'\]/.test(config)) throw new Error('frontend canary action mismatch');
+          if(!app.includes("const D1_ACCOUNTING_WRITE_ACTIONS = new Set(['saveAccountingTemplate'])")) throw new Error('live app write scope mismatch');
+          if(!app.includes("active:'لا'")||!app.includes('salePrice:0')||!app.includes('fixedCost:0')) throw new Error('synthetic zero inactive payload guard missing');
+          if(h.mode!=='READONLY'||h.authoritativeWrites!==false) throw new Error('backend authority opened before server arm');
+          if(Number(h.writeCanaryAllowedUserCount||0)!==0||Number(h.writeCanaryAllowedActionCount||0)!==0) throw new Error('server allowlists not empty');
+          console.log('A27_FRONTEND_CANARY_LIVE=PASS');
+          console.log('A27_FRONTEND_ACTION=saveAccountingTemplate');
+          console.log('A27_BACKEND_AUTHORITY=READONLY');
+          console.log('A27_SERVER_CANARY=UNARMED');
+          console.log('PRODUCTION_BUSINESS_MUTATION=NO');
+          NODE
