@@ -2547,3 +2547,16 @@ This aligns with Autonomous Printshop Build Matrix module:
   - `PRODUCTION_BUSINESS_MUTATION=NO`
 - Result: **PASS — FRONTEND ARMED LOCALLY, SERVER STILL FAIL-CLOSED**.
 - Next: arm server-side CANARY only for canonical user `ضياء`, action `saveAccountingTemplate`, max_commands=1, zero-value, short TTL; GENERAL remains forbidden.
+
+
+## Entry ACC-046 — Auto-closing approved first-canary execution path qualified
+- Date: 2026-10-06
+- Execution workflow source: `.github/workflows/easystore-a27-approved-first-canary-execution.yml`, commit `976b390e496bc14c74cbe3a96c94d4073e09409b`.
+- Static invariant test: `db221c7b6fff2bb9a170afe5a3b0b62454bd6f77`.
+- CI commit: `e03f78de2f6dfffa58fe707268cc85f551c4c513`.
+- CI Run `37498728119`: **SUCCESS**.
+- Locked execution contract: canonical user `ضياء`, action `saveAccountingTemplate`, zero-value, max_commands=1, synthetic inactive template only, no GENERAL transition.
+- Workflow auto-disables server authority back to READONLY on success, error, or timeout; TTL remains an independent fail-closed backstop.
+- Exact success evidence required before PASS: templates +1, requestLedger +1, events +1; all financial/stock/party/cash/purchase/custody/day-close tables remain 0; actor and request/audit linkage must match.
+- Production mutation in qualification: NO.
+- Result: **PASS — EXECUTION WINDOW READY, NOT YET STARTED**.
