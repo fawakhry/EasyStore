@@ -2867,3 +2867,14 @@ This aligns with Autonomous Printshop Build Matrix module:
 - No server ARM occurred. Backend remains READONLY; frontend remains bounded to `saveAccountingMaterial`; server canary remains cleared.
 - Result: **BLOCKED_SAFE — EXECUTION CHANNEL REQUIRED, NO BUSINESS WRITE**.
 - Next: use an authenticated GitHub browser session to press Run workflow, preserving the manual-only workflow design; do not weaken the workflow trigger as a workaround.
+
+
+## Entry ACC-067 — Browser dispatch path blocked by exhausted TinyFish balance
+- Date: 2026-10-06
+- Attempted to open an authenticated GitHub browser profile only to press the existing manual-only A2.8 workflow dispatch.
+- Browser automation could not proceed because the TinyFish wallet balance is exhausted.
+- No GitHub workflow dispatch occurred through the browser path.
+- No server ARM occurred. Backend remains READONLY; frontend remains bounded to `saveAccountingMaterial`; server canary remains cleared.
+- Business write: NO. GENERAL opened: NO.
+- Result: **BLOCKED_SAFE — BROWSER EXECUTION CHANNEL UNAVAILABLE DUE TO BALANCE**.
+- Next: either top up the browser wallet and resume assistant-driven dispatch, or owner performs the single GitHub `Run workflow` click manually; after dispatch the assistant resumes monitoring and execution.
