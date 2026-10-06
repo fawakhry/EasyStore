@@ -3123,3 +3123,13 @@ This aligns with Autonomous Printshop Build Matrix module:
 - Postflight: `A29_DEPLOY_POST=READONLY`, row counts invariant, `A29_DEPLOY_RECALC_GUARD_LIVE=YES`, `PRODUCTION_BUSINESS_MUTATION=NO`.
 - GENERAL opened: NO.
 - Result: **PASS — A2.9 SERVER GUARD LIVE, AUTHORITY STILL READONLY**.
+
+
+## Entry ACC-088 — A2.9 frontend recalc CANARY live; server still closed
+- Date: 2026-10-07
+- EasyStore Production app A2.9 code is live; cache shell commit `e5ebc998c0219d931cf43e2e0531b9a455758c39`; frontend config commit `71c45b69154c0c00011301b1696fe5e6a1be3612`.
+- Pages Run `37543753900`: **SUCCESS**.
+- Fresh live config: write mode `CANARY`; action list exactly `[recalcAccountingMaterialsCascade]`; legacy D1 write flag=false; cache tag `a29-recalc-canary-20261007`.
+- Fresh backend health: READONLY, authoritativeWrites=false, server canary users/actions=0/0, command budget cleared, Google business calls=0.
+- Business write: NO. GENERAL: NO.
+- Result: **PASS — FRONTEND ARMED LOCALLY, SERVER AUTHORITY STILL CLOSED**.
