@@ -2803,3 +2803,14 @@ This aligns with Autonomous Printshop Build Matrix module:
 - A2.8 `saveAccountingMaterial` frontend candidate and manual auto-closing execution workflow are both CI-qualified but remain undeployed/unarmed.
 - Result: **PASS — SECOND CANARY DECISION GATE REACHED WITH PRODUCTION FULLY CLOSED**.
 - Owner decision required before any second-family Production deployment/arming.
+
+
+## Entry ACC-061 — Owner approved second bounded Production canary
+- Date: 2026-10-06
+- Owner explicitly approved the second canary family after ACC-060.
+- Approved scope: canonical user `ضياء` + action `saveAccountingMaterial` only.
+- Required payload remains synthetic inactive zero-value Material: department `عام`, materialKind `A2_CANARY`, zero stock/min-stock/cost/sale/dimensions, no components.
+- Server contract remains one user / one action / one new command / zero-value / short TTL / automatic disable; GENERAL remains forbidden.
+- Current Production baseline at approval remains ACC-060: frontend write mode OFF, backend READONLY, server canary cleared, approved first-canary evidence only.
+- No Production mutation in this entry.
+- Next: publish isolated A2.8 app/index code first while Production config stays OFF, verify live propagation, then publish config CANARY for `saveAccountingMaterial` while backend stays READONLY.
