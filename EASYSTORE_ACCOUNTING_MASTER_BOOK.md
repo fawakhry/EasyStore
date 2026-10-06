@@ -2899,3 +2899,13 @@ This aligns with Autonomous Printshop Build Matrix module:
 - Business write: NO. GENERAL opened: NO.
 - Result: **PASS / SAFE NO-OP**.
 - Next: upgrade the main placeholder into a control-plane dispatcher that only launches the same workflow on `candidate/easystore-accounting-a2-20261005`; keep all accounting execution logic exclusively on the qualified candidate branch.
+
+
+## Entry ACC-071 — Safe main dispatcher installed; one-shot trigger prepared
+- Date: 2026-10-07
+- TrendOs `main` dispatcher commit: `f566b57db79feecfaeb25d9050919d37a3272c95`.
+- Dispatcher contains no accounting or D1 mutation logic; it only requests GitHub Actions to run the same workflow file on `candidate/easystore-accounting-a2-20261005`.
+- Owner already approved A2.8 execution and requested assistant-driven execution.
+- Because the connector has no direct workflow-dispatch method, next step is a one-shot push trigger on a dedicated marker file; after candidate run starts, main dispatcher will be returned to manual-only.
+- Server ARM: NO. Business write: NO. Backend remains READONLY.
+- Result: **PASS — CONTROL-PLANE DISPATCHER READY**.
