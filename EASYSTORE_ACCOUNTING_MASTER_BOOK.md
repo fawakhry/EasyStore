@@ -2637,3 +2637,17 @@ This aligns with Autonomous Printshop Build Matrix module:
 - `GENERAL_OPENED=NO`.
 - Result: **PASS — FIRST BOUNDED PRODUCTION ACCOUNTING WRITE CANARY SUCCEEDED AND AUTO-CLOSED**.
 - Next: disable the Production frontend CANARY routing back to `OFF` / empty action list, verify propagation, and keep the successful inactive test template as immutable canary evidence (no delete).
+
+
+## Entry ACC-052 — Frontend CANARY routing disabled after successful test
+- Date: 2026-10-06
+- Production `main/config.js` commit: `235374e0d36244cb52ce8b0731715565d444fea4`.
+- Cleanup change only:
+  - `EASYSTORE_ACCOUNTING_D1_WRITE_MODE='OFF'`;
+  - `EASYSTORE_ACCOUNTING_D1_WRITE_CANARY_ACTIONS=[]`;
+  - legacy compatibility D1 write flag remains false;
+  - D1 READONLY reads remain enabled.
+- GitHub Pages Run `37506376408`: build/report/deploy all **SUCCESS**.
+- This is a rollback/disable of the temporary frontend canary route; it does not delete or reverse the successful inactive zero-value test template.
+- Result: **DEPLOYED — FRONTEND WRITE ROUTING RETURNED TO DEFAULT OFF**.
+- Next: live propagation audit must prove frontend OFF + backend READONLY/server canary cleared + exact post-canary D1 evidence unchanged.
