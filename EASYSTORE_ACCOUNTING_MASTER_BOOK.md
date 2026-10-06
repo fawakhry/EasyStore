@@ -3092,3 +3092,13 @@ This aligns with Autonomous Printshop Build Matrix module:
 - Date: 2026-10-07
 - Owner approved proceeding from ACC-084 to the already qualified next gate.
 - No runtime mutation has occurred yet.
+
+
+## Entry ACC-086 — A2.9 safe partial publish checkpoint
+- Date: 2026-10-07
+- Production `app.js` A2.9 recalc-only code is live at commit `5922a87d19ac431a581bd504ff5a0c0d57d041fc`.
+- Production `config.js` remains write mode OFF with empty canary actions.
+- Production `index.html` still carries the A2.8 cache tag.
+- Backend remains READONLY with server canary cleared; A2.9 backend guard is not yet deployed.
+- No business write occurred and GENERAL was not opened.
+- Result: **BLOCKED_SAFE checkpoint cleared by fresh owner approval to continue**.
