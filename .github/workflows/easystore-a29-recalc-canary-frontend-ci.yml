@@ -1,0 +1,23 @@
+name: EasyStore A2.9 Recalc Canary Frontend CI
+on:
+  push:
+    branches:
+      - candidate/easystore-a29-recalc-canary-prodpatch-20261007
+    paths:
+      - 'app.js'
+      - 'config.js'
+      - 'index.html'
+      - 'tests/easystore_a29_recalc_canary_frontend.test.mjs'
+      - '.github/workflows/easystore-a29-recalc-canary-frontend-ci.yml'
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: node --check app.js
+      - run: node tests/easystore_a29_recalc_canary_frontend.test.mjs
