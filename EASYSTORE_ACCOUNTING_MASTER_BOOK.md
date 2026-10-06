@@ -3133,3 +3133,13 @@ This aligns with Autonomous Printshop Build Matrix module:
 - Fresh backend health: READONLY, authoritativeWrites=false, server canary users/actions=0/0, command budget cleared, Google business calls=0.
 - Business write: NO. GENERAL: NO.
 - Result: **PASS — FRONTEND ARMED LOCALLY, SERVER AUTHORITY STILL CLOSED**.
+
+
+## Entry ACC-088 — A2.9 frontend live and server still fail-closed
+- Date: 2026-10-07
+- Production EasyStore `main`: app/index/config now carry A2.9 recalc-canary code and cache tag; config allows only `recalcAccountingMaterialsCascade` in frontend CANARY mode.
+- Pages deployment for config commit `71c45b69154c0c00011301b1696fe5e6a1be3612`: **SUCCESS**.
+- Fresh live backend health: mode READONLY, policy epoch 8, authoritativeWrites=false, server canary users/actions=0/0, maxCommands=0, commandsStarted=0.
+- A2.9 server recalc guard is live from ACC-087.
+- Business write: NO. GENERAL opened: NO.
+- Result: **PASS — FRONTEND ARMED LOCALLY, SERVER AUTHORITY STILL CLOSED**.
