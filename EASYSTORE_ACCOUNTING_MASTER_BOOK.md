@@ -2968,3 +2968,16 @@ This aligns with Autonomous Printshop Build Matrix module:
 - GENERAL opened: NO.
 - Result: **PASS — A2.8 MATERIAL CANARY COMPLETED, VERIFIED, AND FULLY CLOSED**.
 - Next: update central runtime/schema safety baselines to the two-canary truth before qualifying any further write family.
+
+
+## Entry ACC-077 — Central runtime checkpoint updated to two-canary truth
+- Date: 2026-10-07
+- Runtime checkpoint source commit: `fd9355d8583102a5703b41f2ff63d94c548cf004`.
+- Run `37540475119`, Job `112531973297`: **SUCCESS**.
+- Current Production truth: API version `24202d32-cd6f-41bb-9ce3-0565877ef8be`; Accounting READONLY; policy epoch 8; schemaReady=true; authoritativeWrites=false; Google business calls=0.
+- Server canary users/actions=0/0; command budget cleared.
+- Live EasyStore: write flag=false, write mode=OFF, canary actions=[].
+- Current approved evidence counts: materials=1, templates=1, requestLedger=2, events=2, every other tracked accounting table=0; total tracked rows=6.
+- `ACCOUNTING_CHECKPOINT_APPROVED_CANARY_EVIDENCE=PASS`; `ACCOUNTING_RUNTIME_CHECKPOINT=PASS`; `PRODUCTION_MUTATION=NO`.
+- Result: **PASS — CENTRAL RUNTIME CHECKPOINT MATCHES POST-A2.8 TRUTH**.
+- Next: update manual schema-safety baseline to these immutable canary evidence counts; do not run schema apply.
