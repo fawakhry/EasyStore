@@ -3028,3 +3028,18 @@ This aligns with Autonomous Printshop Build Matrix module:
 - Production mutation: NO.
 - Result: **PASS — A2.9 SERVER-SIDE FAIL-CLOSED GUARD QUALIFIED, NOT DEPLOYED**.
 - Next: build an isolated EasyStore frontend candidate routing only `recalcAccountingMaterialsCascade`, with request id and explicit success/failure handling; keep Production frontend OFF.
+
+
+## Entry ACC-082 — A2.9 recalc frontend candidate CI-qualified repo-only
+- Date: 2026-10-07
+- Isolated frontend branch: `candidate/easystore-a29-recalc-canary-prodpatch-20261007`.
+- App isolation commit: `37d1de5e237d8fdb74be388000365f2c8078841c`.
+- Candidate config commit: `18e63bb51f3a2c70e71308f13ecbac1dbd3fbea7`; cache/index commit: `18c5949fc21360a07226867b51d7be6d85b68e35`.
+- Frontend test commit: `a9a5dc33599376ca0533d9bdede15763c64bfb7b`; CI commit: `cb0be88c9ce21826a94b3c424443607f8c5b547b`.
+- CI Run `37541406324`, Job `112535029913`: **SUCCESS** including `node --check app.js`.
+- Candidate routes D1 write exactly `recalcAccountingMaterialsCascade`; all other accounting writes fail closed during CANARY.
+- Canary button uses a fresh `A29-RECALC-*` requestId and requires returned material/template/changed counts all equal zero before reporting success.
+- Production EasyStore `main` remains write mode OFF and was not modified by this qualification.
+- Production mutation: NO.
+- Result: **PASS — A2.9 FRONTEND CANDIDATE QUALIFIED, NOT DEPLOYED**.
+- Next: qualify a manual-only auto-closing execution workflow preserving the two-canary baseline; do not arm or deploy without owner decision.
