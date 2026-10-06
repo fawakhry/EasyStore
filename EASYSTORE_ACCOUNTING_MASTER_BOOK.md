@@ -2744,3 +2744,19 @@ This aligns with Autonomous Printshop Build Matrix module:
 - The prior ACC-056 failure is fully explained as a Wrangler output-contract mistake; there is no pending migration.
 - Result: **PASS — SCHEMA QUEUE EMPTY / 0030 LIVE**.
 - Next: update schema-apply workflow repo-only to the post-first-canary evidence baseline and make it explicit manual-dispatch only; do not execute schema apply.
+
+
+## Entry ACC-058 — Schema safety workflow modernized and CI-qualified
+- Date: 2026-10-06
+- Schema Apply workflow update commit: `8be11fec7191eb207fba2ca6a9081f049bc3046c`.
+- Safety changes:
+  - trigger changed to explicit `workflow_dispatch` only;
+  - no push-triggered schema application remains;
+  - pre/post accounting baseline now recognizes only the approved first-canary evidence instead of requiring zero accounting rows;
+  - historical unconditional `PRODUCTION_SCHEMA_MUTATION=YES` marker removed.
+- Static guard test commit: `86e8eed3a6486a1f729d861e90ae8fef4c21a40e`.
+- Guard CI commit: `61075afeb4e0bb369ad3de23f03a38664e9365e6`.
+- CI Run `37508002464`: **SUCCESS**.
+- Schema Apply was not executed; Production mutation=NO.
+- Result: **PASS — SCHEMA APPLY IS MANUAL-ONLY AND POST-CANARY-BASELINE AWARE**.
+- Next: qualify a completely isolated frontend and execution path for the proposed second low-risk family `saveAccountingMaterial`; keep Production frontend OFF and backend READONLY.
