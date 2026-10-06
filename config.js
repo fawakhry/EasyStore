@@ -4,12 +4,15 @@ window.TREND_API_URL = "https://script.google.com/macros/s/AKfycbwGHOduL0BHvH-o4
 window.MATBAGY_SECURE_API_PROXY_URL = "";
 
 window.EASYSTORE_ACCOUNTING_D1_READONLY = true;
+window.EASYSTORE_ACCOUNTING_D1_WRITES = false;
+window.EASYSTORE_ACCOUNTING_D1_WRITE_MODE = 'CANARY';
+window.EASYSTORE_ACCOUNTING_D1_WRITE_CANARY_ACTIONS = ['saveAccountingTemplate'];
 window.EASYSTORE_ACCOUNTING_D1_URL = "https://trendos-d1-api.trendmall-contact.workers.dev/v1/employee/accounting";
 window.EASYSTORE_TRENDOS_SSO_HANDOFF_V1 = true;
 
 window.EASYSTORE_VERSION = 'ES47 V1922 Unified Safe Build';
 window.EASYSTORE_SESSION_CATALOG_FIX = window.EASYSTORE_VERSION;
-window.EASYSTORE_CACHE_TAG = 'entry619-d1-readonly-sso2-20261004';
+window.EASYSTORE_CACHE_TAG = 'a27-first-canary-20261006';
 window.EASYSTORE_AUTO_REFRESH = 'safe-3-minutes-when-clean';
 window.EASYSTORE_INITIAL_LOAD_ONCE = true;
 window.EASYSTORE_DISABLE_PHONE_ACTIVATION = true;
