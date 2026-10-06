@@ -2622,3 +2622,18 @@ This aligns with Autonomous Printshop Build Matrix module:
 - Production mutation in this diagnostic: NO.
 - Result: **PASS — CANARY EVIDENCE RECONCILED; SERVER REMAINS READONLY/CLEARED**.
 - Next: correct and rerun the independent post-success audit using the actual request/event linkage contract, then disable frontend CANARY routing back to OFF.
+
+
+## Entry ACC-051 — First Production write canary independently verified PASS
+- Date: 2026-10-06
+- Corrected post-success audit commit: `4c9d5634450fe7e0f09e351fe8bf2e47e621e82e`.
+- Audit Run `37506254211`, Job `112415557005`: **SUCCESS**.
+- Exact verified state:
+  - template `TPL-69C7D9A49828` exists once, inactive, zero fixed/computed/sale value, actor `ضياء`;
+  - request `A27-TPL-muwyw80u-1fuz9v20` exists once, `template-upsert`, actor `ضياء`, status `COMMITTED`, request entity_id blank per current command contract;
+  - one immutable template create event links the request key to template `TPL-69C7D9A49828`;
+  - counts: templates=1, requestLedger=1, events=1; every other tracked accounting business/financial table=0.
+- Runtime after canary: `READONLY`, server canary users/actions=0, command budget cleared.
+- `GENERAL_OPENED=NO`.
+- Result: **PASS — FIRST BOUNDED PRODUCTION ACCOUNTING WRITE CANARY SUCCEEDED AND AUTO-CLOSED**.
+- Next: disable the Production frontend CANARY routing back to `OFF` / empty action list, verify propagation, and keep the successful inactive test template as immutable canary evidence (no delete).
