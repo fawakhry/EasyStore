@@ -2422,3 +2422,23 @@ This aligns with Autonomous Printshop Build Matrix module:
 - Production business-data mutation: NO. Frontend write flag changed: NO.
 - Result: **PASS — one-command budget enforcement is live while authority remains closed**.
 - Next: qualify a minimal Production frontend patch for only `saveAccountingTemplate`, without merging the accounting candidate branch.
+
+
+## Entry ACC-041 — Minimal first-canary frontend patch qualified in isolated branch
+- Date: 2026-10-06
+- Isolated branch created from Production `main` head `41c522d0d63b1897394bedfe836b975d5119bca2`: `candidate/easystore-a27-first-canary-prodpatch-20261006`.
+- Scope is intentionally not a merge of the 87-commit accounting candidate.
+- Production-target patch behavior:
+  - D1 write action set contains exactly `saveAccountingTemplate`;
+  - frontend mode supports only LEGACY or bounded CANARY for this patch; GENERAL is rejected/not configured;
+  - CANARY requires exactly one listed action;
+  - save button under CANARY ignores business form values and generates a unique `A2-CANARY-TEMPLATE-*` payload;
+  - synthetic template is `active=لا`, salePrice=0, fixedCost=0, computedUnitCost=0;
+  - requestId is generated for deterministic idempotency;
+  - visible banner tells the admin this is the A2.7 canary test;
+  - cache tag is bumped to `a27-first-canary-20261006` so `config.js` and `app.js` cannot be mixed with stale cached code.
+- Key source commits: app `79df2b79244e3f63106bce81f32bedff33fdda64`, config `a62cf812fccd8bb3ef00af2eb42c366576f71b73`, cache alignment `69db9fb0de8671ea228da27ca9c2194f30f125ce` / `4e347b690c5467891592d9240df55921c6263641`.
+- CI Run `37497303293`, Job `112385024737`: **SUCCESS**.
+- Production mutation so far: NO.
+- Result: **PASS — MINIMAL FRONTEND PATCH QUALIFIED**.
+- Deployment order for safety: copy app.js + cache-bumped index.html to Production first while config remains legacy/unarmed; verify; only then flip Production config to one-action CANARY while backend is still READONLY.
