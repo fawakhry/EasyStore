@@ -210,23 +210,26 @@
   }
 
   const D1_ACCOUNTING_READ_ACTIONS = new Set(['getAccounting','getDeptInvoiceDraftV1887','getPartyAccountV1858']);
-  const D1_ACCOUNTING_WRITE_ACTIONS = new Set(['saveAccountingTemplate']);
+  const A28_ACCOUNTING_WRITE_ACTIONS_FAIL_CLOSED = new Set(["saveAccountingMaterial","saveAccountingTemplate","archiveAccountingTemplate","recalcAccountingMaterialsCascade","saveAccountingDeptLine","approveAccountingDeptInvoice","saveAccountingFinalInvoice","saveCustomerAccountMovementV1915","saveEasyStoreSupplier","saveEasyStorePurchaseV2","saveEasyStoreSaleV2","saveDeptDailyPurchaseV1917","approveDeptDailyPurchasesV1917","rejectDeptDailyPurchaseV1917","reverseApprovedPurchaseV1920","savePurchaseCustodyV1920","closePurchaseCustodyV1920","saveAccountingWaste","closeDepartmentDayV1920","runAccountingDayAutomationV1921","reopenAccountingFinalInvoice","classifyLegacyAccountingRowV1920","applySuggestedLegacyClassificationsV1921","reconcileLegacyCustomerDebtsV1914"]);
+  const D1_ACCOUNTING_WRITE_ACTIONS = new Set(['saveAccountingMaterial']);
 
-  function a27TemplateCanaryEnabled(){
+  function a28MaterialCanaryEnabled(){
     const mode=String(window.EASYSTORE_ACCOUNTING_D1_WRITE_MODE||'LEGACY').trim().toUpperCase();
     const actions=Array.isArray(window.EASYSTORE_ACCOUNTING_D1_WRITE_CANARY_ACTIONS)?window.EASYSTORE_ACCOUNTING_D1_WRITE_CANARY_ACTIONS.map(String):[];
-    return mode==='CANARY' && actions.length===1 && actions[0]==='saveAccountingTemplate';
+    return mode==='CANARY' && actions.length===1 && actions[0]==='saveAccountingMaterial';
   }
   function newAccountingRequestId(prefix){return String(prefix||'REQ')+'-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,10);}
 
   async function api(action, data){
     const actionName=String(action||'');
     const useD1Read = window.EASYSTORE_ACCOUNTING_D1_READONLY === true && D1_ACCOUNTING_READ_ACTIONS.has(actionName);
+    const accountingWriteRequested = A28_ACCOUNTING_WRITE_ACTIONS_FAIL_CLOSED.has(actionName);
     const writeActionRequested = D1_ACCOUNTING_WRITE_ACTIONS.has(actionName);
     const writeMode=String(window.EASYSTORE_ACCOUNTING_D1_WRITE_MODE||'LEGACY').trim().toUpperCase();
-    if(writeActionRequested && !['LEGACY','CANARY'].includes(writeMode)) throw new Error('وضع كتابة الحسابات غير مسموح في أول كاناري.');
-    if(writeActionRequested && writeMode==='CANARY' && !a27TemplateCanaryEnabled()) throw new Error('نطاق كاناري الحسابات غير مطابق؛ تم منع الحركة.');
-    const useD1Write = writeActionRequested && writeMode==='CANARY' && a27TemplateCanaryEnabled();
+    if(accountingWriteRequested && !['LEGACY','CANARY'].includes(writeMode)) throw new Error('وضع كتابة الحسابات غير مسموح في كاناري الخامة.');
+    if(accountingWriteRequested && writeMode==='CANARY' && !writeActionRequested) throw new Error('هذه الحركة خارج عائلة كاناري الخامة؛ تم منعها محليًا.');
+    if(writeActionRequested && writeMode==='CANARY' && !a28MaterialCanaryEnabled()) throw new Error('نطاق كاناري الخامة غير مطابق؛ تم منع الحركة.');
+    const useD1Write = writeActionRequested && writeMode==='CANARY' && a28MaterialCanaryEnabled();
     const useD1Accounting = useD1Read || useD1Write;
     const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),90000);
     try{
@@ -518,7 +521,7 @@
 
   function screenItems(){
     const selected=accountingScopeDepartment();
-    const canaryBanner=a27TemplateCanaryEnabled()?'<div class="msg"><b>A2.7 CANARY:</b> زر الحفظ ينشئ Template اختبار واحد فقط، غير نشط وبقيمة صفر. لا تستخدم البيانات الموجودة في الحقول كبيانات حقيقية أثناء الاختبار.</div>':'';
+    const canaryBanner='';
     return `${canaryBanner}<div class="card"><h2>${esc(accountingScopeTitle('الأصناف'))}</h2><div class="grid six"><div class="field"><label>القسم</label><select id="itDept"><option ${selected==='طباعة'?'selected':''}>طباعة</option><option ${selected==='ليزر'?'selected':''}>ليزر</option><option>مشترك</option><option>عام</option></select></div><div class="field"><label>اسم الصنف</label><input id="itName"></div><div class="field"><label>نوع</label><select id="itType"><option>صنف بيع</option><option>خامة</option><option>صنف مركب</option></select></div><div class="field"><label>مقاس</label><input id="itSize"></div><div class="field"><label>سعر البيع</label><input id="itSale" type="number"></div><div class="field"><label>تكلفة ثابتة</label><input id="itCost" type="number"></div></div><div class="actions"><button class="btn" onclick="ES27.saveItem()">حفظ / تحديث الصنف</button><button class="btn secondary" onclick="ES27.clearItemForm()">جديد</button></div></div>${itemsTable()}`;
   }
   function itemsTable(){ const all=productTemplates(); const rows=all.map((row,index)=>({row,index})).filter(x=>accountingScopeMatchesDepartment(matDept(x.row),true)); return table(rows,['الصنف','القسم','التكلفة','البيع','مجمل الربح','نسبة الربح','الحالة','إجراء'],x=>{ const r=x.row, cost=matCost(r), sale=matSale(r), g=gp(cost,sale); return [esc(templateName(r)),esc(matDept(r)),isAdmin()?money(cost):'<span class="costHidden">مخفي</span>',money(sale),isAdmin()?money(g.profit):'<span class="costHidden">مخفي</span>',isAdmin()?g.margin.toFixed(1)+'%':'-',activeRow(r)?'مفعل':'موقوف',`<span class="tableActions"><button class="btn small secondary" onclick="ES27.editItem(${x.index})">تعديل</button><button class="btn small warn" onclick="ES27.archiveItem(${x.index})">إيقاف</button></span>`]; }); }
@@ -928,7 +931,8 @@
 
   function screenKitchen(){
     if(!isAdmin()) return '<div class="card"><h2>مطبخ الحسابات</h2><div class="warn">هذا القسم يظهر لضياء فقط.</div></div>';
-    return `<div class="card"><h2>${esc(accountingScopeTitle('مطبخ الحسابات'))}</h2><div class="hint">الخامات الأساسية منفصلة عن الأصناف بمكوناتها، والعرض الحالي تابع للقسم المختار بالأعلى.</div><div class="grid three"><button class="btn" onclick="ES27.kitchenMode('raw')">خامة أساسية</button><button class="btn" onclick="ES27.kitchenMode('recipe')">صنف بمكونات</button><button class="btn secondary" onclick="ES27.recalcCascade()">تحديث كل الأسعار المرتبطة</button></div><div id="kitchenBox">${rawForm()}</div></div>${materialTable()}<div class="card"><div class="toolbar"><h3>${esc(accountingScopeTitle('الأصناف بمكوناتها'))}</h3><span class="pill">${scopedTemplates().length} صنف</span></div>${itemsTable()}</div>`;
+    const canaryBanner=a28MaterialCanaryEnabled()?'<div class="msg"><b>A2.8 CANARY:</b> زر حفظ الخامة ينشئ Material اختبار واحد فقط، غير نشط وصفر مخزون/تكلفة/بيع وبدون مكونات. بيانات الحقول لن تستخدم.</div>':'';
+    return `${canaryBanner}<div class="card"><h2>${esc(accountingScopeTitle('مطبخ الحسابات'))}</h2><div class="hint">الخامات الأساسية منفصلة عن الأصناف بمكوناتها، والعرض الحالي تابع للقسم المختار بالأعلى.</div><div class="grid three"><button class="btn" onclick="ES27.kitchenMode('raw')">خامة أساسية</button><button class="btn" onclick="ES27.kitchenMode('recipe')">صنف بمكونات</button><button class="btn secondary" onclick="ES27.recalcCascade()">تحديث كل الأسعار المرتبطة</button></div><div id="kitchenBox">${rawForm()}</div></div>${materialTable()}<div class="card"><div class="toolbar"><h3>${esc(accountingScopeTitle('الأصناف بمكوناتها'))}</h3><span class="pill">${scopedTemplates().length} صنف</span></div>${itemsTable()}</div>`;
   }
   function rawForm(){ const selected=accountingScopeDepartment(); return `<div class="softBox"><h3>خامة أساسية / مصروف تشغيل</h3><input id="rawId" type="hidden"><div class="grid six"><div class="field"><label>القسم</label><select id="rawDept"><option ${selected==='طباعة'?'selected':''}>طباعة</option><option ${selected==='ليزر'?'selected':''}>ليزر</option><option>مشترك</option></select></div><div class="field"><label>اسم الخامة</label><input id="rawName"></div><div class="field"><label>تصنيف الخامة</label><select id="rawClass"><option>خامة إنتاج</option><option>مصروف تشغيل</option><option>خامة مشتركة</option><option>متوقفة</option></select></div><div class="field"><label>سعر/تكلفة الأصل</label><input id="rawCost" type="number"></div><div class="field"><label>سعر بيع رسمي</label><input id="rawSale" type="number"></div><div class="field"><label>الرصيد / افتتاحي</label><input id="rawStock" type="number"></div></div><div class="grid six"><div class="field"><label>حد النقص</label><input id="rawMin" type="number"></div><div class="field"><label>عرض الخام سم</label><input id="rawW" type="number"></div><div class="field"><label>طول الخام سم</label><input id="rawH" type="number"></div><div class="field"><label>نوع الخامة</label><select id="rawKind"><option>خامة عامة</option><option>خامة ليزر</option><option>رول ورق</option><option>رول لامينشن</option><option>باكيت ورق</option><option>حبر</option><option>مصروف ماكينة</option></select></div><div class="field"><label>ضم إلى بند</label><select id="rawOperatingBand"><option>إنتاج مباشر</option><option>مصروفات تشغيل الطباعة</option><option>مصروفات تشغيل الليزر</option><option>مصروفات تشغيل مشتركة</option></select></div><div class="field"><label>طريقة توزيع التشغيل</label><select id="rawOpMethod"><option>لا يوزع</option><option>ثابت على الفاتورة</option><option>بالمتر</option><option>بالمتر المربع</option><option>نسبة من الفاتورة</option><option>يدوي</option></select></div></div><div class="grid two"><div class="field"><label>قيمة التشغيل للوحدة / النسبة</label><input id="rawOpCost" type="number" placeholder="مثال: 5 جنيه للمتر أو 3%"></div><div class="field"><label>ملاحظات</label><input id="rawNotes"></div></div><div class="actions"><button class="btn" onclick="ES27.saveRaw()">حفظ / تحديث الخامة</button><button class="btn secondary" onclick="ES27.clearRawForm()">جديد</button></div></div>`; }
   function materialTable(){ const all=materialRows(); const rows=all.map((row,index)=>({row,index})).filter(x=>accountingScopeMatchesDepartment(matDept(x.row),true)); return `<div class="card"><div class="toolbar"><h3>${esc(accountingScopeTitle('الخامات الأساسية المسجلة'))}</h3><span class="pill">${rows.length} خامة</span></div>` + table(rows,['الخامة','القسم','النوع','التكلفة','الرصيد','تعديل'],x=>{ const r=x.row; return [esc(materialName(r)),esc(matDept(r)),esc(materialKindLabel(matType(r))),isAdmin()?money(matCost(r)):'<span class="costHidden">مخفي</span>',esc(matStock(r)),`<button class="btn small secondary" onclick="ES27.editRaw(${x.index})">تعديل</button>`]; }) + `</div>`; }
@@ -1295,16 +1299,11 @@
     downloadSaleImage(){ closeFloatingPanels(); const canvas=document.createElement('canvas'); canvas.width=1200; canvas.height=900; const ctx=canvas.getContext('2d'); ctx.fillStyle='#fff'; ctx.fillRect(0,0,1200,900); ctx.fillStyle='#0f766e'; ctx.fillRect(0,0,1200,120); ctx.fillStyle='#fff'; ctx.font='bold 44px Arial'; ctx.textAlign='right'; ctx.fillText('فاتورة مطبعجي',1120,75); ctx.fillStyle='#111827'; ctx.font='28px Arial'; const lines=this.invoicePlainText().split('\n'); let y=170; lines.forEach(l=>{ ctx.fillText(l,1120,y); y+=42; }); const a=document.createElement('a'); a.download='matbagy-sale-'+(val('saNo')||Date.now())+'.png'; a.href=canvas.toDataURL('image/png'); a.click(); },
     async saveItem(){
       if(!canManageAccounting()) return deny();
-      const canary=a27TemplateCanaryEnabled();
-      const p=canary
-        ? {department:'عام',itemName:'A2-CANARY-TEMPLATE-'+Date.now(),category:'A2_CANARY',size:'',salePrice:0,fixedCost:0,computedUnitCost:0,active:'لا',recordType:'template',notes:'A2.7 bounded canary synthetic inactive zero-value template'}
-        : {department:val('itDept'),itemName:val('itName'),category:val('itType')||'صنف بيع',size:val('itSize'),salePrice:num(val('itSale')),fixedCost:num(val('itCost')),computedUnitCost:num(val('itCost')),active:'نعم',recordType:'template'};
+      const p={department:val('itDept'),itemName:val('itName'),category:val('itType')||'صنف بيع',size:val('itSize'),salePrice:num(val('itSale')),fixedCost:num(val('itCost')),computedUnitCost:num(val('itCost')),active:'نعم',recordType:'template'};
       if(!p.itemName) return flash('اكتب اسم الصنف',true);
       try{
-        const payload=canary?Object.assign({upsert:'1',requestId:newAccountingRequestId('A27-TPL')},p):Object.assign({upsert:'1'},p);
-        const reply=await api('saveAccountingTemplate',payload);
+        const reply=await api('saveAccountingTemplate',Object.assign({upsert:'1'},p));
         if(!reply||reply.success===false) throw new Error((reply&&reply.message)||'تعذر حفظ الصنف');
-        if(canary){ state.active='items'; shell(); flash('تم تنفيذ A2.7 Canary: Template اختبار غير نشط وبقيمة صفر.'); return; }
         p.fixedCost=num(reply.calculatedCost); p.computedUnitCost=p.fixedCost; const res=upsertByNameDept(state.data.templates,p,templateName,matDept); saveLocal(); state.active='items'; shell(); flash(reply.message||(res.updated?'الصنف موجود وتم تحديثه في الكتالوج':'تم حفظ الصنف في الكتالوج'));
       }catch(e){ flash('لم يتم حفظ الصنف: '+(e.message||e),true); }
     },
@@ -1409,11 +1408,16 @@
     kitchenMode(mode){ const b=$('kitchenBox'); if(b) b.innerHTML = mode==='recipe' ? recipeForm() : rawForm(); },
     async saveRaw(){
       if(!canManageAccounting()) return deny();
-      const p={department:val('rawDept'),materialName:val('rawName'),materialKind:materialKindLabel(val('rawKind')),materialClass:val('rawClass'),operationExpense:val('rawClass')==='مصروف تشغيل'?'نعم':'لا',operatingBand:val('rawOperatingBand'),operatingCalcMethod:val('rawOpMethod'),operatingUnitCost:num(val('rawOpCost')),unitCost:num(val('rawCost')),salePrice:num(val('rawSale')),stockQty:num(val('rawStock')),minStock:num(val('rawMin')),width:num(val('rawW')),height:num(val('rawH')),notes:val('rawNotes'),active:val('rawClass')==='متوقفة'?'لا':'نعم',recordType:'material'};
+      const canary=a28MaterialCanaryEnabled();
+      const p=canary
+        ? {department:'عام',materialName:'A2-CANARY-MATERIAL-'+Date.now(),materialKind:'A2_CANARY',materialClass:'A2_CANARY',unit:'',unitCost:0,computedUnitCost:0,salePrice:0,stockQty:0,minStock:0,rawWidth:0,rawHeight:0,width:0,height:0,componentsJson:'[]',notes:'A2.8 bounded canary synthetic inactive zero-stock zero-value material',active:'لا',recordType:'material'}
+        : {department:val('rawDept'),materialName:val('rawName'),materialKind:materialKindLabel(val('rawKind')),materialClass:val('rawClass'),operationExpense:val('rawClass')==='مصروف تشغيل'?'نعم':'لا',operatingBand:val('rawOperatingBand'),operatingCalcMethod:val('rawOpMethod'),operatingUnitCost:num(val('rawOpCost')),unitCost:num(val('rawCost')),salePrice:num(val('rawSale')),stockQty:num(val('rawStock')),minStock:num(val('rawMin')),width:num(val('rawW')),height:num(val('rawH')),notes:val('rawNotes'),active:val('rawClass')==='متوقفة'?'لا':'نعم',recordType:'material'};
       if(!p.materialName) return flash('اكتب اسم الخامة',true);
       try{
-        const reply=await api('saveAccountingMaterial',Object.assign({upsert:'1'},p));
+        const payload=canary?Object.assign({upsert:'1',requestId:newAccountingRequestId('A28-MAT')},p):Object.assign({upsert:'1'},p);
+        const reply=await api('saveAccountingMaterial',payload);
         if(!reply||reply.success===false) throw new Error((reply&&reply.message)||'تعذر حفظ الخامة');
+        if(canary){ state.active='kitchen'; shell(); flash('تم تنفيذ A2.8 Canary: خامة اختبار غير نشطة وصفر مخزون/قيمة.'); return; }
         const res=upsertByNameDept(state.data.materials,p,materialName,matDept);
         recalcTemplatesLocal(); saveLocal();
         api('recalcAccountingMaterialsCascade',{}).catch(()=>{});
