@@ -1,0 +1,25 @@
+name: EasyStore A2.8 Material Canary Frontend CI
+
+on:
+  push:
+    branches:
+      - candidate/easystore-a28-material-canary-prodpatch-20261006
+    paths:
+      - 'app.js'
+      - 'config.js'
+      - 'index.html'
+      - 'tests/easystore_a28_material_canary_frontend.test.mjs'
+      - '.github/workflows/easystore-a28-material-canary-frontend-ci.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: node tests/easystore_a28_material_canary_frontend.test.mjs
