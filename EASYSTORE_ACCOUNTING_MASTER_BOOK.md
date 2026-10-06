@@ -2573,3 +2573,23 @@ This aligns with Autonomous Printshop Build Matrix module:
 - Workflow safety: automatic server disable to READONLY on success, error, or timeout; TTL is an additional fail-closed backstop.
 - Final PASS/FAIL and exact D1 deltas are not yet claimed in this entry.
 - Result: **IN_PROGRESS — WAITING FOR AUTHENTICATED DIAA CLICK**.
+
+
+## Entry ACC-048 — First execution window timed out safely; zero mutation proven
+- Date: 2026-10-06
+- Execution Run `37498874051`, Job `112390399447`: **FAIL-SAFE TIMEOUT**.
+- Preflight passed and the bounded server CANARY was armed exactly one user / one action / one command / zero-value.
+- No authenticated canary command arrived during the workflow wait window; exact terminal marker: `A27_EXEC_TIMEOUT_NO_COMMAND`.
+- Automatic cleanup path ran after failure.
+- Post-timeout read-only safety audit commit: `2cbc793192bbbd1cba30f674f5b65d17371b46ad`.
+- Audit Run `37505412035`, Job `112412699632`: **SUCCESS**.
+- Proven post-timeout state:
+  - `A27_TIMEOUT_FAILSAFE=PASS`
+  - `A27_POST_TIMEOUT_MODE=READONLY`
+  - `A27_POST_TIMEOUT_ALLOWLISTS=EMPTY`
+  - `A27_POST_TIMEOUT_BUDGET=CLEARED`
+  - `A27_POST_TIMEOUT_ACCOUNTING_ROWS=0`
+  - `PRODUCTION_BUSINESS_MUTATION=NO`
+- The later user click occurred after the server window had already closed, so it did not create any accounting fact.
+- Result: **BLOCKED_SAFE / ZERO BUSINESS MUTATION**.
+- Next: start a fresh identical approved window and have Diaa click once while the workflow is actively waiting.
