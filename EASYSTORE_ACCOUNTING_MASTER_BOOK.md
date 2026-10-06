@@ -2675,3 +2675,28 @@ This aligns with Autonomous Printshop Build Matrix module:
 - No destructive cleanup was performed; the inactive zero-value template remains as audit evidence.
 - Result: **PASS — A2.7 FIRST BOUNDED PRODUCTION WRITE CANARY COMPLETED, VERIFIED, AND FULLY CLOSED**.
 - Next gate: qualify the next lowest-risk write family read-only/repo-only; any second Production write family requires a new explicit owner decision and must again be one user / one action family / bounded / auto-disable.
+
+
+## Entry ACC-054 — Next-family master-data CANARY hardening deployed under READONLY
+- Date: 2026-10-06
+- Backend source hardening commit: `6497750862a937b1d63ea7298b2531b1574a28d4`.
+- Canary policy test commit: `8db94491f58d0b1f7ca7a88a45b30c38944a8ba7`.
+- Canary Policy CI Run `37507009327`: **SUCCESS**; related A2 family CIs also remained green.
+- New server-side master CANARY shape guard:
+  - Template CANARY must be synthetic `A2-CANARY-TEMPLATE-*`, department `عام`, category `A2_CANARY`, inactive, no components, zero price/cost/output/ink fields;
+  - Material CANARY must be synthetic `A2-CANARY-MATERIAL-*`, department `عام`, materialKind `A2_CANARY`, inactive, no components, stock/min-stock/cost/sale/dimensions all zero;
+  - violations fail closed with `employee-accounting-canary-master-shape-blocked`.
+- READONLY deploy workflow was upgraded from historical zero-row/policy-epoch=2 assumptions to snapshot/invariance plus exact approved post-canary evidence baseline.
+- Deploy workflow commit: `9582f5ed56d4967acf2222c9ebb1b6f57d5333d2`.
+- Deploy Run `37507219065`, Job `112418824845`: **SUCCESS**.
+- Deploy evidence:
+  - shared/accounting overlap=NONE;
+  - source tests PASS including `CANARY_MASTER_PAYLOAD_SHAPE_GUARD=YES`;
+  - pre runtime READONLY, frontend write mode OFF;
+  - current accounting policy epoch=6 and remained invariant through deploy;
+  - server canary default-deny/command budget cleared;
+  - approved first-canary evidence baseline preserved exactly;
+  - Production business-data mutation=NO;
+  - runtime remains READONLY.
+- Result: **PASS — MATERIAL CANARY SERVER SHAPE QUALIFIED/LIVE UNDER CLOSED AUTHORITY**.
+- Next: update central runtime/schema safety workflows to the post-first-canary baseline, then qualify an isolated Production frontend/execution path for `saveAccountingMaterial` without arming it.
