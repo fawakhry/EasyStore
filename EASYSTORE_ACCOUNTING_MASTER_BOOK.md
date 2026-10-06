@@ -2826,3 +2826,13 @@ This aligns with Autonomous Printshop Build Matrix module:
 - Business write: NO. GENERAL: NO.
 - Result: **PASS**.
 - Next: publish only `config.js` as `CANARY` for `saveAccountingMaterial`, then verify live before server ARM.
+
+
+## Entry ACC-063 — A2.8 frontend config published; server still closed
+- Date: 2026-10-06
+- Production `main/config.js` commit: `0c22fc83283e0eb2f95f6da2e5e0b2fb0502f69f`.
+- Config scope: write mode `CANARY`; canary actions exactly `[saveAccountingMaterial]`; legacy D1 write flag remains false.
+- Backend/server authority was not changed by this step and remains subject to separate live verification before ARM.
+- Business write executed: NO. GENERAL opened: NO.
+- Result: **DEPLOYED — LIVE PROPAGATION NOT YET CLAIMED**.
+- Next: verify Pages propagation plus backend READONLY/server-empty state before any server ARM.
