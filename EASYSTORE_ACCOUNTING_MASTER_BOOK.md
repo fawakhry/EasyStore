@@ -2396,3 +2396,16 @@ This aligns with Autonomous Printshop Build Matrix module:
 - Production remains READONLY; migration 0030 is not yet applied; no business write executed.
 - Result: **PASS — ACC-037 BLOCKER REMEDIATED REPO-ONLY**.
 - Next: apply migration 0030 controlled, verify invariants, then redeploy the hardened backend in READONLY.
+
+
+## Entry ACC-039 — Migration 0030 one-command budget applied safely
+- Date: 2026-10-06
+- Controlled schema trigger commit: `81b8c27496b9913360576dedb9edd3f57b8ecce5`.
+- Run `37496575498`, Job `112382541609`: **SUCCESS**.
+- Applied migration: `0030_employee_accounting_write_canary_budget_v1.sql`.
+- Precheck: Production accounting READONLY; clean accounting business baseline=0.
+- Postcheck: schema invariants PASS, non-accounting sentinels invariant, accounting rows remain 0.
+- Mode preserved `READONLY`; policy epoch preserved `2`; Production business-data mutation=NO.
+- Canary command-budget columns now exist in Production schema, but no user/action is armed and no command has been executed.
+- Result: **PASS**.
+- Next: redeploy the hardened backend code that atomically enforces the one-command budget, still in READONLY.
