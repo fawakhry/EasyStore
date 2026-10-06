@@ -30,7 +30,8 @@ for(const action of [
 ]) assert.ok(routedSet.has(action),action);
 
 const apiBlock=app.slice(app.indexOf('async function api('),app.indexOf('function msg('));
-assert.ok(apiBlock.includes('if(useD1Read)'));
+assert.ok(apiBlock.includes('if(useD1Accounting)'),'D1 accounting branch missing');
+assert.ok(apiBlock.includes('const useD1Read'),'D1 read predicate missing');
 assert.ok(apiBlock.includes("Authorization':'Bearer '+user.token"));
 const d1Start=apiBlock.indexOf('if(useD1Read){');
 const legacyStart=apiBlock.indexOf("const endpoint=String(window.MATBAGY_SECURE_API_PROXY_URL||window.TREND_API_URL||'').trim();");
