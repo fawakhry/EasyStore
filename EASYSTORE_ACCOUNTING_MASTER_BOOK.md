@@ -2381,3 +2381,18 @@ This aligns with Autonomous Printshop Build Matrix module:
 - Direct D1 business write and synthetic auth/session minting remain forbidden.
 - Required remediation before ARM: add a server-side atomic one-command budget; replay of the same committed idempotency key may be recognized without creating a second business fact, but a second new request key must fail closed.
 - Result: **BLOCKED_SAFE — ARM NOT EXECUTED**.
+
+
+## Entry ACC-038 — Atomic one-command first-canary budget qualified
+- Date: 2026-10-06
+- Remediation for ACC-037 completed repo-only.
+- Migration source: `0030_employee_accounting_write_canary_budget_v1.sql`, commit `7435346895836513087dc44fd0b6f36b5ac0a37c`.
+- Backend atomic budget source: commit `82a750437f81bd555ca78e75684cf91fe9451ef6`.
+- Canary policy test update: `b8a59bc37d210df5a16d6417e1e687e27c60d0d0`; CI Run `37496419848` = **SUCCESS**.
+- Bounded control workflow updated to ARM with `max_commands=1` and `commands_started=0`: commit `c07fafb6f2a64de1329af259ed49fa987eeb77c4`.
+- Control invariant test commit `131d9dc742facd49e5074f81e2e62c5c73a94dd9`; CI Run `37496471242` = **SUCCESS**.
+- New-request semantics: first new request atomically reserves the single command budget; a second distinct request key fails closed.
+- Existing idempotency key may reach the deterministic idempotency layer without reserving another new-command slot; it cannot create a second business fact.
+- Production remains READONLY; migration 0030 is not yet applied; no business write executed.
+- Result: **PASS — ACC-037 BLOCKER REMEDIATED REPO-ONLY**.
+- Next: apply migration 0030 controlled, verify invariants, then redeploy the hardened backend in READONLY.
