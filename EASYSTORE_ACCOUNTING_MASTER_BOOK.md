@@ -3002,3 +3002,16 @@ This aligns with Autonomous Printshop Build Matrix module:
 - No Production runtime or business data mutation occurred in this cleanup.
 - Result: **PASS — TEMPORARY AUTO-TRIGGER REMOVED; MANUAL-ONLY DISPATCH RESTORED**.
 - Current completed milestone: A2.8 second bounded Production write canary is verified and fully closed; central runtime and schema safety baselines match two-canary truth.
+
+
+## Entry ACC-080 — A2.9 recalc canary read-only preflight passed
+- Date: 2026-10-07
+- Proposed third low-risk family: `recalcAccountingMaterialsCascade` for canonical user `ضياء` only.
+- Read-only preflight source commit: `d185135f868b343d75d7890af8a45e56938a6ebb`.
+- Run `37540932737`, Job `112533489573`: **SUCCESS**.
+- Current closed runtime baseline preserved: backend READONLY, server canary cleared, approved two-canary evidence only.
+- Exact safety evidence: `A29_ACTIVE_MATERIALS=0`, `A29_ACTIVE_TEMPLATES=0`.
+- Expected canary effect under this baseline: master-data mutation=0; requestLedger +1; events +1 only.
+- Production mutation in qualification: NO.
+- Result: **PASS — RECALC IS THE CURRENT LOWEST-RISK MEANINGFUL NEXT WRITE FAMILY**.
+- Next: add repo-only server CANARY guard that rejects recalc if any active Material/Template exists at execution time, then CI-qualify frontend/execution paths; do not deploy or arm before a fresh owner decision.
