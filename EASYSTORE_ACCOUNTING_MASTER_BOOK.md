@@ -2188,3 +2188,129 @@ This aligns with Autonomous Printshop Build Matrix module:
   - prepare controlled ARM/DISABLE + post-write invariant workflow without executing ARM;
   - refresh Production runtime truth;
   - only then request owner approval for the actual one-user/one-action canary.
+
+
+## Entry ACC-031 — Defense-in-depth bounded-canary workflow qualified
+- Date: 2026-10-06
+- Goal: Finish all non-authoritative preparation required before asking the owner to select the first real Production write canary.
+- Frontend bounded-write routing:
+  - `config.js` now has explicit repo-only write mode `OFF | CANARY | GENERAL`;
+  - default remains `OFF`;
+  - `EASYSTORE_ACCOUNTING_D1_WRITE_CANARY_ACTIONS=[]` by default;
+  - in `CANARY`, a D1 write action must be explicitly listed or it fails locally;
+  - a blocked D1 accounting write does **not** silently fall back to Apps Script;
+  - source commits:
+    - config: `733c3521e5e00855fba98781f6832917b99e0234`;
+    - router: `f307ed860c6a231c818cbfe0150e20d4a97c82d7`;
+    - regression test: `817e11c655ba7d78d74307f4750444c2e45061f0`.
+  - CI:
+    - Write Router Run `37492362277` — **SUCCESS**;
+    - Current Checkpoint Run `37492362304` — **SUCCESS**.
+  - Production frontend was not changed.
+- Exact eligible user resolved read-only:
+  - workflow commit: `c1a60f613c263aa66410d2b730b7f55d7bdbe728`;
+  - Run `37492577007`, Job `112368812682` — **SUCCESS**;
+  - D1 public identity fields only:
+    ```ini
+    A2_CANARY_ELIGIBLE_USER_COUNT=1
+    USERNAME=ضياء
+    ROLE=admin
+    DEPARTMENT=الادارة
+    ACTIVE=1
+    PRODUCTION_MUTATION=NO
+    ```
+  - no password, token, hash or secret was queried/logged.
+- Zero-value canary hardening:
+  - source commit: `27b1aa10b3e93de8be098a959a9cf600d5d2a0d1`;
+  - test commit: `e685165cb5ad6911bc4527dc461f5acd807252bb`;
+  - Canary Policy CI Run `37492776184` — **SUCCESS**;
+  - dedicated CANARY semantics now treat `max_amount=0` as **zero-value-only**, not unlimited;
+  - amount extraction now covers master-data value fields including `salePrice`, `fixedCost`, `computedUnitCost`, and `unitCost`;
+  - therefore the proposed first synthetic template cannot accidentally carry a non-zero financial value inside bounded CANARY.
+- ARM/DISABLE workflow prepared, not executed:
+  - workflow: `.github/workflows/easystore-a2-bounded-canary-control.yml`;
+  - workflow source commit: `10263e3f17cb9d65c8648ee51e3a7fb9445a3602`;
+  - invariant test: `ef9bd3d5a368b6468d482ca69681918b4f4ceab3`;
+  - CI commit: `2382898ec5ace505d0bd8342ea4be990b6d587c3`;
+  - CI Run `37493071058` — **SUCCESS**.
+- Control workflow safety contract:
+  - operations are only `CHECK | ARM | DISABLE`;
+  - first ARM is hard-locked to `saveAccountingTemplate`;
+  - ARM requires exact username + explicit confirmation + 5–30 minute TTL;
+  - ARM requires baseline `READONLY`, enabled canary guard, and empty allowlists;
+  - ARM sets exactly one user + one action + `max_amount=0`, then enters `CANARY`;
+  - DISABLE first restores `READONLY`, then empties both allowlists;
+  - workflow rejects/does not contain a transition to `GENERAL`;
+  - postcheck requires zero change to accounting business-row counts.
+- Current repo heads after preparation:
+  ```ini
+  EASYSTORE_CANDIDATE_HEAD=42593f681ed58fc38174cb02d792fb41ea9db2ea
+  ACCOUNTING_BACKEND_CANDIDATE_HEAD=44c1aca4caa73afea9f493b41c3ca8b8c823105d
+  ```
+- Production mutation: NO.
+- Financial write: NO.
+- Result: **PASS — ONE-USER/ONE-ACTION CONTROL PATH QUALIFIED, NOT ARMED**
+
+## Entry ACC-032 — Fresh Production runtime truth before owner canary decision
+- Date: 2026-10-06
+- Goal: Re-read Production after all repo-only canary preparation and after concurrent TrendOS work, so the owner decision is based on current runtime rather than ACC-028.
+- Runtime audit:
+  - workflow refresh commit: `44c1aca4caa73afea9f493b41c3ca8b8c823105d`;
+  - Run: `37493134793`;
+  - Job: `112370722214`;
+  - Conclusion: **SUCCESS**.
+- Current runtime truth:
+  ```ini
+  API_VERSION=377b105f-8788-41be-921d-e23a16ccd341
+  ACCOUNTING_MODE=READONLY
+  ACCOUNTING_POLICY_EPOCH=2
+  ACCOUNTING_SCHEMA_READY=true
+  ACCOUNTING_AUTHORITATIVE_WRITES=false
+  ACCOUNTING_GOOGLE_BUSINESS_CALLS=0
+
+  WRITE_CANARY_READY=true
+  WRITE_CANARY_ENABLED=true
+  WRITE_CANARY_ALLOWED_USERS=0
+  WRITE_CANARY_ALLOWED_ACTIONS=0
+
+  LIVE_EASYSTORE_D1_WRITE_FLAG=ABSENT_SAFE
+
+  materials=0
+  templates=0
+  deptLines=0
+  finalInvoices=0
+  partyLedger=0
+  purchases=0
+  dailyPurchases=0
+  cashbox=0
+  waste=0
+  custodyEvents=0
+  custodyCloses=0
+  dayCloses=0
+  partyBalances=0
+  requestLedger=0
+  events=0
+  TOTAL_ACCOUNTING_ROWS=0
+
+  ACCOUNTING_RUNTIME_CHECKPOINT=PASS
+  PRODUCTION_MUTATION=NO
+  ```
+- Important runtime correction:
+  - Production API version advanced from ACC-028 `39883cad-1223-4e48-9728-b514f7b56a8d` to `377b105f-8788-41be-921d-e23a16ccd341` due concurrent TrendOS deployment activity;
+  - accounting authority did **not** advance: it remains READONLY/default-deny with zero accounting business rows.
+- Dedicated CANARY source/schema status:
+  ```ini
+  BACKEND_CANARY_SOURCE=QUALIFIED_REPO_ONLY
+  MIGRATION_0029_CANARY_MODE=QUALIFIED_REPO_ONLY_NOT_APPLIED
+  FRONTEND_CANARY_ROUTER=QUALIFIED_REPO_ONLY_DEFAULT_OFF
+  CONTROL_WORKFLOW=QUALIFIED_NOT_EXECUTED
+  GENERAL_OPENED=NO
+  FINANCIAL_WRITE_EXECUTED=NO
+  ```
+- Result: **PASS — SAFE DECISION CHECKPOINT**
+- Decision gate:
+  - `A2_7_ARM_ONE_LOW_RISK_WRITE_CANARY_FAMILY`;
+  - recommended action: `saveAccountingTemplate`;
+  - recommended user: exact canonical user `ضياء`;
+  - test object: one unique inactive synthetic template with zero price/cost and no components;
+  - no ARM, migration apply, Production source deploy, frontend canary enablement or financial write may occur until the owner explicitly chooses the user/action canary.
