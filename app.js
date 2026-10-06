@@ -210,12 +210,27 @@
   }
 
   const D1_ACCOUNTING_READ_ACTIONS = new Set(['getAccounting','getDeptInvoiceDraftV1887','getPartyAccountV1858']);
+  const D1_ACCOUNTING_WRITE_ACTIONS = new Set(['saveAccountingTemplate']);
+
+  function a27TemplateCanaryEnabled(){
+    const mode=String(window.EASYSTORE_ACCOUNTING_D1_WRITE_MODE||'LEGACY').trim().toUpperCase();
+    const actions=Array.isArray(window.EASYSTORE_ACCOUNTING_D1_WRITE_CANARY_ACTIONS)?window.EASYSTORE_ACCOUNTING_D1_WRITE_CANARY_ACTIONS.map(String):[];
+    return mode==='CANARY' && actions.length===1 && actions[0]==='saveAccountingTemplate';
+  }
+  function newAccountingRequestId(prefix){return String(prefix||'REQ')+'-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,10);}
 
   async function api(action, data){
-    const useD1Read = window.EASYSTORE_ACCOUNTING_D1_READONLY === true && D1_ACCOUNTING_READ_ACTIONS.has(String(action || ''));
+    const actionName=String(action||'');
+    const useD1Read = window.EASYSTORE_ACCOUNTING_D1_READONLY === true && D1_ACCOUNTING_READ_ACTIONS.has(actionName);
+    const writeActionRequested = D1_ACCOUNTING_WRITE_ACTIONS.has(actionName);
+    const writeMode=String(window.EASYSTORE_ACCOUNTING_D1_WRITE_MODE||'LEGACY').trim().toUpperCase();
+    if(writeActionRequested && !['LEGACY','CANARY'].includes(writeMode)) throw new Error('وضع كتابة الحسابات غير مسموح في أول كاناري.');
+    if(writeActionRequested && writeMode==='CANARY' && !a27TemplateCanaryEnabled()) throw new Error('نطاق كاناري الحسابات غير مطابق؛ تم منع الحركة.');
+    const useD1Write = writeActionRequested && writeMode==='CANARY' && a27TemplateCanaryEnabled();
+    const useD1Accounting = useD1Read || useD1Write;
     const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),90000);
     try{
-      if(useD1Read){
+      if(useD1Accounting){
         const hasSession = await ensureTrendosSso();
         if(!hasSession) throw new Error('انتهت الجلسة، سجل الدخول من TrendOS ثم افتح الحسابات مرة أخرى.');
         const endpoint=String(window.EASYSTORE_ACCOUNTING_D1_URL||'').trim();
@@ -503,7 +518,8 @@
 
   function screenItems(){
     const selected=accountingScopeDepartment();
-    return `<div class="card"><h2>${esc(accountingScopeTitle('الأصناف'))}</h2><div class="grid six"><div class="field"><label>القسم</label><select id="itDept"><option ${selected==='طباعة'?'selected':''}>طباعة</option><option ${selected==='ليزر'?'selected':''}>ليزر</option><option>مشترك</option><option>عام</option></select></div><div class="field"><label>اسم الصنف</label><input id="itName"></div><div class="field"><label>نوع</label><select id="itType"><option>صنف بيع</option><option>خامة</option><option>صنف مركب</option></select></div><div class="field"><label>مقاس</label><input id="itSize"></div><div class="field"><label>سعر البيع</label><input id="itSale" type="number"></div><div class="field"><label>تكلفة ثابتة</label><input id="itCost" type="number"></div></div><div class="actions"><button class="btn" onclick="ES27.saveItem()">حفظ / تحديث الصنف</button><button class="btn secondary" onclick="ES27.clearItemForm()">جديد</button></div></div>${itemsTable()}`;
+    const canaryBanner=a27TemplateCanaryEnabled()?'<div class="msg"><b>A2.7 CANARY:</b> زر الحفظ ينشئ Template اختبار واحد فقط، غير نشط وبقيمة صفر. لا تستخدم البيانات الموجودة في الحقول كبيانات حقيقية أثناء الاختبار.</div>':'';
+    return `${canaryBanner}<div class="card"><h2>${esc(accountingScopeTitle('الأصناف'))}</h2><div class="grid six"><div class="field"><label>القسم</label><select id="itDept"><option ${selected==='طباعة'?'selected':''}>طباعة</option><option ${selected==='ليزر'?'selected':''}>ليزر</option><option>مشترك</option><option>عام</option></select></div><div class="field"><label>اسم الصنف</label><input id="itName"></div><div class="field"><label>نوع</label><select id="itType"><option>صنف بيع</option><option>خامة</option><option>صنف مركب</option></select></div><div class="field"><label>مقاس</label><input id="itSize"></div><div class="field"><label>سعر البيع</label><input id="itSale" type="number"></div><div class="field"><label>تكلفة ثابتة</label><input id="itCost" type="number"></div></div><div class="actions"><button class="btn" onclick="ES27.saveItem()">حفظ / تحديث الصنف</button><button class="btn secondary" onclick="ES27.clearItemForm()">جديد</button></div></div>${itemsTable()}`;
   }
   function itemsTable(){ const all=productTemplates(); const rows=all.map((row,index)=>({row,index})).filter(x=>accountingScopeMatchesDepartment(matDept(x.row),true)); return table(rows,['الصنف','القسم','التكلفة','البيع','مجمل الربح','نسبة الربح','الحالة','إجراء'],x=>{ const r=x.row, cost=matCost(r), sale=matSale(r), g=gp(cost,sale); return [esc(templateName(r)),esc(matDept(r)),isAdmin()?money(cost):'<span class="costHidden">مخفي</span>',money(sale),isAdmin()?money(g.profit):'<span class="costHidden">مخفي</span>',isAdmin()?g.margin.toFixed(1)+'%':'-',activeRow(r)?'مفعل':'موقوف',`<span class="tableActions"><button class="btn small secondary" onclick="ES27.editItem(${x.index})">تعديل</button><button class="btn small warn" onclick="ES27.archiveItem(${x.index})">إيقاف</button></span>`]; }); }
 
@@ -1277,7 +1293,21 @@
     async copySaleText(){ closeFloatingPanels(); const t=this.invoicePlainText(); try{ await navigator.clipboard.writeText(t); flash('تم نسخ نص الفاتورة'); }catch(e){ prompt('انسخ نص الفاتورة',t); } },
     openSaleWhatsApp(){ closeFloatingPanels(); const t=this.invoicePlainText(); window.open('https://wa.me/?text='+encodeURIComponent(t),'_blank'); },
     downloadSaleImage(){ closeFloatingPanels(); const canvas=document.createElement('canvas'); canvas.width=1200; canvas.height=900; const ctx=canvas.getContext('2d'); ctx.fillStyle='#fff'; ctx.fillRect(0,0,1200,900); ctx.fillStyle='#0f766e'; ctx.fillRect(0,0,1200,120); ctx.fillStyle='#fff'; ctx.font='bold 44px Arial'; ctx.textAlign='right'; ctx.fillText('فاتورة مطبعجي',1120,75); ctx.fillStyle='#111827'; ctx.font='28px Arial'; const lines=this.invoicePlainText().split('\n'); let y=170; lines.forEach(l=>{ ctx.fillText(l,1120,y); y+=42; }); const a=document.createElement('a'); a.download='matbagy-sale-'+(val('saNo')||Date.now())+'.png'; a.href=canvas.toDataURL('image/png'); a.click(); },
-    async saveItem(){ if(!canManageAccounting()) return deny(); const p={department:val('itDept'),itemName:val('itName'),category:val('itType')||'صنف بيع',size:val('itSize'),salePrice:num(val('itSale')),fixedCost:num(val('itCost')),computedUnitCost:num(val('itCost')),active:'نعم',recordType:'template'}; if(!p.itemName) return flash('اكتب اسم الصنف',true); try{ const reply=await api('saveAccountingTemplate',Object.assign({upsert:'1'},p)); if(!reply||reply.success===false) throw new Error((reply&&reply.message)||'تعذر حفظ الصنف'); p.fixedCost=num(reply.calculatedCost); p.computedUnitCost=p.fixedCost; const res=upsertByNameDept(state.data.templates,p,templateName,matDept); saveLocal(); state.active='items'; shell(); flash(reply.message||(res.updated?'الصنف موجود وتم تحديثه في الكتالوج':'تم حفظ الصنف في الكتالوج')); }catch(e){ flash('لم يتم حفظ الصنف: '+(e.message||e),true); } },
+    async saveItem(){
+      if(!canManageAccounting()) return deny();
+      const canary=a27TemplateCanaryEnabled();
+      const p=canary
+        ? {department:'عام',itemName:'A2-CANARY-TEMPLATE-'+Date.now(),category:'A2_CANARY',size:'',salePrice:0,fixedCost:0,computedUnitCost:0,active:'لا',recordType:'template',notes:'A2.7 bounded canary synthetic inactive zero-value template'}
+        : {department:val('itDept'),itemName:val('itName'),category:val('itType')||'صنف بيع',size:val('itSize'),salePrice:num(val('itSale')),fixedCost:num(val('itCost')),computedUnitCost:num(val('itCost')),active:'نعم',recordType:'template'};
+      if(!p.itemName) return flash('اكتب اسم الصنف',true);
+      try{
+        const payload=canary?Object.assign({upsert:'1',requestId:newAccountingRequestId('A27-TPL')},p):Object.assign({upsert:'1'},p);
+        const reply=await api('saveAccountingTemplate',payload);
+        if(!reply||reply.success===false) throw new Error((reply&&reply.message)||'تعذر حفظ الصنف');
+        if(canary){ state.active='items'; shell(); flash('تم تنفيذ A2.7 Canary: Template اختبار غير نشط وبقيمة صفر.'); return; }
+        p.fixedCost=num(reply.calculatedCost); p.computedUnitCost=p.fixedCost; const res=upsertByNameDept(state.data.templates,p,templateName,matDept); saveLocal(); state.active='items'; shell(); flash(reply.message||(res.updated?'الصنف موجود وتم تحديثه في الكتالوج':'تم حفظ الصنف في الكتالوج'));
+      }catch(e){ flash('لم يتم حفظ الصنف: '+(e.message||e),true); }
+    },
     editItem(i){ const r=productTemplates()[i]; if(!r) return; set('itDept',matDept(r)); set('itName',templateName(r)); set('itType',r.category||matType(r)); set('itSize',r.size); set('itSale',matSale(r)); set('itCost',matCost(r)); },
     clearItemForm(){ ['itName','itSize','itSale','itCost'].forEach(id=>set(id,'')); },
     archiveItem(i){ if(!canManageAccounting()) return deny(); const r=productTemplates()[i]; if(!r || !confirm('إيقاف الصنف ' + templateName(r) + '؟')) return; r.active='لا'; r['مفعل']='لا'; saveLocal(); api('archiveAccountingTemplate',{itemName:templateName(r),department:matDept(r)}).catch(()=>{}); shell(); },
