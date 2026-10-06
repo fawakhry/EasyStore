@@ -2495,3 +2495,14 @@ This aligns with Autonomous Printshop Build Matrix module:
 - GENERAL opened: NO. Financial write executed: NO.
 - Result: **PASS — CANARY-CAPABLE BACKEND LIVE, AUTHORITY STILL READONLY/DEFAULT-DENY**.
 - Next: refresh exact live API/health state, qualify the frontend/execution path, then ARM only the approved user `ضياء` + action `saveAccountingTemplate`.
+
+
+## Entry ACC-043 — Frontend Production code propagation verified; still unarmed
+- Date: 2026-10-06
+- ACC-042 failure root cause confirmed: audit attempt 1 ran before GitHub Pages deployment completed.
+- Pages deployment Run `37497438403` for Production main head `15aa7281b13e4a0bf18628a6d776093fa67005ee`: **SUCCESS**.
+- Same live audit Run `37497500344` rerun attempt 2, Job `112386239065`: **SUCCESS**.
+- Live evidence: `A27_LIVE_APP_CODE=PASS`, `A27_LIVE_CACHE_TAG=PASS`, `A27_LIVE_CONFIG=UNARMED`, `A27_BACKEND_MODE=READONLY`, `A27_SERVER_ALLOWLISTS=EMPTY`.
+- Production business mutation: NO.
+- Result: **PASS — qualified one-action frontend code is live but write routing is still unarmed**.
+- Next: flip only Production `config.js` to CANARY + `[saveAccountingTemplate]`; backend remains READONLY during this frontend flip.
