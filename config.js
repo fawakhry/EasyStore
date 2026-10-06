@@ -5,8 +5,8 @@ window.MATBAGY_SECURE_API_PROXY_URL = "";
 
 window.EASYSTORE_ACCOUNTING_D1_READONLY = true;
 window.EASYSTORE_ACCOUNTING_D1_WRITES = false;
-window.EASYSTORE_ACCOUNTING_D1_WRITE_MODE = 'CANARY';
-window.EASYSTORE_ACCOUNTING_D1_WRITE_CANARY_ACTIONS = ['saveAccountingTemplate'];
+window.EASYSTORE_ACCOUNTING_D1_WRITE_MODE = 'OFF';
+window.EASYSTORE_ACCOUNTING_D1_WRITE_CANARY_ACTIONS = [];
 window.EASYSTORE_ACCOUNTING_D1_URL = "https://trendos-d1-api.trendmall-contact.workers.dev/v1/employee/accounting";
 window.EASYSTORE_TRENDOS_SSO_HANDOFF_V1 = true;
 
