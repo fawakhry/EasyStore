@@ -3143,3 +3143,12 @@ This aligns with Autonomous Printshop Build Matrix module:
 - A2.9 server recalc guard is live from ACC-087.
 - Business write: NO. GENERAL opened: NO.
 - Result: **PASS — FRONTEND ARMED LOCALLY, SERVER AUTHORITY STILL CLOSED**.
+
+
+## Entry ACC-089 — A2.9 armed
+- Date: 2026-10-07
+- Run `37543905745` preflight PASS.
+- Server CANARY bounded: user/action=1/1, maxCommands=1, commandsStarted=0.
+- Scope: `ضياء` + `recalcAccountingMaterialsCascade` only.
+- GENERAL: NO.
+- Status: IN_PROGRESS.
