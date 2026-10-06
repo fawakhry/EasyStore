@@ -3015,3 +3015,16 @@ This aligns with Autonomous Printshop Build Matrix module:
 - Production mutation in qualification: NO.
 - Result: **PASS — RECALC IS THE CURRENT LOWEST-RISK MEANINGFUL NEXT WRITE FAMILY**.
 - Next: add repo-only server CANARY guard that rejects recalc if any active Material/Template exists at execution time, then CI-qualify frontend/execution paths; do not deploy or arm before a fresh owner decision.
+
+
+## Entry ACC-081 — A2.9 recalc server guard CI-qualified repo-only
+- Date: 2026-10-07
+- Backend guard source commit: `3e32acd2b29bd7f1b5d1827165bcfcdd3e5b83a0`.
+- A2.9 invariant test commit: `a223bed64011f22f5638cd8fe7d42817fee30e8b`.
+- CI commit: `f9dea30938c900db411dc774b477ac48b7716ebe`.
+- CI Run `37541100135`, Job `112534022627`: **SUCCESS** including `node --check`.
+- Dedicated CANARY safeguards now qualified repo-only: recalc payload cannot carry business data; recalc is rejected if any active Material or Template exists at execution time.
+- No backend deploy occurred. Production remains on the previously verified READONLY version.
+- Production mutation: NO.
+- Result: **PASS — A2.9 SERVER-SIDE FAIL-CLOSED GUARD QUALIFIED, NOT DEPLOYED**.
+- Next: build an isolated EasyStore frontend candidate routing only `recalcAccountingMaterialsCascade`, with request id and explicit success/failure handling; keep Production frontend OFF.
