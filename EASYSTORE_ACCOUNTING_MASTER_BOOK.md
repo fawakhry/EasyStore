@@ -2461,3 +2461,18 @@ This aligns with Autonomous Printshop Build Matrix module:
 - GENERAL opened: NO.
 - Result: **PASS — CANARY MODE SCHEMA CAPABILITY LIVE, AUTHORITY STILL READONLY**.
 - Next: deploy the qualified backend CANARY source while preserving READONLY/default-deny, then verify runtime before any ARM.
+
+
+## Entry ACC-042 — Frontend Production propagation audit failed safe
+- Date: 2026-10-06
+- Production source updates performed without merge:
+  - `main/app.js` commit `0a56b7bf39cfc0c7f2dffcfe23d9488899634a7c`;
+  - `main/index.html` commit `15aa7281b13e4a0bf18628a6d776093fa67005ee`.
+- `main/config.js` was intentionally left unchanged/unarmed.
+- Live audit workflow source commit: `9aace86bb77039d7e7f9a78007318857242f78f8`.
+- Run `37497500344`, Job `112385708807`: **FAIL**.
+- Exact failure: `new index cache tag not live`.
+- Interpretation: GitHub Pages had not yet exposed the cache-bumped index at audit time; no assumption is made about propagation timing.
+- Safety response: config flip NOT executed; backend remains READONLY; server canary allowlists remain empty; no business write occurred.
+- Classification: **FAIL-SAFE / PROPAGATION NOT YET PROVEN**.
+- Next: inspect Pages/main deployment state and rerun the read-only live audit; do not arm frontend or backend until it passes.
