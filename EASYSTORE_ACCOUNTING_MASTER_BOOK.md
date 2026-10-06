@@ -2814,3 +2814,15 @@ This aligns with Autonomous Printshop Build Matrix module:
 - Current Production baseline at approval remains ACC-060: frontend write mode OFF, backend READONLY, server canary cleared, approved first-canary evidence only.
 - No Production mutation in this entry.
 - Next: publish isolated A2.8 app/index code first while Production config stays OFF, verify live propagation, then publish config CANARY for `saveAccountingMaterial` while backend stays READONLY.
+
+
+## Entry ACC-062 — A2.8 frontend live, still unarmed
+- Date: 2026-10-06
+- `main/app.js` = `80ff17ca25eacf8176fc94c95d9545c0b5b3e2b1`.
+- `main/index.html` = `86b823196e0e3975a3cd1354bad27c8cbdc068bf`.
+- Pages Run `37510045306`: **SUCCESS**.
+- Live audit commit `801a6d19537f86fd88abf1ecadaefda793de111e`, Run `37510230800`: **SUCCESS**.
+- Verified live: A2.8 material-only app/cache present; frontend write mode `OFF`; action list empty; backend `READONLY`; server canary cleared.
+- Business write: NO. GENERAL: NO.
+- Result: **PASS**.
+- Next: publish only `config.js` as `CANARY` for `saveAccountingMaterial`, then verify live before server ARM.
