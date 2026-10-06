@@ -9,7 +9,7 @@ window.MATBAGY_SECURE_API_PROXY_URL = "";
 
 // ============================================================
 // EasyStore Accounting / D1
-// A2.9 — Bounded Recalc Canary
+// A2.9 — Post-canary default OFF
 // ============================================================
 
 // القراءة من D1 مفعلة
@@ -18,13 +18,11 @@ window.EASYSTORE_ACCOUNTING_D1_READONLY = true;
 // Legacy/general D1 writes تظل مقفولة
 window.EASYSTORE_ACCOUNTING_D1_WRITES = false;
 
-// السماح بوضع CANARY فقط
-window.EASYSTORE_ACCOUNTING_D1_WRITE_MODE = 'CANARY';
+// الكتابة الافتراضية مقفولة بعد إغلاق A2.9
+window.EASYSTORE_ACCOUNTING_D1_WRITE_MODE = 'OFF';
 
-// عائلة الكتابة الوحيدة المسموحة في هذا الـCanary
-window.EASYSTORE_ACCOUNTING_D1_WRITE_CANARY_ACTIONS = [
-  'recalcAccountingMaterialsCascade'
-];
+// لا توجد عائلات كتابة مسموحة بعد الإغلاق
+window.EASYSTORE_ACCOUNTING_D1_WRITE_CANARY_ACTIONS = [];
 
 // D1 Accounting API
 window.EASYSTORE_ACCOUNTING_D1_URL =
