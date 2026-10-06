@@ -2936,3 +2936,15 @@ This aligns with Autonomous Printshop Build Matrix module:
 - `GENERAL_OPENED=NO`.
 - Result: **PASS — SECOND BOUNDED PRODUCTION WRITE CANARY SUCCEEDED AND AUTO-CLOSED**.
 - Next: independently audit exact D1 post-state, then return Production frontend write mode to OFF and verify final closed runtime.
+
+
+## Entry ACC-074 — Second Material Canary independently verified PASS
+- Date: 2026-10-07
+- Independent audit commit: `6b312959d672f790738d38cfac438e3a92e9c4e1`.
+- Audit Run `37540203056`, Job `112531079769`: **SUCCESS**.
+- Verified exact post-state: materials=1, templates=1, requestLedger=2, events=2; every other tracked accounting business/financial table=0.
+- Material `MAT-5340D6F6A51F` is synthetic `A2_CANARY`, inactive, zero stock/min-stock/cost/sale/dimensions, actor `ضياء`.
+- Request `A28-MAT-mux8u1o6-672anozd` is COMMITTED; matching immutable material create event links to the stable material id.
+- Runtime is READONLY; authoritativeWrites=false; server canary allowlists/budget cleared; GENERAL opened=NO.
+- Result: **PASS — A2.8 WRITE EVIDENCE VERIFIED INDEPENDENTLY**.
+- Next: return Production frontend write routing to OFF/empty action list and verify final live closure; retain inactive zero-value canary artifacts as audit evidence.
