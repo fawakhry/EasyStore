@@ -2981,3 +2981,15 @@ This aligns with Autonomous Printshop Build Matrix module:
 - `ACCOUNTING_CHECKPOINT_APPROVED_CANARY_EVIDENCE=PASS`; `ACCOUNTING_RUNTIME_CHECKPOINT=PASS`; `PRODUCTION_MUTATION=NO`.
 - Result: **PASS — CENTRAL RUNTIME CHECKPOINT MATCHES POST-A2.8 TRUTH**.
 - Next: update manual schema-safety baseline to these immutable canary evidence counts; do not run schema apply.
+
+
+## Entry ACC-078 — Schema safety baseline updated to two-canary evidence
+- Date: 2026-10-07
+- Manual-only schema workflow baseline update commit: `723872c0f0d04cc4b8779e9eafadccc892a991ef`.
+- Guard test update commit: `0ba7e18e31936aa1b72ee30518bf8399e2e05467`.
+- Guard CI Run `37540604992`, Job `112532404614`: **SUCCESS**.
+- Schema Apply remains `workflow_dispatch` only; no schema apply was executed.
+- Safety baseline now requires the immutable approved evidence: materials=1, templates=1, requestLedger=2, events=2, with all other guarded accounting evidence counts unchanged at zero.
+- Production mutation: NO.
+- Result: **PASS — SCHEMA SAFETY WORKFLOW MATCHES POST-A2.8 TRUTH**.
+- Next: remove the temporary one-shot dispatcher marker from TrendOs main; keep the dispatcher itself manual-only.
