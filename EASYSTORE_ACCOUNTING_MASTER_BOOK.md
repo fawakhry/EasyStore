@@ -2370,3 +2370,14 @@ This aligns with Autonomous Printshop Build Matrix module:
 - `ACCOUNTING_RUNTIME_CHECKPOINT=PASS`; `PRODUCTION_MUTATION=NO`.
 - Result: **PASS — CANARY-capable Production backend verified while authority remains closed**.
 - Next: arm exactly `ضياء` + `saveAccountingTemplate` for a short bounded window only after confirming an authenticated execution path that does not bypass EasyStore policy/deterministic tools.
+
+
+## Entry ACC-037 — First-canary command-count gap found before ARM
+- Date: 2026-10-06
+- Finding during final frontend/execution-path qualification: the current server canary policy bounds user, action, amount and expiry, but does not yet atomically cap the number of new write commands inside the window.
+- Risk: two distinct clicks/request IDs by the allowed user could create two inactive zero-value templates before disable/expiry.
+- Classification: **BLOCKED_SAFE**.
+- Current Production remains READONLY; canary users/actions remain empty; no financial/business write executed.
+- Direct D1 business write and synthetic auth/session minting remain forbidden.
+- Required remediation before ARM: add a server-side atomic one-command budget; replay of the same committed idempotency key may be recognized without creating a second business fact, but a second new request key must fail closed.
+- Result: **BLOCKED_SAFE — ARM NOT EXECUTED**.
