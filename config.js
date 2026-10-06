@@ -5,14 +5,14 @@ window.MATBAGY_SECURE_API_PROXY_URL = "";
 
 window.EASYSTORE_ACCOUNTING_D1_READONLY = true;
 window.EASYSTORE_ACCOUNTING_D1_WRITES = false;
-window.EASYSTORE_ACCOUNTING_D1_WRITE_MODE = 'OFF';
-window.EASYSTORE_ACCOUNTING_D1_WRITE_CANARY_ACTIONS = [];
+window.EASYSTORE_ACCOUNTING_D1_WRITE_MODE = 'CANARY';
+window.EASYSTORE_ACCOUNTING_D1_WRITE_CANARY_ACTIONS = ['recalcAccountingMaterialsCascade'];
 window.EASYSTORE_ACCOUNTING_D1_URL = "https://trendos-d1-api.trendmall-contact.workers.dev/v1/employee/accounting";
 window.EASYSTORE_TRENDOS_SSO_HANDOFF_V1 = true;
 
 window.EASYSTORE_VERSION = 'ES47 V1922 Unified Safe Build';
 window.EASYSTORE_SESSION_CATALOG_FIX = window.EASYSTORE_VERSION;
-window.EASYSTORE_CACHE_TAG = 'a28-material-canary-20261006';
+window.EASYSTORE_CACHE_TAG = 'a29-recalc-canary-20261007';
 window.EASYSTORE_AUTO_REFRESH = 'safe-3-minutes-when-clean';
 window.EASYSTORE_INITIAL_LOAD_ONCE = true;
 window.EASYSTORE_DISABLE_PHONE_ACTIVATION = true;
