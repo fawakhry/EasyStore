@@ -1299,16 +1299,11 @@
     downloadSaleImage(){ closeFloatingPanels(); const canvas=document.createElement('canvas'); canvas.width=1200; canvas.height=900; const ctx=canvas.getContext('2d'); ctx.fillStyle='#fff'; ctx.fillRect(0,0,1200,900); ctx.fillStyle='#0f766e'; ctx.fillRect(0,0,1200,120); ctx.fillStyle='#fff'; ctx.font='bold 44px Arial'; ctx.textAlign='right'; ctx.fillText('فاتورة مطبعجي',1120,75); ctx.fillStyle='#111827'; ctx.font='28px Arial'; const lines=this.invoicePlainText().split('\n'); let y=170; lines.forEach(l=>{ ctx.fillText(l,1120,y); y+=42; }); const a=document.createElement('a'); a.download='matbagy-sale-'+(val('saNo')||Date.now())+'.png'; a.href=canvas.toDataURL('image/png'); a.click(); },
     async saveItem(){
       if(!canManageAccounting()) return deny();
-      const canary=a27TemplateCanaryEnabled();
-      const p=canary
-        ? {department:'عام',itemName:'A2-CANARY-TEMPLATE-'+Date.now(),category:'A2_CANARY',size:'',salePrice:0,fixedCost:0,computedUnitCost:0,active:'لا',recordType:'template',notes:'A2.7 bounded canary synthetic inactive zero-value template'}
-        : {department:val('itDept'),itemName:val('itName'),category:val('itType')||'صنف بيع',size:val('itSize'),salePrice:num(val('itSale')),fixedCost:num(val('itCost')),computedUnitCost:num(val('itCost')),active:'نعم',recordType:'template'};
+      const p={department:val('itDept'),itemName:val('itName'),category:val('itType')||'صنف بيع',size:val('itSize'),salePrice:num(val('itSale')),fixedCost:num(val('itCost')),computedUnitCost:num(val('itCost')),active:'نعم',recordType:'template'};
       if(!p.itemName) return flash('اكتب اسم الصنف',true);
       try{
-        const payload=canary?Object.assign({upsert:'1',requestId:newAccountingRequestId('A27-TPL')},p):Object.assign({upsert:'1'},p);
-        const reply=await api('saveAccountingTemplate',payload);
+        const reply=await api('saveAccountingTemplate',Object.assign({upsert:'1'},p));
         if(!reply||reply.success===false) throw new Error((reply&&reply.message)||'تعذر حفظ الصنف');
-        if(canary){ state.active='items'; shell(); flash('تم تنفيذ A2.7 Canary: Template اختبار غير نشط وبقيمة صفر.'); return; }
         p.fixedCost=num(reply.calculatedCost); p.computedUnitCost=p.fixedCost; const res=upsertByNameDept(state.data.templates,p,templateName,matDept); saveLocal(); state.active='items'; shell(); flash(reply.message||(res.updated?'الصنف موجود وتم تحديثه في الكتالوج':'تم حفظ الصنف في الكتالوج'));
       }catch(e){ flash('لم يتم حفظ الصنف: '+(e.message||e),true); }
     },
