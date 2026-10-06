@@ -1,0 +1,26 @@
+name: EasyStore A2.7 First Canary Frontend CI
+
+on:
+  push:
+    branches:
+      - candidate/easystore-a27-first-canary-prodpatch-20261006
+    paths:
+      - 'app.js'
+      - 'config.js'
+      - 'tests/easystore_a27_first_canary_frontend.test.js'
+      - '.github/workflows/easystore-a27-first-canary-frontend-ci.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: node --check app.js
+      - run: node tests/easystore_a27_first_canary_frontend.test.js
