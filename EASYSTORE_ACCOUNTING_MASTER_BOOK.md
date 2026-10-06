@@ -2846,3 +2846,14 @@ This aligns with Autonomous Printshop Build Matrix module:
 - Business write executed: NO. GENERAL opened: NO.
 - Result: **PASS — FRONTEND ARMED LOCALLY, SERVER AUTHORITY STILL FAIL-CLOSED**.
 - Next: start the already CI-qualified A2.8 execution workflow; its preflight must re-prove exact D1 baseline before server ARM.
+
+
+## Entry ACC-065 — A2.8 execution ready; manual dispatch capability is the only blocker
+- Date: 2026-10-06
+- Production frontend is live in bounded `CANARY` mode for `saveAccountingMaterial` only.
+- Fresh live health remains `READONLY`, authoritativeWrites=false, server canary users/actions=0/0, maxCommands=0, commandsStarted=0.
+- The approved A2.8 execution workflow remains intentionally `workflow_dispatch` / manual-only as qualified in ACC-059.
+- Available GitHub connector does not expose workflow-dispatch execution; attempted conversion to push-trigger was blocked and was not applied.
+- No server ARM occurred. No business write occurred. GENERAL remains closed.
+- Result: **BLOCKED_SAFE — ONLY MANUAL WORKFLOW DISPATCH IS REQUIRED**.
+- Next: owner triggers `EasyStore A2.8 Approved Material Canary Execution` on branch `candidate/easystore-accounting-a2-20261005`; then runtime monitoring resumes before the authenticated EasyStore click.
