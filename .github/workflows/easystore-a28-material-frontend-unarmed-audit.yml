@@ -1,0 +1,51 @@
+name: EasyStore A2.8 Material Frontend Unarmed Production Audit
+
+on:
+  push:
+    branches:
+      - candidate/easystore-zero-google-audit-20261004
+    paths:
+      - '.github/workflows/easystore-a28-material-frontend-unarmed-audit.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - name: Audit live A2.8 code while routing remains OFF
+        shell: bash
+        run: |
+          set -euo pipefail
+          BASE="https://fawakhry.github.io/EasyStore"
+          API="https://trendos-d1-api.trendmall-contact.workers.dev"
+          curl --fail --silent --show-error --location "$BASE/index.html?a28unarmed=$GITHUB_RUN_ID" > /tmp/index.html
+          curl --fail --silent --show-error --location "$BASE/app.js?a28unarmed=$GITHUB_RUN_ID" > /tmp/app.js
+          curl --fail --silent --show-error --location "$BASE/config.js?a28unarmed=$GITHUB_RUN_ID" > /tmp/config.js
+          curl --fail --silent --show-error "$API/v1/employee/accounting/health?a28unarmed=$GITHUB_RUN_ID" > /tmp/health.json
+          node <<'NODE'
+          const fs=require('fs');
+          const index=fs.readFileSync('/tmp/index.html','utf8');
+          const app=fs.readFileSync('/tmp/app.js','utf8');
+          const cfg=fs.readFileSync('/tmp/config.js','utf8');
+          const h=JSON.parse(fs.readFileSync('/tmp/health.json','utf8'));
+          if(!index.includes("CACHE_TAG = 'a28-material-canary-20261006'"))throw new Error('A2.8 index not live');
+          if(!index.includes('app.js?v=a28-material-canary-20261006'))throw new Error('A2.8 app cache tag not live');
+          if(!app.includes("const D1_ACCOUNTING_WRITE_ACTIONS = new Set(['saveAccountingMaterial'])"))throw new Error('material-only app code not live');
+          if(!app.includes("materialName:'A2-CANARY-MATERIAL-'+Date.now()"))throw new Error('synthetic material guard not live');
+          if(!/EASYSTORE_ACCOUNTING_D1_WRITE_MODE\s*=\s*'OFF'/.test(cfg))throw new Error('frontend routing not OFF');
+          if(!/EASYSTORE_ACCOUNTING_D1_WRITE_CANARY_ACTIONS\s*=\s*\[\]/.test(cfg))throw new Error('frontend action list not empty');
+          if(!/EASYSTORE_ACCOUNTING_D1_WRITES\s*=\s*false/.test(cfg))throw new Error('legacy write flag drift');
+          if(h.mode!=='READONLY'||h.authoritativeWrites!==false)throw new Error('backend not READONLY');
+          if(Number(h.writeCanaryAllowedUserCount||0)!==0||Number(h.writeCanaryAllowedActionCount||0)!==0)throw new Error('server allowlists not empty');
+          if(Number(h.writeCanaryMaxCommands||0)!==0||Number(h.writeCanaryCommandsStarted||0)!==0)throw new Error('server budget not cleared');
+          console.log('A28_LIVE_APP_CODE=PASS');
+          console.log('A28_LIVE_CACHE_TAG=PASS');
+          console.log('A28_LIVE_CONFIG=OFF');
+          console.log('A28_BACKEND_MODE=READONLY');
+          console.log('A28_SERVER_CANARY=CLEARED');
+          console.log('PRODUCTION_BUSINESS_MUTATION=NO');
+          NODE
