@@ -2700,3 +2700,24 @@ This aligns with Autonomous Printshop Build Matrix module:
   - runtime remains READONLY.
 - Result: **PASS — MATERIAL CANARY SERVER SHAPE QUALIFIED/LIVE UNDER CLOSED AUTHORITY**.
 - Next: update central runtime/schema safety workflows to the post-first-canary baseline, then qualify an isolated Production frontend/execution path for `saveAccountingMaterial` without arming it.
+
+
+## Entry ACC-055 — Central runtime checkpoint updated to post-canary truth
+- Date: 2026-10-06
+- Runtime checkpoint workflow commit: `86e7b3ada596060d917f34b6daa57bbc1aebc103`.
+- Run `37507420961`, Job `112419499453`: **SUCCESS**.
+- Current Production truth:
+  - API version `b6343d39-7657-4870-8233-1a5164d6f11f`;
+  - Accounting mode `READONLY`;
+  - policy epoch `6`;
+  - schema ready=true, authoritativeWrites=false, Google business calls=0;
+  - server canary users/actions=0 and command budget cleared;
+  - live EasyStore D1 write flag=false;
+  - live write mode=`OFF`;
+  - live frontend canary actions=[];
+  - materials=0, templates=1, requestLedger=1, events=1, every other tracked accounting table=0;
+  - total tracked accounting rows=3, all approved first-canary evidence.
+- `ACCOUNTING_CHECKPOINT_APPROVED_CANARY_EVIDENCE=PASS` and `ACCOUNTING_RUNTIME_CHECKPOINT=PASS`.
+- Production mutation: NO.
+- Result: **PASS — CENTRAL CHECKPOINT NOW MATCHES RUNTIME TRUTH AFTER FIRST CANARY**.
+- Next: make schema-apply safety workflow aware of this immutable evidence baseline, then continue second-family repo-only qualification.
