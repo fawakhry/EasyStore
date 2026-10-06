@@ -1,0 +1,38 @@
+name: EasyStore Accounting Current Checkpoint CI
+
+on:
+  push:
+    branches:
+      - candidate/easystore-zero-google-audit-20261004
+    paths:
+      - '.github/workflows/easystore-accounting-current-checkpoint-ci.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  qualify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Validate current accounting frontend checkpoint
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check app.js
+          node tests/accounting_agent_policy_v1.test.js
+          node tests/accounting_read_model_v1.test.js
+          node tests/accounting_connector_contract_v1.test.js
+          node tests/accounting_write_model_v1.test.js
+          node tests/easystore_a1_core_read_router.test.js
+          node tests/easystore_a1_all_reads_d1_only.test.js
+          node tests/easystore_a2_write_router.test.js
+          node tests/easystore_a2_no_legacy_accounting_fallback.test.js
+          echo EASYSTORE_ACCOUNTING_CURRENT_CHECKPOINT_CI=PASS
+          echo PRODUCTION_MUTATION=NO
