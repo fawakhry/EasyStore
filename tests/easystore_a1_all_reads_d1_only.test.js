@@ -33,7 +33,7 @@ const apiBlock=app.slice(app.indexOf('async function api('),app.indexOf('functio
 assert.ok(apiBlock.includes('if(useD1Accounting)'),'D1 accounting branch missing');
 assert.ok(apiBlock.includes('const useD1Read'),'D1 read predicate missing');
 assert.ok(apiBlock.includes("Authorization':'Bearer '+user.token"));
-const d1Start=apiBlock.indexOf('if(useD1Read){');
+const d1Start=apiBlock.indexOf('if(useD1Accounting){');
 const legacyStart=apiBlock.indexOf("const endpoint=String(window.MATBAGY_SECURE_API_PROXY_URL||window.TREND_API_URL||'').trim();");
 assert.ok(d1Start>=0 && legacyStart>d1Start,'D1 and legacy branches missing');
 const d1Branch=apiBlock.slice(d1Start,legacyStart);
