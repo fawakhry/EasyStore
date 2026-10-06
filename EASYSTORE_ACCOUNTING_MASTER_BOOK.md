@@ -2518,3 +2518,16 @@ This aligns with Autonomous Printshop Build Matrix module:
 - Production business mutation: NO.
 - Result: **PASS — FRONTEND READY, SERVER NOT ARMED**.
 - Next: read-only check for an active canonical `ضياء` session; no credential or token data may be read.
+
+
+## Entry ACC-044 — Production frontend config flipped to one-action CANARY; backend still closed
+- Date: 2026-10-06
+- Production `main` commit: `e72df8ac90cb81f7baac55b9f07f3b9270480707`.
+- Changed file only: `config.js`.
+- Production frontend config now sets `EASYSTORE_ACCOUNTING_D1_WRITE_MODE='CANARY'` and `EASYSTORE_ACCOUNTING_D1_WRITE_CANARY_ACTIONS=['saveAccountingTemplate']`; legacy compatibility flag remains false.
+- GitHub Pages deployment Run `37497829182`: **SUCCESS**.
+- This frontend step does not open server write authority by itself; backend/server state must still be verified separately before ARM.
+- Financial/business write executed in this step: NO.
+- GENERAL opened: NO.
+- Result: **DEPLOYED — FRONTEND ONE-ACTION CANARY ROUTING PUBLISHED; SERVER ARM NOT YET EXECUTED**.
+- Next: live audit must prove config propagation + backend READONLY + empty server allowlists before server ARM.
