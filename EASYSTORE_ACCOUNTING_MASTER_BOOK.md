@@ -2356,3 +2356,17 @@ This aligns with Autonomous Printshop Build Matrix module:
 - Automatic rollback was armed for the deployment but was not needed.
 - Result: **PASS — CANARY-capable backend is live but write authority remains closed**.
 - Next: refresh exact Production API/runtime truth, then enable only the approved one-user/one-action bounded CANARY path.
+
+
+## Entry ACC-036 — Post-deploy Production checkpoint PASS
+- Date: 2026-10-06
+- Runtime audit commit: `2ab0daba6db37a3e0a93a8ce1c939c4572cc2cfb`.
+- Run `37495525695`, Job `112378945160`: **SUCCESS**.
+- Current API version: `81bcc92e-fe06-464d-aa8c-93301b6617dc`.
+- Accounting runtime: READONLY, policy epoch 2, schema ready, authoritative writes=false, Google business calls=0.
+- Canary: ready=true, enabled=true, allowed users=0, allowed actions=0.
+- Live EasyStore D1 write flag: absent-safe.
+- All tracked accounting business tables remain 0 rows; total accounting rows=0.
+- `ACCOUNTING_RUNTIME_CHECKPOINT=PASS`; `PRODUCTION_MUTATION=NO`.
+- Result: **PASS — CANARY-capable Production backend verified while authority remains closed**.
+- Next: arm exactly `ضياء` + `saveAccountingTemplate` for a short bounded window only after confirming an authenticated execution path that does not bypass EasyStore policy/deterministic tools.
