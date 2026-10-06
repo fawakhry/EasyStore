@@ -3152,3 +3152,17 @@ This aligns with Autonomous Printshop Build Matrix module:
 - Scope: `ضياء` + `recalcAccountingMaterialsCascade` only.
 - GENERAL: NO.
 - Status: IN_PROGRESS.
+
+
+## Entry ACC-090 — A2.9 recalc Production canary succeeded and server auto-closed
+- Date: 2026-10-07
+- Execution Run `37543905745`, Job `112543210231`: **SUCCESS**.
+- `A29_EXEC_PREFLIGHT=PASS`; user `ضياء`; action `recalcAccountingMaterialsCascade`; active master rows=0.
+- Exact evidence: `A29_EXEC_EXACT_D1_EVIDENCE=PASS`; request `A29-RECALC-muxaasiz-yihe2m4t`; result `ZERO_MASTER_SCOPE`.
+- Recalc returned materialCount=0, templateCount=0, changedMaterials=0, changedTemplates=0.
+- No Material/Template/master/financial rows changed; requestLedger and events each advanced by exactly one.
+- `A29_EXEC_SERVER_AUTO_DISABLED=PASS`; fresh runtime after completion is READONLY, authoritativeWrites=false, users/actions=0/0, command budget cleared; policy epoch=10.
+- `GENERAL_OPENED=NO`; Google business calls remain 0.
+- EasyStore Production `main` current head `a6c9ddd74c98dbddb91bb1b4d0ddcb811a9eca37`; current config remains frontend CANARY for `recalcAccountingMaterialsCascade`, so frontend closure to OFF is still pending.
+- Backend candidate head `599f4f38009b0312a69a7edbe43deb6f4c934a0a`; A2.9 recalc guard is live.
+- Result: **PASS — THIRD BOUNDED PRODUCTION CANARY SUCCEEDED; SERVER CLOSED, FRONTEND OFF CLEANUP + POST-AUDIT STILL PENDING**.
