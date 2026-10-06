@@ -1,0 +1,51 @@
+name: EasyStore A2.7 Frontend Armed Production Audit
+
+on:
+  push:
+    branches:
+      - candidate/easystore-zero-google-audit-20261004
+    paths:
+      - '.github/workflows/easystore-a27-frontend-armed-production-audit.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - name: Audit live frontend CANARY while backend remains READONLY
+        shell: bash
+        run: |
+          set -euo pipefail
+          BASE="https://fawakhry.github.io/EasyStore"
+          API="https://trendos-d1-api.trendmall-contact.workers.dev"
+          curl --fail --silent --show-error --location "$BASE/index.html?a27armed=$GITHUB_RUN_ID" > /tmp/index.html
+          curl --fail --silent --show-error --location "$BASE/app.js?a27armed=$GITHUB_RUN_ID" > /tmp/app.js
+          curl --fail --silent --show-error --location "$BASE/config.js?a27armed=$GITHUB_RUN_ID" > /tmp/config.js
+          curl --fail --silent --show-error "$API/v1/employee/accounting/health?a27armed=$GITHUB_RUN_ID" > /tmp/health.json
+          node <<'NODE'
+          const fs=require('fs');
+          const index=fs.readFileSync('/tmp/index.html','utf8');
+          const app=fs.readFileSync('/tmp/app.js','utf8');
+          const config=fs.readFileSync('/tmp/config.js','utf8');
+          const h=JSON.parse(fs.readFileSync('/tmp/health.json','utf8'));
+          if(!index.includes("CACHE_TAG = 'a27-first-canary-20261006'")) throw new Error('canary index cache tag not live');
+          if(!app.includes("const D1_ACCOUNTING_WRITE_ACTIONS = new Set(['saveAccountingTemplate'])")) throw new Error('one-action app code not live');
+          if(!app.includes("itemName:'A2-CANARY-TEMPLATE-'+Date.now()")) throw new Error('synthetic zero-value template guard not live');
+          if(!/EASYSTORE_ACCOUNTING_D1_WRITE_MODE\s*=\s*'CANARY'/.test(config)) throw new Error('frontend CANARY mode not live');
+          if(!/EASYSTORE_ACCOUNTING_D1_WRITE_CANARY_ACTIONS\s*=\s*\['saveAccountingTemplate'\]/.test(config)) throw new Error('frontend canary action mismatch');
+          if(!/EASYSTORE_ACCOUNTING_D1_WRITES\s*=\s*false/.test(config)) throw new Error('legacy write flag drift');
+          if(h.mode!=='READONLY'||h.authoritativeWrites!==false) throw new Error('backend authority not closed');
+          if(Number(h.writeCanaryAllowedUserCount||0)!==0||Number(h.writeCanaryAllowedActionCount||0)!==0) throw new Error('server allowlists armed too early');
+          if(Number(h.writeCanaryMaxCommands||0)!==0||Number(h.writeCanaryCommandsStarted||0)!==0) throw new Error('server command budget armed too early');
+          console.log('A27_LIVE_FRONTEND_MODE=CANARY');
+          console.log('A27_LIVE_FRONTEND_ACTION=saveAccountingTemplate');
+          console.log('A27_LIVE_SYNTHETIC_ZERO_VALUE_GUARD=PASS');
+          console.log('A27_BACKEND_MODE=READONLY');
+          console.log('A27_SERVER_ALLOWLISTS=EMPTY');
+          console.log('A27_SERVER_COMMAND_BUDGET=UNARMED');
+          console.log('PRODUCTION_BUSINESS_MUTATION=NO');
+          NODE
