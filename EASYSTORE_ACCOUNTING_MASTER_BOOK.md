@@ -2107,3 +2107,84 @@ This aligns with Autonomous Printshop Build Matrix module:
 - Next gate:
   - prepare and qualify the fail-closed arm/disable workflow and post-write invariant checks without executing ARM;
   - then request the owner's explicit choice of canary user/action before any Production financial write authority is opened.
+
+
+## Entry ACC-030 — Dedicated CANARY mode blocker found and repaired repo-only
+- Date: 2026-10-06
+- Goal: Prove that the first accounting write canary can be armed without ever opening `GENERAL`.
+- Initial source finding:
+  - the deployed A2 source accepted writes only when accounting control mode was `GENERAL`;
+  - `READONLY` correctly rejected every non-read action;
+  - the write-canary allowlist was enforced only inside `GENERAL`;
+  - therefore the existing implementation did **not** satisfy the owner rule: bounded canary must not require opening GENERAL.
+- Safety classification: **BLOCKED_SAFE**.
+  - no runtime mode change;
+  - no allowlist change;
+  - no frontend write cutover;
+  - no Production financial/business mutation.
+- Read-only Production prerequisite probe:
+  - workflow source commit: `3691616534ae52d14cda3ebf00b0468a51ca6030`;
+  - workflow: `.github/workflows/easystore-a2-canary-mode-preflight.yml`;
+  - Run: `37491320726`;
+  - Job: `112364494678`;
+  - Conclusion: **SUCCESS**;
+  - evidence:
+    ```ini
+    A2_CANARY_MODE_PREFLIGHT=PASS
+    CURRENT_ACCOUNTING_MODE=READONLY
+    CURRENT_POLICY_EPOCH=2
+    CONTROL_SCHEMA_ALLOWS_CANARY=false
+    CANARY_ENABLED=true
+    CANARY_ALLOWED_USERS_JSON=[]
+    CANARY_ALLOWED_ACTIONS_JSON=[]
+    CANARY_MAX_AMOUNT=0
+    CANARY_EXPIRES_AT_MS=0
+    PRODUCTION_MUTATION=NO
+    ```
+- Dedicated backend CANARY source added:
+  - source commit: `b298c8c3af15e17ab62f691d805281b4555dd134`;
+  - accepted runtime modes are now explicitly `READONLY | CANARY | GENERAL`;
+  - `READONLY` still rejects writes;
+  - `CANARY` and `GENERAL` route non-read actions through `enforceWriteCanaryV1`;
+  - `CANARY` uses strict `requireEnabled=true`, so disabling/missing the canary guard cannot accidentally widen authority;
+  - health exposes `writeAuthorityMode=CANARY_BOUNDED` when in CANARY.
+- Initial CI after source change:
+  - Run `37491545598`: **FAIL**;
+  - failure was a stale source assertion requiring the exact historical `GENERAL`-only guard string;
+  - syntax and the other A2 family CIs were successful;
+  - no deploy or Production mutation occurred.
+- Control-schema remediation prepared repo-only:
+  - migration: `0029_employee_accounting_canary_mode_v1.sql`;
+  - commit: `c9f09a69a4eca32ceb492fbbe9d0bcc90dff491e`;
+  - migration widens only the singleton control-table mode CHECK from
+    `OFF/READONLY/GENERAL` to `OFF/READONLY/CANARY/GENERAL`;
+  - it copies the existing control row unchanged, therefore applying the migration by itself is designed to preserve `READONLY`, invoice counter and policy epoch;
+  - **migration has NOT been applied to Production**.
+- Canary policy regression test updated:
+  - test commit: `0dadf75fabd92fcfa025b169796c58922b1261d6`;
+  - Run: `37492151690`;
+  - Conclusion: **SUCCESS**;
+  - test now locks:
+    - dedicated CANARY mode exists;
+    - CANARY requires the guard to remain enabled;
+    - explicit user/action/amount/expiry policy remains mandatory;
+    - READONLY remains fail-closed;
+    - GENERAL is not required for bounded canary.
+- Production state after this entry:
+  ```ini
+  PRODUCTION_ACCOUNTING_MODE=READONLY
+  PRODUCTION_CANARY_ALLOWED_USERS=0
+  PRODUCTION_CANARY_ALLOWED_ACTIONS=0
+  MIGRATION_0029_APPLIED=NO
+  DEDICATED_CANARY_SOURCE=QUALIFIED_REPO_ONLY
+  GENERAL_OPENED=NO
+  FINANCIAL_WRITE_EXECUTED=NO
+  PRODUCTION_MUTATION=NO
+  ```
+- Result: **PASS — DEDICATED CANARY DESIGN QUALIFIED REPO-ONLY / PRODUCTION STILL READONLY**
+- Next gate:
+  - qualify defense-in-depth frontend one-action CANARY routing;
+  - identify the exact canonical full/admin username read-only;
+  - prepare controlled ARM/DISABLE + post-write invariant workflow without executing ARM;
+  - refresh Production runtime truth;
+  - only then request owner approval for the actual one-user/one-action canary.
