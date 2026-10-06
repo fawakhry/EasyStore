@@ -3043,3 +3043,17 @@ This aligns with Autonomous Printshop Build Matrix module:
 - Production mutation: NO.
 - Result: **PASS — A2.9 FRONTEND CANDIDATE QUALIFIED, NOT DEPLOYED**.
 - Next: qualify a manual-only auto-closing execution workflow preserving the two-canary baseline; do not arm or deploy without owner decision.
+
+
+## Entry ACC-083 — A2.9 recalc execution path fully qualified repo-only
+- Date: 2026-10-07
+- Manual-only execution workflow commit: `ba0e589606b2d186225ef0da71af52f89ef96d0d`.
+- Execution invariant test commit: `7fd4d7e5c09a3457e16f6e8c41b94bd2dab8d3b9`.
+- CI commit: `4892015c5aeab3ce216a8797412009d72636c30f`.
+- CI Run `37541602252`, Job `112535667083`: **SUCCESS**.
+- Locked contract: user `ضياء` only; action `recalcAccountingMaterialsCascade` only; max one new command; zero amount; activeMaterials=0 and activeTemplates=0 required; master row counts must not change; only requestLedger +1 and events +1 may appear.
+- Exact success evidence requires operation `material-cost-cascade`, immutable event `material-cost-cascade/all/recalculate`, and returned materialCount/templateCount/changedMaterials/changedTemplates all equal zero.
+- Workflow auto-disables server authority back to READONLY on success/error/timeout; GENERAL transition is forbidden.
+- No Production frontend deploy, backend deploy, ARM, or write occurred.
+- Result: **PASS — A2.9 EXECUTION PATH QUALIFIED, NOT DEPLOYED / NOT ARMED**.
+- Next: refresh live Production runtime; only then present the fresh owner decision gate.
