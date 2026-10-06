@@ -2442,3 +2442,22 @@ This aligns with Autonomous Printshop Build Matrix module:
 - Production mutation so far: NO.
 - Result: **PASS — MINIMAL FRONTEND PATCH QUALIFIED**.
 - Deployment order for safety: copy app.js + cache-bumped index.html to Production first while config remains legacy/unarmed; verify; only then flip Production config to one-action CANARY while backend is still READONLY.
+
+
+## Entry ACC-034 — Migration 0029 applied safely in Production
+- Date: 2026-10-06
+- Controlled schema workflow Run `37495134095`, Job `112377620195`: **SUCCESS**.
+- Applied migration: `0029_employee_accounting_canary_mode_v1.sql`.
+- Precheck: accounting runtime READONLY, clean accounting baseline, migration 0029 pending.
+- Postcheck evidence:
+  - `A2_SCHEMA_ACCOUNTING_ROWS_POST=0`
+  - `A2_SCHEMA_NON_ACCOUNTING_SENTINELS=INVARIANT`
+  - `A2_SCHEMA_MODE_PRESERVED=READONLY`
+  - `A2_SCHEMA_POLICY_EPOCH_PRESERVED=2`
+  - `A2_SCHEMA_POST_HEALTH=PASS`
+  - `A2_SCHEMA_PRODUCTION_BUSINESS_DATA_MUTATION=NO`
+  - `A2_SCHEMA_PRODUCTION_SCHEMA_MUTATION=YES`
+- Financial/business write executed: NO.
+- GENERAL opened: NO.
+- Result: **PASS — CANARY MODE SCHEMA CAPABILITY LIVE, AUTHORITY STILL READONLY**.
+- Next: deploy the qualified backend CANARY source while preserving READONLY/default-deny, then verify runtime before any ARM.
