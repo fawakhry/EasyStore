@@ -2909,3 +2909,15 @@ This aligns with Autonomous Printshop Build Matrix module:
 - Because the connector has no direct workflow-dispatch method, next step is a one-shot push trigger on a dedicated marker file; after candidate run starts, main dispatcher will be returned to manual-only.
 - Server ARM: NO. Business write: NO. Backend remains READONLY.
 - Result: **PASS — CONTROL-PLANE DISPATCHER READY**.
+
+
+## Entry ACC-072 — A2.8 candidate workflow started and server CANARY armed
+- Date: 2026-10-07
+- One-shot dispatcher Run `37539802497`: SUCCESS.
+- Qualified candidate Run `37539813718` started on branch `candidate/easystore-accounting-a2-20261005`.
+- Candidate preflight: SUCCESS.
+- Main dispatcher restored to manual-only at commit `f9c912411277c7b4f7d75c2bc3062357eb56bba9`.
+- Fresh runtime health while waiting: mode `CANARY`, writeAuthorityMode `CANARY_BOUNDED`, policy epoch 7, users/actions=1/1, maxAmount=0, maxCommands=1, commandsStarted=0.
+- Approved scope remains canonical user `ضياء` + action `saveAccountingMaterial` only.
+- Business write has not started yet. GENERAL remains closed.
+- Result: **IN_PROGRESS — WAITING FOR ONE AUTHENTICATED DIAA MATERIAL SAVE CLICK**.
