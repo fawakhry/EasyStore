@@ -16,7 +16,13 @@ for(const action of active) assert.ok(routedSet.has(action),'active write not D1
 assert.equal(routedSet.size,21,'unexpected D1 write route count');
 
 assert.match(config,/window\.EASYSTORE_ACCOUNTING_D1_WRITES\s*=\s*false\s*;/);
-assert.match(app,/const useD1Write\s*=\s*window\.EASYSTORE_ACCOUNTING_D1_WRITES === true/);
+assert.match(config,/window\.EASYSTORE_ACCOUNTING_D1_WRITE_MODE\s*=\s*'OFF'\s*;/);
+assert.match(config,/window\.EASYSTORE_ACCOUNTING_D1_WRITE_CANARY_ACTIONS\s*=\s*\[\]\s*;/);
+assert.match(app,/const configuredWriteMode\s*=\s*String\(window\.EASYSTORE_ACCOUNTING_D1_WRITE_MODE/);
+assert.match(app,/configuredWriteMode === 'CANARY'/);
+assert.match(app,/configuredCanaryActions\.has\(actionName\)/);
+assert.match(app,/هذه الحركة خارج نطاق كاناري الحسابات المسموح/);
+assert.match(app,/const useD1Write\s*=\s*writeActionRequested/);
 assert.match(app,/const useD1Accounting\s*=\s*useD1Read \|\| useD1Write/);
 
 const apiStart=app.indexOf('async function api(');
@@ -45,6 +51,9 @@ for(const marker of [
 console.log('EASYSTORE_A2_WRITE_ROUTER_SOURCE=PASS');
 console.log('D1_WRITE_ACTION_COUNT='+routedSet.size);
 console.log('D1_WRITE_FLAG_DEFAULT=false');
+console.log('D1_WRITE_MODE_DEFAULT=OFF');
+console.log('D1_WRITE_CANARY_ACTIONS_DEFAULT=EMPTY');
+console.log('D1_WRITE_CANARY_FRONTEND_FAIL_CLOSED=YES');
 console.log('D1_WRITE_SILENT_LEGACY_FALLBACK=NO');
 console.log('WRITE_REQUEST_ID_MARKERS=PASS');
 console.log('PRODUCTION_MUTATION=NO');
