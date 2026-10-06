@@ -3057,3 +3057,20 @@ This aligns with Autonomous Printshop Build Matrix module:
 - No Production frontend deploy, backend deploy, ARM, or write occurred.
 - Result: **PASS — A2.9 EXECUTION PATH QUALIFIED, NOT DEPLOYED / NOT ARMED**.
 - Next: refresh live Production runtime; only then present the fresh owner decision gate.
+
+
+## Entry ACC-084 — A2.9 recalc canary decision gate reached with Production fully closed
+- Date: 2026-10-07
+- Final runtime refresh commit: `0f264bdb29c51126da70605d14308a7192bee677`.
+- Runtime Checkpoint Run `37541687074`, Job `112535947785`: **SUCCESS**.
+- Live Production truth: API version `24202d32-cd6f-41bb-9ce3-0565877ef8be`; Accounting READONLY; policy epoch 8; authoritativeWrites=false; Google business calls=0; server canary users/actions=0/0; command budget cleared; EasyStore main write mode OFF; canary action list empty.
+- Approved evidence remains unchanged: materials=1, templates=1, requestLedger=2, events=2, all other tracked accounting tables=0; total tracked rows=6.
+- A2.9 backend guard is qualified repo-only but not deployed; backend candidate HEAD `0f264bdb29c51126da70605d14308a7192bee677`.
+- A2.9 frontend candidate is qualified repo-only and not deployed; branch `candidate/easystore-a29-recalc-canary-prodpatch-20261007`, HEAD `cb0be88c9ce21826a94b3c424443607f8c5b547b`.
+- Production EasyStore main remains `b005c1e6ae5ce309823bd09523f3fea73c189853` with write mode OFF.
+- Proposed third canary: canonical user `ضياء` + action `recalcAccountingMaterialsCascade` only.
+- Current preflight proves activeMaterials=0 and activeTemplates=0. Server guard additionally fails closed if either becomes nonzero at execution time.
+- Expected successful Production effect: no Material/Template/master/financial row changes; requestLedger +1 and events +1 only, with recalc result materialCount=0, templateCount=0, changedMaterials=0, changedTemplates=0.
+- Execution workflow is manual-only, one user / one action / one command / zero-value / short TTL / auto-disable; GENERAL transition forbidden.
+- Result: **PASS — A2.9 DECISION GATE REACHED; NOTHING DEPLOYED OR ARMED**.
+- Owner decision required before backend guard deploy, frontend candidate publish, server ARM, or Production recalc command.
