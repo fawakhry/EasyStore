@@ -3,10 +3,15 @@ const fs=require('fs');
 
 const app=fs.readFileSync('app.js','utf8');
 const config=fs.readFileSync('config.js','utf8');
+const index=fs.readFileSync('index.html','utf8');
 
 assert.match(config,/EASYSTORE_ACCOUNTING_D1_WRITES\s*=\s*false/);
 assert.match(config,/EASYSTORE_ACCOUNTING_D1_WRITE_MODE\s*=\s*'CANARY'/);
 assert.match(config,/EASYSTORE_ACCOUNTING_D1_WRITE_CANARY_ACTIONS\s*=\s*\['saveAccountingTemplate'\]/);
+assert.ok(config.includes("EASYSTORE_CACHE_TAG = 'a27-first-canary-20261006'"));
+assert.ok(index.includes("CACHE_TAG = 'a27-first-canary-20261006'"));
+assert.ok(index.includes('config.js?v=a27-first-canary-20261006'));
+assert.ok(index.includes('app.js?v=a27-first-canary-20261006'));
 
 const m=app.match(/const D1_ACCOUNTING_WRITE_ACTIONS\s*=\s*new Set\((\[[\s\S]*?\])\);/);
 assert.ok(m,'write action set missing');
