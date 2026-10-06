@@ -5,6 +5,12 @@ on:
     branches:
       - candidate/easystore-zero-google-audit-20261004
     paths:
+      - 'app.js'
+      - 'config.js'
+      - 'docs/ACCOUNTING_*.json'
+      - 'tests/accounting_*.test.js'
+      - 'tests/easystore_a1_*.test.js'
+      - 'tests/easystore_a2_*.test.js'
       - '.github/workflows/easystore-accounting-current-checkpoint-ci.yml'
 
 permissions:
