@@ -2734,3 +2734,13 @@ This aligns with Autonomous Printshop Build Matrix module:
 - Production mutation: NO.
 - Result: **FAIL-SAFE / DIAGNOSTIC CONTRACT ERROR, NOT A PENDING-MIGRATION FINDING**.
 - Next: fix the preflight to accept `No migrations to apply!` and independently prove 0030 schema presence via `pragma_table_info(employee_accounting_write_canary_v1)` for `max_commands` and `commands_started`.
+
+
+## Entry ACC-057 — Zero pending migrations proven after diagnostic fix
+- Date: 2026-10-06
+- Corrected preflight commit: `1ffce4870904d3f710c35d64dcb6b8d1b001ed64`.
+- Run `37507745514`, Job `112420625302`: **SUCCESS**.
+- Evidence: `A2_SCHEMA_PENDING_MIGRATIONS=0`, `A2_SCHEMA_0030_COLUMNS=LIVE`, `PRODUCTION_MUTATION=NO`.
+- The prior ACC-056 failure is fully explained as a Wrangler output-contract mistake; there is no pending migration.
+- Result: **PASS — SCHEMA QUEUE EMPTY / 0030 LIVE**.
+- Next: update schema-apply workflow repo-only to the post-first-canary evidence baseline and make it explicit manual-dispatch only; do not execute schema apply.
