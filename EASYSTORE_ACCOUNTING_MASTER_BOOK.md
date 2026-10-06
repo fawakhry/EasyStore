@@ -2409,3 +2409,16 @@ This aligns with Autonomous Printshop Build Matrix module:
 - Canary command-budget columns now exist in Production schema, but no user/action is armed and no command has been executed.
 - Result: **PASS**.
 - Next: redeploy the hardened backend code that atomically enforces the one-command budget, still in READONLY.
+
+
+## Entry ACC-040 — One-command CANARY backend guard deployed in READONLY
+- Date: 2026-10-06
+- Deploy trigger commit: `26a064f703f7a3ad8449c8514865bba1019549f2`.
+- Run `37496800508`, Job `112383305335`: **SUCCESS**.
+- Latest shared TrendOS head included ephemerally: `f57943a03c4547d8ef5c5948bac7234f2cd944ff`; risky overlap=NONE.
+- Source tests PASS, including `CANARY_ATOMIC_COMMAND_BUDGET=YES` and `CANARY_SECOND_NEW_REQUEST_FAILS_CLOSED=YES`.
+- Pre API version: `81bcc92e-fe06-464d-aa8c-93301b6617dc`.
+- Post runtime remains READONLY, default-deny canary PASS, cross-family health PASS, accounting row counts invariant.
+- Production business-data mutation: NO. Frontend write flag changed: NO.
+- Result: **PASS — one-command budget enforcement is live while authority remains closed**.
+- Next: qualify a minimal Production frontend patch for only `saveAccountingTemplate`, without merging the accounting candidate branch.
