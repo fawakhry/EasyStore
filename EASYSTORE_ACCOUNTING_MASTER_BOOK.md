@@ -2889,3 +2889,13 @@ This aligns with Autonomous Printshop Build Matrix module:
 - No server ARM occurred. No accounting business write occurred. Backend remains READONLY.
 - Result: **BLOCKED_SAFE — WORKFLOW MUST EXIST ON DEFAULT BRANCH FOR MANUAL DISPATCH UI**.
 - Next: copy only the already-qualified manual A2.8 workflow file to `main` without merging the accounting candidate or changing runtime authority, then verify the Actions page exists.
+
+
+## Entry ACC-070 — Main placeholder run verified safe; no A2.8 execution occurred
+- Date: 2026-10-07
+- User-triggered Run `37539550034` completed SUCCESS on branch `main`, head `f96a14ca674b00b251ee3a53aa683e4f442757ba`.
+- Executed job was `default-branch-placeholder` only; the qualified candidate A2.8 workflow did not run.
+- Fresh runtime health after the placeholder: mode `READONLY`, authoritativeWrites=false, server canary users/actions=0/0, maxCommands=0, commandsStarted=0.
+- Business write: NO. GENERAL opened: NO.
+- Result: **PASS / SAFE NO-OP**.
+- Next: upgrade the main placeholder into a control-plane dispatcher that only launches the same workflow on `candidate/easystore-accounting-a2-20261005`; keep all accounting execution logic exclusively on the qualified candidate branch.
