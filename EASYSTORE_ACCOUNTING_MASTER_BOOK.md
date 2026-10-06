@@ -2476,3 +2476,22 @@ This aligns with Autonomous Printshop Build Matrix module:
 - Safety response: config flip NOT executed; backend remains READONLY; server canary allowlists remain empty; no business write occurred.
 - Classification: **FAIL-SAFE / PROPAGATION NOT YET PROVEN**.
 - Next: inspect Pages/main deployment state and rerun the read-only live audit; do not arm frontend or backend until it passes.
+
+
+## Entry ACC-035 — CANARY-capable backend deployed under READONLY
+- Date: 2026-10-06
+- Deploy workflow Run `37497512292`, Job `112385747639`: **SUCCESS**.
+- Shared TrendOS base included safely; `A2_DEPLOY_SHARED_OVERLAP=NONE`.
+- Source qualification: `A2_DEPLOY_SOURCE_TESTS=PASS`; dedicated CANARY policy and zero-value guards passed.
+- Pre-deploy Production: API version `1022ea15-56ad-43df-b8f3-c9662afa9815`, Accounting READONLY, live EasyStore write flag absent-safe, accounting rows=0.
+- Post-deploy evidence:
+  - `A2_DEPLOY_ACCOUNTING_POST=READONLY`
+  - `A2_DEPLOY_CANARY_DEFAULT_DENY=PASS`
+  - `A2_DEPLOY_CROSS_FAMILY_HEALTH=PASS`
+  - `A2_DEPLOY_ACCOUNTING_ROW_COUNTS_INVARIANT=PASS`
+  - `A2_ACCOUNTING_READONLY_API_DEPLOY=PASS`
+  - `A2_PRODUCTION_BUSINESS_DATA_MUTATION=NO`
+  - `A2_RUNTIME_MODE=READONLY`
+- GENERAL opened: NO. Financial write executed: NO.
+- Result: **PASS — CANARY-CAPABLE BACKEND LIVE, AUTHORITY STILL READONLY/DEFAULT-DENY**.
+- Next: refresh exact live API/health state, qualify the frontend/execution path, then ARM only the approved user `ضياء` + action `saveAccountingTemplate`.
