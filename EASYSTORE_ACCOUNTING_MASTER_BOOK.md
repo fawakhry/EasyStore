@@ -2721,3 +2721,16 @@ This aligns with Autonomous Printshop Build Matrix module:
 - Production mutation: NO.
 - Result: **PASS — CENTRAL CHECKPOINT NOW MATCHES RUNTIME TRUTH AFTER FIRST CANARY**.
 - Next: make schema-apply safety workflow aware of this immutable evidence baseline, then continue second-family repo-only qualification.
+
+
+## Entry ACC-056 — Schema no-pending preflight false-negative; Schema Apply remained untouched
+- Date: 2026-10-06
+- Read-only preflight commit: `13e1a1dbd21bd5649bc10493e95bbadacd42ac4f`.
+- Run `37507603926`: **FAIL-SAFE**.
+- Wrangler output explicitly said: `No migrations to apply!`.
+- Failure came from an invalid diagnostic assumption that `wrangler d1 migrations list` would also print already-applied migration `0030`; it does not when nothing is pending.
+- Exact failing assertion: `0030 not visible in migration history`.
+- Schema Apply workflow was not modified or executed after this failure.
+- Production mutation: NO.
+- Result: **FAIL-SAFE / DIAGNOSTIC CONTRACT ERROR, NOT A PENDING-MIGRATION FINDING**.
+- Next: fix the preflight to accept `No migrations to apply!` and independently prove 0030 schema presence via `pragma_table_info(employee_accounting_write_canary_v1)` for `max_commands` and `commands_started`.
