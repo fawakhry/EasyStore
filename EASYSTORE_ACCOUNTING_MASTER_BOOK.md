@@ -3086,3 +3086,9 @@ This aligns with Autonomous Printshop Build Matrix module:
 - `ACCOUNTING_CHECKPOINT_APPROVED_CANARY_EVIDENCE=PASS`, `ACCOUNTING_RUNTIME_CHECKPOINT=PASS`, `PRODUCTION_MUTATION=NO`.
 - Result: **PASS — CENTRAL CHECKPOINT NOW MATCHES RUNTIME TRUTH AFTER TWO CANARIES**.
 - Next: update any remaining schema/deploy safety baselines to the same two-canary truth before qualifying a third write family; no further Production write family without a fresh owner decision.
+
+
+## Entry ACC-085 — Decision confirmed
+- Date: 2026-10-07
+- Owner approved proceeding from ACC-084 to the already qualified next gate.
+- No runtime mutation has occurred yet.
