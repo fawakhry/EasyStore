@@ -2593,3 +2593,16 @@ This aligns with Autonomous Printshop Build Matrix module:
 - The later user click occurred after the server window had already closed, so it did not create any accounting fact.
 - Result: **BLOCKED_SAFE / ZERO BUSINESS MUTATION**.
 - Next: start a fresh identical approved window and have Diaa click once while the workflow is actively waiting.
+
+
+## Entry ACC-049 — Independent post-success audit stopped on request-ledger assertion
+- Date: 2026-10-06
+- First-canary execution Run `37505537312`, Job `112413135519`: **SUCCESS**.
+- Execution workflow evidence before close: `A27_EXEC_EXACT_D1_EVIDENCE=PASS`, template `TPL-69C7D9A49828`, request `A27-TPL-muwyw80u-1fuz9v20`, `A27_EXEC_SERVER_AUTO_DISABLED=PASS`, `GENERAL_OPENED=NO`.
+- Independent post-success audit source commit: `792a90f0e4d5e98207a0c5509ccef0dee1984adb`.
+- Audit Run `37505912222`, Job `112414402125`: **FAIL-SAFE**.
+- Exact failing assertion: `request mismatch` in a stricter diagnostic check that additionally required request-ledger `entity_id` to equal the template id.
+- This failure does not itself prove a business or authority drift; it indicates the independent audit made an unproven request-ledger shape assumption not required by the successful execution workflow.
+- No further write authority is opened. Server was already auto-disabled by the successful execution workflow.
+- Result: **FAIL-SAFE / DIAGNOSTIC SHAPE MISMATCH — exact D1 rows must be inspected read-only before final classification**.
+- Next: read exact template/request/event rows and current health; then reconcile the diagnostic assertion and only after that disable frontend CANARY routing.
