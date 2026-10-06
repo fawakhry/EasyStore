@@ -2506,3 +2506,15 @@ This aligns with Autonomous Printshop Build Matrix module:
 - Production business mutation: NO.
 - Result: **PASS — qualified one-action frontend code is live but write routing is still unarmed**.
 - Next: flip only Production `config.js` to CANARY + `[saveAccountingTemplate]`; backend remains READONLY during this frontend flip.
+
+
+## Entry ACC-044 — Live frontend canary, server unarmed
+- Date: 2026-10-06
+- Production config commit: `e72df8ac90cb81f7baac55b9f07f3b9270480707`.
+- Pages Run `37497829182`: **SUCCESS**.
+- Live audit Run `37497972573`, Job `112387312729`: **SUCCESS**.
+- Evidence: frontend CANARY is live for `saveAccountingTemplate` only; backend remains `READONLY`; server allowlists remain empty.
+- Synthetic template guard is live: inactive and zero-value.
+- Production business mutation: NO.
+- Result: **PASS — FRONTEND READY, SERVER NOT ARMED**.
+- Next: read-only check for an active canonical `ضياء` session; no credential or token data may be read.
