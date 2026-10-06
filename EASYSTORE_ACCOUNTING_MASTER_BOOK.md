@@ -2857,3 +2857,13 @@ This aligns with Autonomous Printshop Build Matrix module:
 - No server ARM occurred. No business write occurred. GENERAL remains closed.
 - Result: **BLOCKED_SAFE — ONLY MANUAL WORKFLOW DISPATCH IS REQUIRED**.
 - Next: owner triggers `EasyStore A2.8 Approved Material Canary Execution` on branch `candidate/easystore-accounting-a2-20261005`; then runtime monitoring resumes before the authenticated EasyStore click.
+
+
+## Entry ACC-066 — Owner requested assistant-executed A2.8 dispatch
+- Date: 2026-10-06
+- Owner explicitly requested that the assistant execute the approved A2.8 Material Canary workflow instead of asking for a manual GitHub click.
+- Current GitHub connector can read/write repository content and inspect Actions but exposes no `workflow_dispatch` action.
+- Target workflow remains manual-only and has not been modified to add an automatic push trigger.
+- No server ARM occurred. Backend remains READONLY; frontend remains bounded to `saveAccountingMaterial`; server canary remains cleared.
+- Result: **BLOCKED_SAFE — EXECUTION CHANNEL REQUIRED, NO BUSINESS WRITE**.
+- Next: use an authenticated GitHub browser session to press Run workflow, preserving the manual-only workflow design; do not weaken the workflow trigger as a workaround.
