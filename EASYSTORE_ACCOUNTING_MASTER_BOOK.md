@@ -2340,3 +2340,19 @@ This aligns with Autonomous Printshop Build Matrix module:
 - Canary allowlists were not armed and no financial write executed.
 - Result: **PASS**.
 - Next: deploy the qualified CANARY-aware backend code while keeping Production READONLY, with automatic rollback on any runtime drift.
+
+
+## Entry ACC-035 — CANARY-aware backend deployed while remaining READONLY
+- Date: 2026-10-06
+- Deploy workflow: `.github/workflows/easystore-a2-accounting-readonly-api-deploy.yml`.
+- Trigger commit: `b1359b21a05a90c759de0d718baf3be3c06c4447`.
+- Run `37495322066`, Job `112378253218`: **SUCCESS**.
+- Ephemeral merge included latest shared TrendOS head `3f4b01b2ba9203d76ffe837b6c7440caf93c6801`; risky shared/accounting overlap: **NONE**.
+- All A2 source tests passed, including dedicated CANARY mode and zero-value-only guard.
+- Pre-deploy API version: `377b105f-8788-41be-921d-e23a16ccd341`.
+- Pre-state: Accounting READONLY, live EasyStore write flag absent-safe, accounting rows=0.
+- Post-state: `A2_DEPLOY_ACCOUNTING_POST=READONLY`, `A2_DEPLOY_CANARY_DEFAULT_DENY=PASS`, cross-family health PASS, accounting row counts invariant.
+- Production business-data mutation: **NO**. Frontend write flag changed: **NO**.
+- Automatic rollback was armed for the deployment but was not needed.
+- Result: **PASS — CANARY-capable backend is live but write authority remains closed**.
+- Next: refresh exact Production API/runtime truth, then enable only the approved one-user/one-action bounded CANARY path.
