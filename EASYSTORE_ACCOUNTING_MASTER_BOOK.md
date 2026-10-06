@@ -1794,3 +1794,224 @@ This aligns with Autonomous Printshop Build Matrix module:
   - shared-base resync rerun: `37365910966` — **QUEUED**
   - GitHub Actions runner queue is the current external execution blocker; no user decision is required.
 
+## Entry ACC-025C — A2.7 write-canary preflight passed after connection interruption
+- Date: 2026-10-06
+- Goal: Re-run the write-canary preflight from the last safe point after the interrupted session.
+- Backend branch: `candidate/easystore-accounting-a2-20261005`
+- Workflow commit: `79ca3a8b754c8fabe52b9d9cea0ad9bc1436e7c7`
+- Run: `37448627223`
+- Job: `112219422662`
+- Result: **SUCCESS**
+- Runtime truth:
+  ```ini
+  A2_7_RUNTIME_MODE=READONLY
+  A2_7_AUTHORITATIVE_WRITES=NO
+  A2_7_LIVE_EASYSTORE_WRITE_FLAG=ABSENT_SAFE
+  A2_7_GOOGLE_BUSINESS_CALLS=0
+  A2_7_SCHEMA_READY=YES
+  ```
+- Production A2 schema verification:
+  - required A2 tables: PASS;
+  - material dimensions: PASS;
+  - department work date: PASS;
+  - stable Party ledger ID: PASS;
+  - command/audit columns: PASS;
+  - final-invoice reversal/direct-sale columns: PASS;
+  - day-close integrity columns: PASS.
+- Accounting row-count snapshot:
+  - all 15 checked accounting business/audit tables returned **0 rows**.
+- Safety:
+  - no write user/action was armed;
+  - no frontend write route was enabled;
+  - no Production business-data mutation occurred.
+- Result: **PASS — CANARY PREFLIGHT READY, WRITE AUTHORITY STILL OFF**
+
+## Entry ACC-026 — Legacy accounting actions retired fail-closed
+- Date: 2026-10-06
+- Goal: Ensure the three obsolete Google/legacy-cleanup accounting actions can never fall through to Apps Script after the A0 clean baseline.
+- Retired actions:
+  - `classifyLegacyAccountingRowV1920`
+  - `applySuggestedLegacyClassificationsV1921`
+  - `reconcileLegacyCustomerDebtsV1914`
+- Retirement workflow history:
+  - Run `37366056117`: failed safely during the first workflow form;
+  - Run `37366125076`: failed safely while correcting workflow YAML;
+  - Run `37366340256`: failed safely while correcting newline escaping;
+  - Run `37448699100`: **SUCCESS** after interruption recovery.
+- Effective source commit:
+  - `e36327e1dca923360ac894c9c36b4744a9c46fdf`
+- Current frontend rule:
+  - retired accounting actions are checked before read/write routing;
+  - any call fails closed with a migration-retired error;
+  - they cannot reach the legacy Apps Script endpoint.
+- Current accounting routing inventory:
+  ```ini
+  ACCOUNTING_LITERAL_ACTIONS=33
+  D1_READ_ACTIONS=11
+  D1_WRITE_ACTIONS=21
+  RETIRED_ACTIONS=3
+  LEGACY_ACCOUNTING_FALLBACK_ACTIONS=0
+  ```
+- Checkpoint regression:
+  - first current-checkpoint run `37489133079` failed because the old A1 test expected `if(useD1Read)` after the router was intentionally unified to `if(useD1Accounting)`;
+  - second run `37489277167` exposed the second stale A1 branch locator for the same reason;
+  - test fixes:
+    - `7a3417d8b4ffc85520cdfbeeae83bbb10068bafe`
+    - `f8af1b9996e31c2a36f79a02db9e89b753ddaacf`
+  - final A1-only verification Run `37489362409`: **SUCCESS**;
+  - full accounting checkpoint Run `37489362639`: **SUCCESS**.
+- Final checkpoint evidence:
+  ```ini
+  ACCOUNTING_AGENT_POLICY_V1=PASS
+  ACCOUNTING_CONNECTOR_CONTRACT_V1=PASS
+  ACCOUNTING_READ_MODEL_V1=PASS
+  ACCOUNTING_WRITE_MODEL_V1=PASS
+  EASYSTORE_A1_ALL_ACCOUNTING_READS_D1_ONLY_SOURCE=PASS
+  EASYSTORE_A2_WRITE_ROUTER_SOURCE=PASS
+  EASYSTORE_A2_ACCOUNTING_ACTION_COVERAGE=PASS
+  LEGACY_ACCOUNTING_FALLBACK_ACTIONS=0
+  D1_WRITE_FLAG_DEFAULT=false
+  PRODUCTION_MUTATION=NO
+  ```
+- Result: **PASS**
+
+## Entry ACC-027A — Controlled A2 READONLY API deployment: blocked-safe attempts and rollback evidence
+- Date: 2026-10-06
+- Goal: Deploy the complete A2 accounting API source to Production while keeping accounting strictly READONLY and preserving concurrent TrendOS work.
+- Shared-base synchronization before deploy:
+  - sync runs `37448923561` and `37449093875`: **SUCCESS**;
+  - final deployment package explicitly included shared TrendOS head `ee7a476c94e2d1122d276d58a6db37021b911187`;
+  - source-overlap gate reported `A2_DEPLOY_SHARED_OVERLAP=NONE`.
+- Safe deployment attempts:
+  - Run `37449223385`: **FAIL BEFORE DEPLOY** because the accounting branch did not yet prove the current shared TrendOS head was an ancestor; no Production mutation.
+  - Run `37449338736`: **FAIL BEFORE DEPLOY** because the temporary Wrangler config resolved the relative entry point incorrectly and could not find `production-shadow/index.js`; no deployment occurred.
+  - Run `37449460701`: new Worker version reached Production and all post-health checks passed, but the workflow used raw file-byte `cmp` for the pre/post D1 count snapshots. The semantically equivalent JSON representation differed, so the guard treated it as failure and **automatically rolled back** to pre-version `c46f5639-41c4-4c39-b7cc-983922bda3fc`.
+- Important safety evidence from the rollback attempt:
+  ```ini
+  A2_DEPLOY_ACCOUNTING_POST=READONLY
+  A2_DEPLOY_CANARY_DEFAULT_DENY=PASS
+  A2_DEPLOY_CROSS_FAMILY_HEALTH=PASS
+  AUTOMATIC_ROLLBACK=SUCCESS
+  BUSINESS_WRITE_AUTHORITY=NO
+  ```
+- Remediation:
+  - compare accounting counts structurally rather than byte-for-byte;
+  - keep automatic rollback armed for every post-deploy verification failure.
+- Result: **BLOCKED_SAFE → REMEDIATED**
+
+## Entry ACC-027B — Complete A2 accounting API deployed to Production in READONLY mode
+- Date: 2026-10-06
+- Deploy workflow head: `3ee107e9181334ac229f911b062155cf89bcba61`
+- Run: `37449603966`
+- Job: `112222678301`
+- Conclusion: **SUCCESS**
+- Pre-deploy truth:
+  ```ini
+  PRE_API_VERSION=c46f5639-41c4-4c39-b7cc-983922bda3fc
+  ACCOUNTING_MODE=READONLY
+  LIVE_EASYSTORE_WRITE_FLAG=ABSENT_SAFE
+  ACCOUNTING_BUSINESS_ROWS=0
+  ```
+- Source qualification in the deploy run:
+  - A2 command foundation: PASS;
+  - Party/customer/supplier writes: PASS;
+  - purchases/daily purchases/custody: PASS;
+  - purchase reversal: PASS;
+  - waste/stock/recalc: PASS;
+  - final invoice/day close: PASS;
+  - direct sale: PASS;
+  - write-canary policy: PASS.
+- Post-deploy truth:
+  ```ini
+  A2_DEPLOY_ACCOUNTING_POST=READONLY
+  A2_DEPLOY_CANARY_DEFAULT_DENY=PASS
+  A2_DEPLOY_CROSS_FAMILY_HEALTH=PASS
+  A2_DEPLOY_ACCOUNTING_ROW_COUNTS_INVARIANT=PASS
+  A2_ACCOUNTING_READONLY_API_DEPLOY=PASS
+  A2_RUNTIME_MODE=READONLY
+  A2_FRONTEND_WRITE_FLAG_CHANGED=NO
+  ```
+- Meaning:
+  - the new A2 code is now physically deployed in the Production API;
+  - financial write authority is **still disabled**;
+  - EasyStore Production frontend has not been switched to D1 writes;
+  - no accounting business row was created by deployment.
+- Result: **PASS — DEPLOYED READONLY, NO FINANCIAL CUTOVER**
+
+## Entry ACC-028 — Current verified accounting checkpoint
+- Date: 2026-10-06
+- Purpose: Freeze the exact runtime/repo truth after the interrupted session and all safe recovery steps.
+- Runtime audit workflow:
+  - Backend audit commit: `20b3879a3ebb679b41dcac43ccf87ead672e2827`
+  - Run: `37488946599`
+  - Job: `112356256909`
+  - Conclusion: **SUCCESS**
+- Current active Production API:
+  ```ini
+  API_VERSION=39883cad-1223-4e48-9728-b514f7b56a8d
+  ACCOUNTING_MODE=READONLY
+  ACCOUNTING_POLICY_EPOCH=2
+  ACCOUNTING_SCHEMA_READY=true
+  ACCOUNTING_AUTHORITATIVE_WRITES=false
+  ACCOUNTING_GOOGLE_BUSINESS_CALLS=0
+
+  WRITE_CANARY_READY=true
+  WRITE_CANARY_ENABLED=true
+  WRITE_CANARY_ALLOWED_USERS=0
+  WRITE_CANARY_ALLOWED_ACTIONS=0
+
+  LIVE_EASYSTORE_D1_WRITE_FLAG=ABSENT_SAFE
+  ```
+- Canary interpretation:
+  - canary infrastructure is installed and enabled as a **default-deny guard**;
+  - with zero allowed users and zero allowed actions it authorizes **no financial write**;
+  - runtime remains READONLY regardless.
+- Current Production accounting dataset:
+  ```ini
+  materials=0
+  templates=0
+  deptLines=0
+  finalInvoices=0
+  partyLedger=0
+  purchases=0
+  dailyPurchases=0
+  cashbox=0
+  waste=0
+  custodyEvents=0
+  custodyCloses=0
+  dayCloses=0
+  partyBalances=0
+  requestLedger=0
+  events=0
+  TOTAL_ACCOUNTING_ROWS=0
+  ```
+- Current candidate frontend checkpoint:
+  ```ini
+  ACCOUNTING_LITERAL_ACTIONS=33
+  D1_READ_ACTIONS=11
+  D1_WRITE_ACTIONS=21
+  RETIRED_ACTIONS=3
+  LEGACY_ACCOUNTING_FALLBACK_ACTIONS=0
+
+  D1_WRITE_FLAG_DEFAULT=false
+  SILENT_GOOGLE_READ_FALLBACK=NO
+  D1_WRITE_SILENT_LEGACY_FALLBACK=NO
+
+  AI_LEDGER_AUTHORITY=NO
+  DIRECT_AI_DB_WRITE=NO
+  CONNECTOR_DEFAULT_MODE=OFF
+  EASYSTORE_FINANCIAL_AUTHORITY=YES
+  AUTONOMOUS_PRINTSHOP_FINANCIAL_AUTHORITY=NO
+  ```
+- Current validated direction:
+  - EasyStore is the accounting/financial authority;
+  - Autonomous Printshop/TrendOS communicates through the Finance Connector contract only;
+  - Connector/AI cannot write D1 directly;
+  - A2 backend is deployed READONLY first;
+  - frontend write cutover remains disabled until one explicitly bounded canary family is armed and verified.
+- Production business-data mutation by this checkpoint audit: NO.
+- Result: **PASS — SAFE RESUME POINT**
+- Next gate:
+  - `A2_7_ARM_ONE_LOW_RISK_WRITE_CANARY_FAMILY`
+  - requires an explicit bounded canary user/action scope before any financial write is permitted.
+
