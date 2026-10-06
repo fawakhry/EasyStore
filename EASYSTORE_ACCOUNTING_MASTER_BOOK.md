@@ -2325,3 +2325,18 @@ This aligns with Autonomous Printshop Build Matrix module:
 - Evidence: `A27_PRE_RUNTIME=READONLY_DEFAULT_DENY`, `A27_PENDING_MIGRATION=0029_employee_accounting_canary_mode_v1.sql`, `PRODUCTION_MUTATION=NO`.
 - Result: **PASS**. Migration 0029 is the qualified next schema step; no write authority has been opened.
 - Next: apply 0029 with the existing controlled schema workflow and require READONLY/business-row invariance.
+
+
+## Entry ACC-034 — Migration 0029 applied to Production safely
+- Date: 2026-10-06
+- Controlled workflow: `.github/workflows/easystore-a2-schema-apply-controlled.yml`.
+- Trigger commit: `da7f21b686b6884396cbc9321031dcdd58d2e10a`.
+- Run `37495134095`, Job `112377620195`: **SUCCESS**.
+- Applied migration: `0029_employee_accounting_canary_mode_v1.sql` only.
+- Precheck: READONLY, accounting baseline rows=0.
+- Postcheck: all A2 schema checks PASS; accounting rows remain 0; non-accounting sentinel counts invariant.
+- Accounting mode preserved `READONLY`; policy epoch preserved `2`; Google business calls remain 0.
+- Production business-data mutation: **NO**. Production schema mutation: **YES — control mode domain now supports CANARY**.
+- Canary allowlists were not armed and no financial write executed.
+- Result: **PASS**.
+- Next: deploy the qualified CANARY-aware backend code while keeping Production READONLY, with automatic rollback on any runtime drift.
