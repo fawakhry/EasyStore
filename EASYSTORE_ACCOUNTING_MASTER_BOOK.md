@@ -2948,3 +2948,23 @@ This aligns with Autonomous Printshop Build Matrix module:
 - Runtime is READONLY; authoritativeWrites=false; server canary allowlists/budget cleared; GENERAL opened=NO.
 - Result: **PASS — A2.8 WRITE EVIDENCE VERIFIED INDEPENDENTLY**.
 - Next: return Production frontend write routing to OFF/empty action list and verify final live closure; retain inactive zero-value canary artifacts as audit evidence.
+
+
+## Entry ACC-075 — Frontend Material Canary routing disabled after successful A2.8 test
+- Date: 2026-10-07
+- Production `main/config.js` cleanup commit: `b005c1e6ae5ce309823bd09523f3fea73c189853`.
+- GitHub Pages Run `37540303607`: build/report/deploy all **SUCCESS**.
+- Cleanup state: `EASYSTORE_ACCOUNTING_D1_WRITE_MODE='OFF'`; `EASYSTORE_ACCOUNTING_D1_WRITE_CANARY_ACTIONS=[]`; legacy D1 write flag remains false; D1 READONLY reads remain enabled.
+- No destructive cleanup was performed; the inactive zero-value Material canary remains as immutable audit evidence.
+- Result: **DEPLOYED — FRONTEND WRITE ROUTING RETURNED TO DEFAULT OFF**.
+
+## Entry ACC-076 — Second bounded Production canary fully closed and live runtime verified
+- Date: 2026-10-07
+- Fresh live frontend: write mode `OFF`, canary actions empty, legacy D1 write flag=false.
+- Fresh backend health: mode `READONLY`, policy epoch 8, authoritativeWrites=false, writeAuthorityMode `OFF`, Google business calls=0.
+- Server canary: users/actions=0/0, maxAmount=0, maxCommands=0, commandsStarted=0, expiry=0.
+- Independently verified persisted evidence remains: materials=1, templates=1, requestLedger=2, events=2; every other tracked accounting business/financial table=0.
+- First template canary and second material canary are both inactive and zero-value; no delete/reversal was performed because they are audit evidence and not financial facts.
+- GENERAL opened: NO.
+- Result: **PASS — A2.8 MATERIAL CANARY COMPLETED, VERIFIED, AND FULLY CLOSED**.
+- Next: update central runtime/schema safety baselines to the two-canary truth before qualifying any further write family.
