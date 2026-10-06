@@ -2606,3 +2606,19 @@ This aligns with Autonomous Printshop Build Matrix module:
 - No further write authority is opened. Server was already auto-disabled by the successful execution workflow.
 - Result: **FAIL-SAFE / DIAGNOSTIC SHAPE MISMATCH — exact D1 rows must be inspected read-only before final classification**.
 - Next: read exact template/request/event rows and current health; then reconcile the diagnostic assertion and only after that disable frontend CANARY routing.
+
+
+## Entry ACC-050 — Request-ledger shape reconciled; canary evidence is internally consistent
+- Date: 2026-10-06
+- Read-only exact evidence diagnostic commit: `dc482a27c85b1c2ca4ec5b63e842d79addbe172e`.
+- Diagnostic Run `37506075562`, Job `112414950192`: evidence read step **SUCCESS**.
+- Current runtime after successful canary: `READONLY`, authoritativeWrites=false, server canary users/actions=0, maxCommands=0, commandsStarted=0.
+- Exact D1 rows:
+  - template: `TPL-69C7D9A49828`, department `عام`, category `A2_CANARY`, inactive, fixed/computed/sale values all 0, updated_by=`ضياء`;
+  - request: `A27-TPL-muwyw80u-1fuz9v20`, operation `template-upsert`, actor `ضياء`, status `COMMITTED`, `entity_id=''`, source_system=`EasyStore`, correlation_id=request key, command_version=`A2_COMMAND_V1`;
+  - event: entity_type=`template`, entity_id=`TPL-69C7D9A49828`, event_type=`create`, actor=`ضياء`, request_key/correlation_id match the request.
+- Source contract review: `beginCommandV1` defaults its optional `entityId` parameter to empty string; `saveTemplate` calls `beginCommandV1` without that fourth entity-id parameter, then writes the generated template id into the immutable audit event. Therefore blank request-ledger entity_id is the current deterministic source behavior, not a runtime corruption.
+- ACC-049 failure was caused by an over-strict diagnostic assertion, not by extra writes or an authority leak.
+- Production mutation in this diagnostic: NO.
+- Result: **PASS — CANARY EVIDENCE RECONCILED; SERVER REMAINS READONLY/CLEARED**.
+- Next: correct and rerun the independent post-success audit using the actual request/event linkage contract, then disable frontend CANARY routing back to OFF.
