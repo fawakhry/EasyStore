@@ -2780,3 +2780,26 @@ This aligns with Autonomous Printshop Build Matrix module:
 - Production mutation in this qualification: NO.
 - Result: **PASS — A2.8 MATERIAL CANARY READY FOR FINAL LIVE READ-ONLY RECHECK; NOT ARMED / NOT DEPLOYED**.
 - Next: refresh Production runtime truth after the connection interruption; only if still closed may the owner be asked for a fresh explicit decision to deploy/arm this second family.
+
+
+## Entry ACC-060 — Post-interruption live runtime recheck passed; second canary decision gate reached
+- Date: 2026-10-06
+- Runtime refresh trigger commit: `87261afe600beeb295143b569ea472ccff7f1ad8`.
+- Runtime Checkpoint Run `37509183755`, Job `112425560338`: **SUCCESS**.
+- Live Production truth after the connection interruption:
+  - API version `b6343d39-7657-4870-8233-1a5164d6f11f`;
+  - Accounting mode `READONLY`;
+  - policy epoch `6`;
+  - schemaReady=true;
+  - authoritativeWrites=false;
+  - Google business calls=0;
+  - server canary users=0, actions=0, command budget cleared;
+  - EasyStore Production write flag=false;
+  - EasyStore Production write mode=`OFF`;
+  - EasyStore Production canary actions=[];
+  - dataset unchanged: materials=0, templates=1, requestLedger=1, events=1, all other tracked accounting tables=0;
+  - total tracked accounting rows=3, exactly the approved first-canary evidence;
+  - Production mutation in this refresh=NO.
+- A2.8 `saveAccountingMaterial` frontend candidate and manual auto-closing execution workflow are both CI-qualified but remain undeployed/unarmed.
+- Result: **PASS — SECOND CANARY DECISION GATE REACHED WITH PRODUCTION FULLY CLOSED**.
+- Owner decision required before any second-family Production deployment/arming.
