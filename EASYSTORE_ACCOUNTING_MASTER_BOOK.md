@@ -2921,3 +2921,18 @@ This aligns with Autonomous Printshop Build Matrix module:
 - Approved scope remains canonical user `ضياء` + action `saveAccountingMaterial` only.
 - Business write has not started yet. GENERAL remains closed.
 - Result: **IN_PROGRESS — WAITING FOR ONE AUTHENTICATED DIAA MATERIAL SAVE CLICK**.
+
+
+## Entry ACC-073 — Second bounded Production Material Canary succeeded and auto-closed
+- Date: 2026-10-07
+- Qualified candidate Run `37539813718`, Job `112529780647`: **SUCCESS**.
+- Preflight: PASS for canonical user `ضياء` + action `saveAccountingMaterial` only.
+- Exact execution evidence: `A28_EXEC_EXACT_D1_EVIDENCE=PASS`.
+- Material created once: `MAT-5340D6F6A51F`.
+- Request committed once: `A28-MAT-mux8u1o6-672anozd`.
+- Material shape verified: department `عام`, kind `A2_CANARY`, inactive, zero stock/min-stock/unit/computed/sale values, zero dimensions, actor `ضياء`.
+- Matching immutable material create event linked to the same request.
+- `A28_EXEC_SERVER_AUTO_DISABLED=PASS`; backend returned to READONLY and server canary cleared.
+- `GENERAL_OPENED=NO`.
+- Result: **PASS — SECOND BOUNDED PRODUCTION WRITE CANARY SUCCEEDED AND AUTO-CLOSED**.
+- Next: independently audit exact D1 post-state, then return Production frontend write mode to OFF and verify final closed runtime.
