@@ -3112,3 +3112,14 @@ This aligns with Autonomous Printshop Build Matrix module:
 - Fresh runtime: accounting READONLY, authoritativeWrites=false, server canary users/actions=0/0, command budget=0, Google business calls=0.
 - Business write: NO. GENERAL: NO.
 - Result: **BLOCKED_SAFE RESOLVED FOR RESUME — AUTHORITY STILL CLOSED**.
+
+
+## Entry ACC-087 — A2.9 recalc guard deployed under READONLY
+- Date: 2026-10-07
+- Isolated deploy workflow commit: `599f4f38009b0312a69a7edbe43deb6f4c934a0a`.
+- Run `37543642653`, Job `112542315428`: **SUCCESS**.
+- `A29_DEPLOY_SHARED_OVERLAP=NONE`; A2.9 source/tests PASS.
+- Preflight matched the two-canary baseline and frontend OFF state.
+- Postflight: `A29_DEPLOY_POST=READONLY`, row counts invariant, `A29_DEPLOY_RECALC_GUARD_LIVE=YES`, `PRODUCTION_BUSINESS_MUTATION=NO`.
+- GENERAL opened: NO.
+- Result: **PASS — A2.9 SERVER GUARD LIVE, AUTHORITY STILL READONLY**.
