@@ -3761,3 +3761,26 @@ This aligns with Autonomous Printshop Build Matrix module:
   ```
 - Production impact: TrendOS frontend SSO handoff repaired only; platform non-app assets unchanged.
 - Result: **DEPLOY/PASS — SECURE TRENDOS→EASYSTORE SSO HANDOFF LIVE WITH ACCOUNTING FULLY CLOSED**.
+
+
+## Entry ACC-106 — Secure SSO verified by owner; A2.10 Supplier CANARY re-enabled pre-arm
+- Date: 2026-10-07
+- Owner runtime verification after ACC-105: EasyStore visibly showed `D1 READONLY / SSO OK`.
+- Previous failed A2.10 execution attempt remained zero-command and was already closed safely under ACC-104.
+- Production EasyStore frontend was re-enabled only for the bounded Supplier canary:
+  - config commit `60a878a16fa42fbe594be023bffeb90f82056ffa`;
+  - GitHub Pages Run `37614818059`: SUCCESS.
+- Live frontend:
+  - mode=`CANARY`;
+  - actions=[`saveEasyStoreSupplier`] only;
+  - D1 readonly flag=true;
+  - legacy D1 writes=false.
+- Live backend immediately before re-arm remained:
+  - mode=`READONLY`;
+  - authoritativeWrites=false;
+  - server users/actions=0/0;
+  - max commands/started=0/0;
+  - Google business calls=0.
+- GENERAL opened: NO.
+- Business mutation at this step: NO.
+- Result: **PASS — SSO OK VERIFIED; FRONTEND BOUNDED CANARY LIVE; SERVER STILL UNARMED**.
