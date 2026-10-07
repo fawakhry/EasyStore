@@ -1,0 +1,70 @@
+name: EasyStore A2.10 Supplier Activation Qualification
+
+on:
+  push:
+    branches:
+      - candidate/easystore-a210-supplier-canary-activation-20261007
+    paths:
+      - 'app.js'
+      - 'config.js'
+      - 'index.html'
+      - 'tests/easystore_a210_supplier_activation.test.mjs'
+      - '.github/workflows/easystore-a210-supplier-activation-ci.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  qualify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: candidate/easystore-a210-supplier-canary-activation-20261007
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Verify exact activation candidate
+        id: test
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check app.js
+          node tests/easystore_a210_supplier_activation.test.mjs
+          {
+            echo "A210_SUPPLIER_ACTIVATION_QUALIFICATION=PASS"
+            echo "RUN_ID=$GITHUB_RUN_ID"
+            echo "FRONTEND_MODE=CANARY"
+            echo "FRONTEND_ACTIONS=[saveEasyStoreSupplier]"
+            echo "D1_READONLY=true"
+            echo "LEGACY_D1_WRITES=false"
+            echo "PRODUCTION_DEPLOY=NO"
+            echo "PRODUCTION_MUTATION=NO"
+            echo "GENERAL_OPENED=NO"
+          } > /tmp/result.txt
+      - name: Persist result
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ "${{ steps.test.outcome }}" = "success" ]; then
+            cp /tmp/result.txt .github/a210-supplier-activation-ci-result.txt
+          else
+            {
+              echo "A210_SUPPLIER_ACTIVATION_QUALIFICATION=FAIL"
+              echo "RUN_ID=$GITHUB_RUN_ID"
+              echo "PRODUCTION_DEPLOY=NO"
+              echo "PRODUCTION_MUTATION=NO"
+              echo "GENERAL_OPENED=NO"
+            } > .github/a210-supplier-activation-ci-result.txt
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add .github/a210-supplier-activation-ci-result.txt
+          git commit -m "A2.10: persist supplier activation qualification result" || exit 0
+          git push origin HEAD:candidate/easystore-a210-supplier-canary-activation-20261007
+      - name: Enforce result
+        if: steps.test.outcome != 'success'
+        run: exit 1
