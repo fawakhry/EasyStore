@@ -1,0 +1,58 @@
+name: Accounting Master Book Append ACC-123
+
+on:
+  push:
+    branches:
+      - candidate/easystore-zero-google-audit-20261004
+    paths:
+      - '.github/workflows/accounting-master-book-append-acc123.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  append:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: candidate/easystore-zero-google-audit-20261004
+      - name: Append ACC-123 once
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 <<'PY'
+          from pathlib import Path
+          p=Path('EASYSTORE_ACCOUNTING_MASTER_BOOK.md')
+          s=p.read_text()
+          block="""## Entry ACC-123 — A2.12 isolated frontend published closed and independently verified
+          - Date: 2026-10-07
+          - Owner approval: ACC-121.
+          - Isolated A2.12 frontend candidate merged to Production main through PR #16.
+          - Production merge commit: 374aff3df16dcaef34d42b9749e015e4041948f2.
+          - GitHub Pages Run 37640658231: SUCCESS.
+          - Published frontend code contains only the A2.12 Dept Line canary write path, but config remained OFF/actions=[].
+          - Independent post-publish readonly audit:
+            - workflow commit 7d09665aa2b95c32c75bd5c6542f745ffc51842d;
+            - Run 37641117896, Job 112860025521: SUCCESS.
+          - Verified state:
+            - FRONTEND_CODE=A212_LIVE
+            - FRONTEND_MODE=OFF
+            - FRONTEND_ACTIONS=[]
+            - BACKEND_MODE=READONLY
+            - SERVER_USERS_ACTIONS=0/0
+            - COMMAND_BUDGET=0/0
+            - baseline materials1/templates1/parties1/partyBalances1/waste1/deptLines0/requestLedger5/events5
+            - PRODUCTION_BUSINESS_MUTATION=NO
+            - GENERAL_OPENED=NO
+          - Result: PASS — A2.12 CODE IS LIVE WITH ALL WRITE AUTHORITY STILL CLOSED.
+          """
+          if '## Entry ACC-123 ' not in s:
+              s += '\n\n'+block.strip()+'\n'
+              p.write_text(s)
+          PY
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+fawakhry@users.noreply.github.com"
+          git add EASYSTORE_ACCOUNTING_MASTER_BOOK.md
+          git commit -m "ACC-123: record closed A2.12 frontend publish" || exit 0
+          git push origin HEAD:candidate/easystore-zero-google-audit-20261004
