@@ -4026,6 +4026,14 @@ This aligns with Autonomous Printshop Build Matrix module:
   - server ARM;
   - fifth Production Waste command.
 
+## Entry ACC-112 — Owner approval for A2.11 bounded Waste Production canary
+- Date: 2026-10-07
+- Owner explicitly approved proceeding from ACC-111.
+- Approved scope only: canonical actor ضياء; action saveAccountingWaste; one synthetic A2-CANARY-WASTE-* row; amount 0.01 EGP; recovered 0; no material; no stock movement; no cashbox; no Party ledger; max one command; short TTL; automatic return to READONLY; GENERAL forbidden.
+- This approval did not itself deploy, ARM, or mutate business data.
+- Result: APPROVED — A2.11 MAY PROCEED ONLY WITHIN THE BOUNDED SCOPE ABOVE.
+
+
 ## Entry ACC-113 — A2.11 guard and isolated frontend deployed closed
 - Date: 2026-10-07
 - Owner approval: ACC-112.
@@ -4047,3 +4055,98 @@ This aligns with Autonomous Printshop Build Matrix module:
 - GENERAL opened: NO.
 - Production business mutation at this step: NO.
 - Result: PASS — A2.11 FRONTEND BOUNDED CANARY LIVE; SERVER NOT YET ARMED.
+
+
+## Entry ACC-115 — A2.11 attempts 1-5 blocked safely before any command
+- Date: 2026-10-07
+- Execution workflow Run 37620047780 attempts 1 through 5 all completed FAILURE because no accepted command reached D1 before timeout.
+- Attempt timestamps were independently re-read from GitHub; every failed attempt auto-cleaned the server back to READONLY.
+- Live health checks during diagnosis repeatedly proved commandsStarted=0.
+- Attempt 6 preflight still found the exact ACC-114 four-canary baseline, proving attempts 1-5 caused no business mutation.
+- UI root causes found and repaired without widening server authority:
+  - Waste tab initially absent for the admin view;
+  - a local isAdmin classification gate blocked the A2.11 handler;
+  - local Waste navigation still depended on role classification;
+  - final root cause was a legacy protectAction wrapper that forced saveWaste through canUseDepartment before A2.11 code could run.
+- Production frontend repair milestones:
+  - server-authoritative actor fix Pages Run 37626195333: SUCCESS;
+  - server-authoritative navigation fix commit 14d4a0d87a096763747294dcaff7bf9a5195dd67, Pages Run 37628375794: SUCCESS;
+  - final legacy Waste wrapper fix commit 9f81113df64e9ee0af0f5152f9ce61c6172748fa, Pages Run 37630313934: SUCCESS.
+- Frontend qualification after the wrapper correction: Run 37630180784 SUCCESS.
+- One intermediate repo-only frontend qualification Run 37628028865 failed because the test had not yet been updated to the just-changed navigation invariant; follow-up qualification passed. Production accounting authority was unaffected.
+- GENERAL opened: NO.
+- Result: BLOCKED_SAFE — ATTEMPTS 1-5 PRODUCED ZERO COMMANDS AND ZERO BUSINESS MUTATION.
+
+
+## Entry ACC-116 — A2.11 fifth bounded Production canary succeeded: Waste
+- Date: 2026-10-07
+- Execution workflow Run 37620047780, attempt 6, Job 112830907477: SUCCESS.
+- Scope actually executed: actor ضياء; action saveAccountingWaste; one command; amount 0.01 EGP; recovered 0; no material.
+- Immutable evidence:
+  - A211_EXEC_EXACT_D1_EVIDENCE=PASS
+  - request key A211-WASTE-muy6h1tz-3ffj2p52
+  - Waste ID WASTE-A8A7A494DCC0
+  - order ID A2-CANARY-WASTE-MUY6H1TZ
+  - amount 0.01
+  - recovered 0
+  - stock move delta 0
+  - cashbox delta 0
+  - Party ledger delta 0
+  - server auto-disable PASS
+  - GENERAL_OPENED=NO
+- Expected/observed delta: waste 0→1; requestLedger 4→5; events 4→5; all protected financial/stock tables unchanged.
+- Result: PASS — FIFTH BOUNDED PRODUCTION CANARY SUCCEEDED WITH ONLY THE SYNTHETIC WASTE RECORD.
+
+
+## Entry ACC-117 — A2.11 final live closure verified
+- Date: 2026-10-07
+- Production frontend returned to OFF in commit aaef6cfa0c050648362d79b3b539784fdb7a7bce.
+- GitHub Pages Run 37633651831: SUCCESS.
+- Server had already auto-disabled to READONLY with zero allowed users/actions and zero command budget.
+- Independent final closure check:
+  - workflow commit f27e30468721c18fa805e0c4ec681169d4a8db03;
+  - Run 37634035986: SUCCESS.
+- Final authoritative Production truth:
+  - FRONTEND_MODE=OFF
+  - BACKEND_MODE=READONLY
+  - materials=1
+  - templates=1
+  - parties=1
+  - partyBalances=1
+  - waste=1
+  - requestLedger=5
+  - events=5
+  - stockMoves=0
+  - partyLedger=0
+  - cashbox=0
+  - all other tracked accounting tables=0
+  - request key A211-WASTE-muy6h1tz-3ffj2p52
+  - Waste ID WASTE-A8A7A494DCC0
+  - order ID A2-CANARY-WASTE-MUY6H1TZ
+  - amount 0.01
+  - GENERAL_OPENED=NO
+- Result: PASS — A2.11 CLOSED CLEANLY; FIVE-CANARY BASELINE IS NOW AUTHORITATIVE.
+
+
+## Entry ACC-118 — Five-canary baseline aligned across runtime/schema/deploy guards
+- Date: 2026-10-07
+- Authoritative baseline after ACC-117: materials=1, templates=1, parties=1, partyBalances=1, waste=1, requestLedger=5, events=5; all other tracked/protected accounting tables=0.
+- Runtime checkpoint:
+  - commit 79cdd794221e9c8647eb49629452dac81201c36a;
+  - Run 37634415613: SUCCESS.
+- READONLY API deploy guard:
+  - commit 7c7b73fee33b9d7d88665369a6056032f046621d;
+  - pre/post expectations now use the five-canary baseline.
+- Schema controlled guard:
+  - workflow commit 093555585d19ca7181e64182017d077e00bcb610;
+  - first repo-only guard Run 37634478390: FAILURE because its test still expected the prior four-canary values;
+  - test corrected in commit b0b7b80886119597524b521b3242c76d621b185b;
+  - follow-up Run 37634510728: SUCCESS.
+- Cross-guard qualification:
+  - workflow commit 00e101d3b5d5301c0ad5032f2e87dbfbde7e0407;
+  - Run 37634703408: SUCCESS.
+- Schema apply executed by baseline alignment: NO.
+- API deploy executed by baseline alignment: NO.
+- Production business mutation from baseline alignment: NO.
+- GENERAL opened: NO.
+- Result: PASS — CENTRAL SAFETY BASELINES MATCH THE FIVE-CANARY RUNTIME TRUTH.
