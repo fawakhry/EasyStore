@@ -3611,3 +3611,31 @@ This aligns with Autonomous Printshop Build Matrix module:
 - Data mutation at approval-record step: NO.
 - Production impact at approval-record step: NO.
 - Result: **APPROVED — AUTHORITATIVE DEPLOYMENT MAY PROCEED ONLY WITHIN THE BOUNDED A2.10 SCOPE ABOVE**.
+
+
+## Entry ACC-101 — A2.10 Supplier guard deployed READONLY with zero drift
+- Date: 2026-10-07
+- Owner approval prerequisite: ACC-100.
+- Production deploy workflow: `.github/workflows/easystore-a210-supplier-guard-readonly-deploy.yml`.
+- Run `37602789752`, Job `112730963921`: **SUCCESS**.
+- Qualified source/guard tests: PASS.
+- Preflight: Production frontend OFF; backend READONLY; server canary cleared; Google business calls 0; exact three-canary zero-party baseline matched.
+- Postflight:
+  ```ini
+  A210_DEPLOY_POST=READONLY
+  A210_DEPLOY_ROW_COUNTS_INVARIANT=PASS
+  A210_DEPLOY_SUPPLIER_GUARD_LIVE=YES
+  PRODUCTION_BUSINESS_MUTATION=NO
+  GENERAL_OPENED=NO
+  ```
+- D1 remained unchanged:
+  - materials=1;
+  - templates=1;
+  - parties=0;
+  - partyBalances=0;
+  - requestLedger=3;
+  - events=3;
+  - all other tracked/protected accounting tables=0;
+  - active materials/templates=0.
+- Data mutation: NO.
+- Result: **PASS — SUPPLIER GUARD LIVE IN READONLY WITH ZERO ACCOUNTING DRIFT**.
