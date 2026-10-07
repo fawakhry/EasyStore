@@ -3679,3 +3679,21 @@ This aligns with Autonomous Printshop Build Matrix module:
   ```
 - Data mutation: NO.
 - Result: **PASS — A2.10 FRONTEND LIVE BUT STILL CLOSED; READY FOR BOUNDED CANARY ENABLEMENT**.
+
+
+## Entry ACC-103 — A2.10 Supplier frontend CANARY live; server still unarmed
+- Date: 2026-10-07
+- Owner approval prerequisite: ACC-100.
+- Production frontend config commit: `2c38b60e17ad0d49b8a70c8730cf3041d8122c1d`.
+- Frontend mode: CANARY.
+- Frontend canary action: `saveEasyStoreSupplier` only.
+- D1 read flag remains true; legacy D1 writes remain false.
+- Fresh pre-arm read-only audit: Run `37603654957`: **SUCCESS**.
+- Backend mode: READONLY.
+- Server users/actions: 0/0.
+- Command budget: 0/0.
+- Google business calls: 0.
+- D1 baseline: materials=1, templates=1, parties=0, partyBalances=0, requestLedger=3, events=3, all other tracked/protected tables=0.
+- GENERAL opened: NO.
+- Production business mutation: NO.
+- Result: **PASS — FRONTEND CANARY BOUNDED TO SUPPLIER ONLY; SERVER NOT YET ARMED**.
