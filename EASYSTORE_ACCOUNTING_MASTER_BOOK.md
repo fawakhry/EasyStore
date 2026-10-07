@@ -3784,3 +3784,71 @@ This aligns with Autonomous Printshop Build Matrix module:
 - GENERAL opened: NO.
 - Business mutation at this step: NO.
 - Result: **PASS — SSO OK VERIFIED; FRONTEND BOUNDED CANARY LIVE; SERVER STILL UNARMED**.
+
+
+## Entry ACC-107 — A2.10 fourth bounded Production canary succeeded: Supplier
+- Date: 2026-10-07
+- Owner approval: ACC-100.
+- Secure SSO prerequisite repaired and verified under ACC-105/ACC-106.
+- Execution workflow: `EasyStore A2.10 Supplier Canary Execution`.
+- Run `37603841111`, attempt 3, Job `112770981267`: **SUCCESS**.
+- Scope actually executed:
+  - actor: `ضياء`;
+  - action: `saveEasyStoreSupplier`;
+  - one command only;
+  - zero value;
+  - synthetic inactive supplier only.
+- Exact immutable evidence:
+  ```ini
+  A210_EXEC_EXACT_D1_EVIDENCE=PASS
+  A210_EXEC_REQUEST_KEY=A210-SUP-muy172ll-yt58wwmb
+  A210_EXEC_SUPPLIER_ID=SUP-DE7F67937CC3
+  A210_EXEC_SUPPLIER_NAME=A2-CANARY-SUPPLIER-MUY172LL
+  A210_EXEC_OPENING_BALANCE=0
+  A210_EXEC_ACTIVE=false
+  A210_EXEC_PARTY_LEDGER_DELTA=0
+  A210_EXEC_CASHBOX_DELTA=0
+  A210_EXEC_SERVER_AUTO_DISABLED=PASS
+  GENERAL_OPENED=NO
+  ```
+- Expected/observed successful D1 delta:
+  - parties: 0 -> 1;
+  - partyBalances: 0 -> 1, balance exactly 0;
+  - requestLedger: 3 -> 4;
+  - events: 3 -> 4;
+  - materials/templates remain 1/1;
+  - partyLedger/cashbox/stock/purchases/invoices/custody/waste/day-close remain unchanged at 0.
+- Result: **PASS — FOURTH BOUNDED PRODUCTION CANARY SUCCEEDED WITH ZERO FINANCIAL VALUE**.
+
+
+## Entry ACC-108 — A2.10 Supplier final live closure verified
+- Date: 2026-10-07
+- Production frontend closed after the successful canary:
+  - commit `ee86787be4d0b12e853349036ff8eb6f51a9c64c`;
+  - GitHub Pages Run `37615277024`: **SUCCESS**.
+- Independent final closure audit:
+  - workflow `.github/workflows/easystore-a210-supplier-final-closure-audit.yml`;
+  - source commit `7e8f0b8e8756aa3b283176bad28e67e4ae6f68a7`;
+  - Run `37615468533`: **SUCCESS**.
+- Final authoritative Production truth:
+  ```ini
+  A210_FINAL_CLOSURE=PASS
+  FRONTEND_MODE=OFF
+  FRONTEND_CANARY_ACTIONS=[]
+  BACKEND_MODE=READONLY
+  SERVER_USERS_ACTIONS=0/0
+  COMMAND_BUDGET=0/0
+  GOOGLE_BUSINESS_CALLS=0
+  MATERIALS=1
+  TEMPLATES=1
+  PARTIES=1
+  PARTY_BALANCES=1
+  REQUEST_LEDGER=4
+  EVENTS=4
+  OTHER_TRACKED_TABLES=0
+  A210_OPENING_BALANCE=0
+  A210_ACTIVE=false
+  GENERAL_OPENED=NO
+  PRODUCTION_CLOSED=YES
+  ```
+- Result: **PASS — A2.10 CLOSED CLEANLY; FOUR-CANARY BASELINE IS NOW AUTHORITATIVE**.
