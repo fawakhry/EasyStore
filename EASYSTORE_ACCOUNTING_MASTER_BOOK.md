@@ -3472,3 +3472,51 @@ This aligns with Autonomous Printshop Build Matrix module:
   - prepare manual-only backend source deploy and manual-only auto-closing execution workflow;
   - qualify those files repo-only;
   - do not run either deploy or canary before owner Decision Gate.
+
+
+## Entry ACC-098 — A2.10 Supplier deploy and execution paths qualified repo-only
+- Date: 2026-10-07
+- Goal: Complete all non-authoritative preparation for the proposed fourth bounded Production canary without deploying or arming it.
+- Prepared manual-only backend guard deploy workflow:
+  - `.github/workflows/easystore-a210-supplier-guard-readonly-deploy.yml`
+  - commit: `c0b5ab124b18896e0a44369c9c16358a37596774`
+  - trigger: `workflow_dispatch` only;
+  - preflight requires frontend OFF, backend READONLY, server canary cleared, Google business calls=0 and exact three-canary zero-party baseline;
+  - deploy is code-only, keeps vars, requires row-count invariance and has automatic Worker rollback on any postflight drift.
+- Prepared manual-only auto-closing execution workflow:
+  - `.github/workflows/easystore-a210-supplier-canary-execution.yml`
+  - commit: `115aeda827df7580d9397657a3b254b0ce0f79e2`
+  - trigger: `workflow_dispatch` only;
+  - exact scope: canonical admin `ضياء` + `saveEasyStoreSupplier` only;
+  - one new command, zero-value, 15-minute TTL, automatic disable back to READONLY on success/error/timeout;
+  - GENERAL transition is forbidden;
+  - expected successful delta: parties +1, zero-balance partyBalances +1, requestLedger +1, events +1; all financial/stock/operational ledgers unchanged.
+- Static workflow invariant test:
+  - `tests/easystore_a210_supplier_workflow_invariants.test.mjs`
+  - commit: `7aed28c306c6255862e22dd2f720353cc0de7b9b`.
+- Qualification CI:
+  - workflow commit: `2e728b7d5cb4b8d8ddec88e7318cbe66be01baa0`
+  - Run `37554778671`, Job `112578388571`: **SUCCESS**.
+  - exact evidence:
+    ```ini
+    A210_SUPPLIER_DEPLOY_EXECUTION_QUALIFICATION=PASS
+    SERVER_GUARD=PASS
+    DEPLOY_WORKFLOW=MANUAL_ONLY
+    EXECUTION_WORKFLOW=MANUAL_ONLY
+    BASELINE=materials1_templates1_parties0_partyBalances0_requestLedger3_events3
+    ONE_USER=ضياء
+    ONE_ACTION=saveEasyStoreSupplier
+    ONE_COMMAND=YES
+    ZERO_VALUE=YES
+    AUTO_DISABLE=YES
+    GENERAL_ALLOWED=NO
+    PRODUCTION_DEPLOY=NO
+    PRODUCTION_ARM=NO
+    PRODUCTION_MUTATION=NO
+    ```
+- Data mutation: NO.
+- Production impact: NO.
+- Result: **PASS — A2.10 DEPLOY/EXECUTION PATHS QUALIFIED REPO-ONLY; NOTHING DEPLOYED OR ARMED**.
+- Next:
+  - refresh exact live Production truth after this qualification;
+  - stop at a fresh owner Decision Gate before backend guard deploy, frontend publish, server ARM, or fourth Production command.
