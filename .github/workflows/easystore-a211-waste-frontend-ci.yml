@@ -1,0 +1,52 @@
+name: EasyStore A2.11 Waste Frontend Qualification
+
+on:
+  push:
+    branches:
+      - candidate/easystore-a211-waste-canary-prodpatch-20261007
+    paths:
+      - 'app.js'
+      - 'config.js'
+      - 'index.html'
+      - 'tests/easystore_a211_waste_frontend_canary.test.mjs'
+      - '.github/workflows/easystore-a211-waste-frontend-ci.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  qualify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: candidate/easystore-a211-waste-canary-prodpatch-20261007
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Qualify isolated Waste candidate
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check app.js
+          node tests/easystore_a211_waste_frontend_canary.test.mjs
+          {
+            echo "A211_WASTE_FRONTEND_QUALIFICATION=PASS"
+            echo "D1_WRITE_ACTION=saveAccountingWaste_ONLY"
+            echo "SYNTHETIC_ORDER_PREFIX=A2-CANARY-WASTE-"
+            echo "REQUEST_PREFIX=A211-WASTE"
+            echo "AMOUNT=0.01"
+            echo "RECOVERED=0"
+            echo "MATERIAL=NONE"
+            echo "ADMIN_WASTE_SCREEN=CANARY_ONLY"
+            echo "CANDIDATE_MODE=OFF"
+            echo "CANDIDATE_ACTIONS=[]"
+            echo "PRODUCTION_DEPLOY=NO"
+            echo "PRODUCTION_MUTATION=NO"
+          } | tee .github/a211-waste-frontend-ci-result.txt
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add .github/a211-waste-frontend-ci-result.txt
+          git commit -m "A2.11: persist Waste frontend qualification" || exit 0
+          git push origin HEAD:candidate/easystore-a211-waste-canary-prodpatch-20261007
