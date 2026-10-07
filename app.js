@@ -1589,7 +1589,8 @@
     if(typeof original!=='function') return;
     window.ES27[name]=function(){ if(!allowed()) return deny(); return original.apply(this,arguments); };
   }
-  ['saveDeptLine','saveDeptLineAndOpenSales','saveWaste'].forEach(name=>protectAction(name,canUseDepartment));
+  ['saveDeptLine','saveDeptLineAndOpenSales'].forEach(name=>protectAction(name,canUseDepartment));
+  protectAction('saveWaste',()=>a211WasteCanaryEnabled()?!!user.token:canUseDepartment());
 
 
 
