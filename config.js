@@ -9,7 +9,7 @@ window.MATBAGY_SECURE_API_PROXY_URL = "";
 
 // ============================================================
 // EasyStore Accounting / D1
-// A2.11 — Waste canary candidate, unarmed by default
+// A2.12 — Dept Line canary candidate, unarmed by default
 // ============================================================
 
 // القراءة من D1 مفعلة
@@ -41,9 +41,9 @@ window.EASYSTORE_VERSION = 'ES47 V1922 Unified Safe Build';
 window.EASYSTORE_SESSION_CATALOG_FIX =
   window.EASYSTORE_VERSION;
 
-// A2.11 candidate cache tag
+// A2.12 candidate cache tag
 window.EASYSTORE_CACHE_TAG =
-  'a211-waste-canary-20261007';
+  'a212-dept-line-canary-20261007';
 
 window.EASYSTORE_AUTO_REFRESH =
   'safe-3-minutes-when-clean';

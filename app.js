@@ -148,7 +148,7 @@
     else if(isPrint() || isLaser()) screens=['dept','deptPurchases','waste','stock'];
     else if(isFinal()) screens=['sales','final','customers','deptView'];
     else screens=['sales'];
-    if(a211WasteCanaryEnabled() && user.token && !screens.includes('waste')) screens.push('waste');
+    if(a212DeptLineCanaryEnabled() && user.token && !screens.includes('dept')) screens.push('dept');
     return screens;
   }
   function canManageAccounting(){ return isAdmin(); }
@@ -214,26 +214,26 @@
   }
 
   const D1_ACCOUNTING_READ_ACTIONS = new Set(['getAccounting','getDeptInvoiceDraftV1887','getPartyAccountV1858']);
-  const A211_ACCOUNTING_WRITE_ACTIONS_FAIL_CLOSED = new Set(["saveAccountingMaterial","saveAccountingTemplate","archiveAccountingTemplate","recalcAccountingMaterialsCascade","saveAccountingDeptLine","approveAccountingDeptInvoice","saveAccountingFinalInvoice","saveCustomerAccountMovementV1915","saveEasyStoreSupplier","saveEasyStorePurchaseV2","saveEasyStoreSaleV2","saveDeptDailyPurchaseV1917","approveDeptDailyPurchasesV1917","rejectDeptDailyPurchaseV1917","reverseApprovedPurchaseV1920","savePurchaseCustodyV1920","closePurchaseCustodyV1920","saveAccountingWaste","closeDepartmentDayV1920","runAccountingDayAutomationV1921","reopenAccountingFinalInvoice","classifyLegacyAccountingRowV1920","applySuggestedLegacyClassificationsV1921","reconcileLegacyCustomerDebtsV1914"]);
-  const D1_ACCOUNTING_WRITE_ACTIONS = new Set(['saveAccountingWaste']);
+  const A212_ACCOUNTING_WRITE_ACTIONS_FAIL_CLOSED = new Set(["saveAccountingMaterial","saveAccountingTemplate","archiveAccountingTemplate","recalcAccountingMaterialsCascade","saveAccountingDeptLine","approveAccountingDeptInvoice","saveAccountingFinalInvoice","saveCustomerAccountMovementV1915","saveEasyStoreSupplier","saveEasyStorePurchaseV2","saveEasyStoreSaleV2","saveDeptDailyPurchaseV1917","approveDeptDailyPurchasesV1917","rejectDeptDailyPurchaseV1917","reverseApprovedPurchaseV1920","savePurchaseCustodyV1920","closePurchaseCustodyV1920","saveAccountingWaste","closeDepartmentDayV1920","runAccountingDayAutomationV1921","reopenAccountingFinalInvoice","classifyLegacyAccountingRowV1920","applySuggestedLegacyClassificationsV1921","reconcileLegacyCustomerDebtsV1914"]);
+  const D1_ACCOUNTING_WRITE_ACTIONS = new Set(['saveAccountingDeptLine']);
 
-  function a211WasteCanaryEnabled(){
+  function a212DeptLineCanaryEnabled(){
     const mode=String(window.EASYSTORE_ACCOUNTING_D1_WRITE_MODE||'OFF').trim().toUpperCase();
     const actions=Array.isArray(window.EASYSTORE_ACCOUNTING_D1_WRITE_CANARY_ACTIONS)?window.EASYSTORE_ACCOUNTING_D1_WRITE_CANARY_ACTIONS.map(String):[];
-    return mode==='CANARY' && actions.length===1 && actions[0]==='saveAccountingWaste';
+    return mode==='CANARY' && actions.length===1 && actions[0]==='saveAccountingDeptLine';
   }
   function newAccountingRequestId(prefix){return String(prefix||'REQ')+'-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,10);}
 
   async function api(action, data){
     const actionName=String(action||'');
     const useD1Read = window.EASYSTORE_ACCOUNTING_D1_READONLY === true && D1_ACCOUNTING_READ_ACTIONS.has(actionName);
-    const accountingWriteRequested = A211_ACCOUNTING_WRITE_ACTIONS_FAIL_CLOSED.has(actionName);
+    const accountingWriteRequested = A212_ACCOUNTING_WRITE_ACTIONS_FAIL_CLOSED.has(actionName);
     const writeActionRequested = D1_ACCOUNTING_WRITE_ACTIONS.has(actionName);
     const writeMode=String(window.EASYSTORE_ACCOUNTING_D1_WRITE_MODE||'LEGACY').trim().toUpperCase();
-    if(accountingWriteRequested && !['OFF','LEGACY','CANARY'].includes(writeMode)) throw new Error('وضع كتابة الحسابات غير مسموح في كاناري الهالك.');
-    if(accountingWriteRequested && writeMode==='CANARY' && !writeActionRequested) throw new Error('هذه الحركة خارج عائلة كاناري الهالك؛ تم منعها محليًا.');
-    if(writeActionRequested && writeMode==='CANARY' && !a211WasteCanaryEnabled()) throw new Error('نطاق كاناري الهالك غير مطابق؛ تم منع الحركة.');
-    const useD1Write = writeActionRequested && writeMode==='CANARY' && a211WasteCanaryEnabled();
+    if(accountingWriteRequested && !['OFF','LEGACY','CANARY'].includes(writeMode)) throw new Error('وضع كتابة الحسابات غير مسموح في كاناري بند القسم.');
+    if(accountingWriteRequested && writeMode==='CANARY' && !writeActionRequested) throw new Error('هذه الحركة خارج عائلة كاناري بند القسم؛ تم منعها محليًا.');
+    if(writeActionRequested && writeMode==='CANARY' && !a212DeptLineCanaryEnabled()) throw new Error('نطاق كاناري بند القسم غير مطابق؛ تم منع الحركة.');
+    const useD1Write = writeActionRequested && writeMode==='CANARY' && a212DeptLineCanaryEnabled();
     const useD1Accounting = useD1Read || useD1Write;
     const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),90000);
     try{
@@ -448,7 +448,7 @@
     else if(isPrint() || isLaser()) list = [['dept','فاتورة القسم'],['deptPurchases','مشتريات اليوم'],['waste','هوالك القسم'],['stock','الأصناف المتاحة']];
     else if(isFinal()) list = [['sales','فواتير المبيعات'],['final','تقفيل الفاتورة'],['customers','العملاء'],['deptView','أجزاء الأقسام']];
     else list = [['dashboard','لوحة الحسابات'],['sales','فواتير المبيعات']];
-    if(a211WasteCanaryEnabled() && user.token && !list.some(x=>x[0]==='waste')) list.push(['waste','هوالك القسم']);
+    if(a212DeptLineCanaryEnabled() && user.token && !list.some(x=>x[0]==='dept')) list.push(['dept','فاتورة القسم']);
     if(!list.some(x=>x[0] === state.active)) state.active = list[0][0];
     return `<div class="tabs">${list.map(x=>`<button class="tab ${state.active===x[0]?'active':''}" onclick="ES27.go('${x[0]}')">${x[1]}</button>`).join('')}</div>`;
   }
@@ -1466,7 +1466,21 @@
     },
     toggleLaserCalc(){ const b=$('laserCalcBox'); if(b) b.classList.toggle('hidden'); },
     async saveDeptLineAndOpenSales(){ const order=encodeURIComponent(val('dlOrder')); const customer=encodeURIComponent(val('dlCustomer')); const saved=await this.saveDeptLine(); if(saved) location.href='?screen=sales&orderId='+order+'&customer='+customer+'&v=es46-v1921-semi-automatic-accounting'; },
-    async saveDeptLine(){ this.calcDept(); const tpl=selectedDeptTemplate(); const itemDept=tpl?matDept(tpl):val('dlItemDept'); const shared=($('dlSharedLine')&&$('dlSharedLine').checked)||isSharedDeptName(itemDept); const unitSale=num(val('dlSale')); const qty=num(val('dlQty'))||1; const quote=state.laserQuote||{}; const requestId='DLINE-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,10); const p={lineId:requestId,requestId:requestId,orderId:val('dlOrder'),customerName:val('dlCustomer'),department:userDept(),itemDepartment:itemDept||userDept(),sharedLine:shared?'نعم':'لا',billingStatus:'مسجل - قيد مراجعة القسم',closeStatus:'قيد مراجعة القسم',approvalStatus:'قيد مراجعة القسم',catalogItemId:tpl?(tpl.id||tpl.ID||tpl.catalogItemId||''):'',templateId:tpl?(tpl.id||tpl.ID||''):'',materialName:quote.materialName||(tpl?(tpl.materialName||tpl['الخامة']||''):''),itemName:val('dlItem'),qty:qty,systemSale:num(val('dlSystemSale')),systemSalePrice:num(val('dlSystemSale')),sale:unitSale,salePrice:unitSale,unitSalePrice:unitSale,lineTotal:unitSale*qty,diff:num(val('dlDiff')),laserDetailsJson:Object.keys(quote).length?JSON.stringify(quote):'',consumedAreaTotal:num(quote.consumedAreaTotal),wastePercent:num(quote.wastePercent),notes:val('dlNotes'),user:user.name,date:new Date().toISOString()}; if(!p.customerName||!p.orderId||!p.itemName){ flash('اسم العميل ورقم الأوردر والصنف مطلوبين.',true); return false; } if(shared){ const dup=(state.data.deptLines||[]).find(x=>isSharedLineRecord(x)&&sameDeptInvoiceContext(x,p.orderId,p.customerName)&&nkey(rowItem(x))===nkey(p.itemName)&&isUnbilledDeptLine(x)); if(dup){ flash('البند المشترك مسجل بالفعل بواسطة '+rowDept(dup)+' وسيظهر تلقائيًا عند القسم الآخر. لا تسجله مرتين.',true); return false; } } try{ const reply=await api('saveAccountingDeptLine',p); if(!reply||reply.success===false) throw new Error((reply&&reply.message)||'تعذر حفظ مسودة القسم'); if(reply.lineId){p.id=reply.lineId;p.ID=reply.lineId;} if(!reply.duplicatePrevented) state.data.deptLines.unshift(p); if(p.diff&&!reply.duplicatePrevented) state.data.wasteLines.unshift({department:p.department,orderId:p.orderId,reason:'فرق سعر عن السيستم',amount:p.diff,paid:0}); saveLocal(); state.laserQuote=null; set('dlItemSel',''); set('dlItem',''); set('dlItemDept',''); set('dlSystemSale',''); set('dlSale',''); set('dlDiff',''); set('dlNotes',''); set('dlQty','1'); refreshDeptContextUi(); flash(reply.message||(shared?'تم حفظ بند مشترك في مسودة القسم وسيظهر عند القسم الآخر':'تم حفظ البند في مسودة فاتورة القسم. يمكنك إضافة بند جديد ثم الاعتماد.')); return true; }catch(e){ flash('لم يتم حفظ مسودة القسم: '+(e.message||e),true); return false; } },
+    async saveDeptLine(){
+      if(a212DeptLineCanaryEnabled()){
+        if(!user.token) return flash('جلسة TrendOS غير متاحة. افتح الحسابات من TrendOS مرة أخرى.',true);
+        const suffix=Date.now().toString(36).toUpperCase();
+        const requestId=newAccountingRequestId('A212-DLINE');
+        const payload={requestId,orderId:'A2-CANARY-DEPT-'+suffix,department:'عام',itemName:'A2-CANARY-DEPT-LINE-'+suffix,qty:1};
+        try{
+          const reply=await api('saveAccountingDeptLine',payload);
+          if(!reply||reply.success===false) throw new Error((reply&&reply.message)||'تعذر تنفيذ كاناري بند القسم');
+          if(String(reply.lineId||reply.id||'')!==requestId||Number(reply.totalCost||0)!==0||Number(reply.salePrice||0)!==0||Number(reply.profit||0)!==0||reply.updated===true) throw new Error('نتيجة كاناري بند القسم خرجت عن الشكل الصناعي الصفري.');
+          flash('تم تنفيذ A2.12 Canary: بند قسم صناعي صفري بدون خامة أو حركة مالية.');
+          return true;
+        }catch(e){ flash('لم يتم تنفيذ A2.12 Canary: '+(e.message||e),true); return false; }
+      }
+      this.calcDept(); const tpl=selectedDeptTemplate(); const itemDept=tpl?matDept(tpl):val('dlItemDept'); const shared=($('dlSharedLine')&&$('dlSharedLine').checked)||isSharedDeptName(itemDept); const unitSale=num(val('dlSale')); const qty=num(val('dlQty'))||1; const quote=state.laserQuote||{}; const requestId='DLINE-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,10); const p={lineId:requestId,requestId:requestId,orderId:val('dlOrder'),customerName:val('dlCustomer'),department:userDept(),itemDepartment:itemDept||userDept(),sharedLine:shared?'نعم':'لا',billingStatus:'مسجل - قيد مراجعة القسم',closeStatus:'قيد مراجعة القسم',approvalStatus:'قيد مراجعة القسم',catalogItemId:tpl?(tpl.id||tpl.ID||tpl.catalogItemId||''):'',templateId:tpl?(tpl.id||tpl.ID||''):'',materialName:quote.materialName||(tpl?(tpl.materialName||tpl['الخامة']||''):''),itemName:val('dlItem'),qty:qty,systemSale:num(val('dlSystemSale')),systemSalePrice:num(val('dlSystemSale')),sale:unitSale,salePrice:unitSale,unitSalePrice:unitSale,lineTotal:unitSale*qty,diff:num(val('dlDiff')),laserDetailsJson:Object.keys(quote).length?JSON.stringify(quote):'',consumedAreaTotal:num(quote.consumedAreaTotal),wastePercent:num(quote.wastePercent),notes:val('dlNotes'),user:user.name,date:new Date().toISOString()}; if(!p.customerName||!p.orderId||!p.itemName){ flash('اسم العميل ورقم الأوردر والصنف مطلوبين.',true); return false; } if(shared){ const dup=(state.data.deptLines||[]).find(x=>isSharedLineRecord(x)&&sameDeptInvoiceContext(x,p.orderId,p.customerName)&&nkey(rowItem(x))===nkey(p.itemName)&&isUnbilledDeptLine(x)); if(dup){ flash('البند المشترك مسجل بالفعل بواسطة '+rowDept(dup)+' وسيظهر تلقائيًا عند القسم الآخر. لا تسجله مرتين.',true); return false; } } try{ const reply=await api('saveAccountingDeptLine',p); if(!reply||reply.success===false) throw new Error((reply&&reply.message)||'تعذر حفظ مسودة القسم'); if(reply.lineId){p.id=reply.lineId;p.ID=reply.lineId;} if(!reply.duplicatePrevented) state.data.deptLines.unshift(p); if(p.diff&&!reply.duplicatePrevented) state.data.wasteLines.unshift({department:p.department,orderId:p.orderId,reason:'فرق سعر عن السيستم',amount:p.diff,paid:0}); saveLocal(); state.laserQuote=null; set('dlItemSel',''); set('dlItem',''); set('dlItemDept',''); set('dlSystemSale',''); set('dlSale',''); set('dlDiff',''); set('dlNotes',''); set('dlQty','1'); refreshDeptContextUi(); flash(reply.message||(shared?'تم حفظ بند مشترك في مسودة القسم وسيظهر عند القسم الآخر':'تم حفظ البند في مسودة فاتورة القسم. يمكنك إضافة بند جديد ثم الاعتماد.')); return true; }catch(e){ flash('لم يتم حفظ مسودة القسم: '+(e.message||e),true); return false; } },
     async aiLaser(){
       const material=val('aiMat'), w=num(val('aiW')), h=num(val('aiH')), q=num(val('aiQty'))||1, waste=num(val('aiWaste')), customerUnitSale=num(val('aiUnitSale'));
       if(!material||!w||!h) return flash('اختار خامة الليزر واكتب المقاس',true);
@@ -1482,19 +1496,6 @@
       }catch(e){ state.laserQuote=null; flash('تعذر حساب الليزر: '+(e.message||e),true); }
     },
     async saveWaste(){
-      if(a211WasteCanaryEnabled()){
-        if(!user.token) return flash('جلسة TrendOS غير متاحة. افتح الحسابات من TrendOS مرة أخرى.',true);
-        const orderId='A2-CANARY-WASTE-'+Date.now().toString(36).toUpperCase();
-        const payload={requestId:newAccountingRequestId('A211-WASTE'),department:'عام',orderId,reason:'A2_CANARY',amount:0.01,paid:0};
-        try{
-          const reply=await api('saveAccountingWaste',payload);
-          if(!reply||reply.success===false) throw new Error((reply&&reply.message)||'تعذر تنفيذ كاناري الهالك');
-          if(Number(reply.amount)!==0.01||Number(reply.paid||0)!==0||Number(reply.remaining)!==0.01||String(reply.materialId||'')!=='') throw new Error('نتيجة كاناري الهالك خرجت عن الشكل الصناعي المعزول.');
-          if(reply.stockBefore!==null||reply.stockAfter!==null) throw new Error('كاناري الهالك لمس مسار المخزون بشكل غير متوقع.');
-          flash('تم تنفيذ A2.11 Canary: سجل هالك صناعي 0.01 بدون خامة أو مخزون.');
-        }catch(e){ flash('لم يتم تنفيذ A2.11 Canary: '+(e.message||e),true); }
-        return;
-      }
       const p={department:userDept(),orderId:val('waOrder'),reason:val('waReason'),amount:num(val('waAmount')),paid:num(val('waPaid')),notes:'',date:new Date().toISOString()};
       if(!p.orderId||!p.reason||p.amount<=0||p.paid<0) return flash('رقم الأوردر ونوع الهالك وقيمة تالف أكبر من صفر مطلوبة.',true);
       try{ const reply=await api('saveAccountingWaste',p); if(!reply||reply.success===false) throw new Error((reply&&reply.message)||'تعذر حفظ الهالك'); p.id=reply.id||''; p.user=user.name; state.data.wasteLines.unshift(p); saveLocal(); shell(); flash('تم حفظ الهالك على السيرفر'); }catch(e){ flash('لم يتم حفظ الهالك: '+(e.message||e),true); }
@@ -1589,8 +1590,9 @@
     if(typeof original!=='function') return;
     window.ES27[name]=function(){ if(!allowed()) return deny(); return original.apply(this,arguments); };
   }
-  ['saveDeptLine','saveDeptLineAndOpenSales'].forEach(name=>protectAction(name,canUseDepartment));
-  protectAction('saveWaste',()=>a211WasteCanaryEnabled()?!!user.token:canUseDepartment());
+  protectAction('saveDeptLine',()=>a212DeptLineCanaryEnabled()?!!user.token:canUseDepartment());
+  protectAction('saveDeptLineAndOpenSales',canUseDepartment);
+  protectAction('saveWaste',canUseDepartment);
 
 
 
