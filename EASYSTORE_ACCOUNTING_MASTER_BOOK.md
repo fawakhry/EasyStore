@@ -4387,3 +4387,126 @@ This aligns with Autonomous Printshop Build Matrix module:
 - Production business mutation from baseline alignment: NO.
 - GENERAL opened: NO.
 - Result: PASS — CENTRAL SAFETY BASELINES MATCH THE SIX-CANARY RUNTIME TRUTH.
+
+
+## Entry ACC-129 — A2.13 zero-balance Custody Close seventh-canary paths qualified repo-only
+- Date: 2026-10-07
+- Starting point: ACC-128 six-canary authoritative baseline.
+- Candidate selected: closePurchaseCustodyV1920 as the next lowest-risk deterministic write family.
+- Risk rationale:
+  - a synthetic employee with no custody events has balance 0 by construction;
+  - closePurchaseCustodyV1 writes only one custody-close row when balance is zero;
+  - the amount>0 branch that creates custody events and cashbox rows is not entered;
+  - no stock, Party ledger, purchase, invoice, or day-close mutation is expected.
+- Exact proposed synthetic shape:
+  - actor: ضياء only;
+  - action: closePurchaseCustodyV1920 only;
+  - request prefix: A213-CCLOSE-*;
+  - employee prefix: A2-CANARY-CUSTODY-*;
+  - department: عام;
+  - workDate: 2099-12-31;
+  - balance before/after: 0;
+  - settlement type: NONE;
+  - settlement amount: 0;
+  - no notes/payment/business data;
+  - one command only;
+  - GENERAL forbidden.
+- Server guard:
+  - source commit 805b64769ecbbad095735e618316c02fd0be3ed7;
+  - guard test commit 42eddff1678436bd29e2ddc48c8194d09b3f17ee;
+  - qualification workflow commit 9bd380c1b192c1114fa5d32fb14033aafd478c9c;
+  - Run 37659512154: SUCCESS.
+- Expected successful delta:
+  - custodyCloses 0→1;
+  - requestLedger 6→7;
+  - events 6→7;
+  - custodyEvents +0;
+  - cashbox +0;
+  - stockMoves +0;
+  - partyLedger +0;
+  - all other six-canary evidence invariant.
+- Isolated frontend candidate:
+  - branch candidate/easystore-a213-custody-close-canary-prodpatch-20261007;
+  - app isolation commit c19845b924b307f904f245c8d0fb33b81d51c640;
+  - unarmed config commit 81132537bc2a9a35d074bbf53dc95c28c64dbfb3;
+  - cache/index commit 61813f19d3424c55cc02c98c1a158732276b1987;
+  - frontend invariant test commit c57973f71be8f472aba118be9d443544736ba01f;
+  - frontend CI commit 006e8b03af39ffaad1eabf4673b3e368c73552e2.
+- Initial frontend qualification Run 37659928852: FAIL repo-only because the generated canary card contained escaped backticks and failed JavaScript syntax check.
+- Syntax corrected in commit 075cf15b2d56fb88dec59fc045a27010f33d15d6.
+- Follow-up frontend qualification Run 37660070175: SUCCESS.
+- Frontend contract:
+  - D1 write set contains only closePurchaseCustodyV1920;
+  - canary button is visible only during exact A2.13 CANARY;
+  - real UI values are ignored; payload uses the synthetic employee, department and future synthetic work date;
+  - response must prove zero balance / NONE settlement / zero amount;
+  - normal Dept Line behavior restored; no A2.12 special frontend path remains;
+  - candidate config stays OFF/actions=[].
+- Manual-only Production paths prepared but NOT run:
+  - READONLY guard deploy workflow commit 3f2183c68e11f14e79ac625b7beb869fe8c60cc4;
+  - auto-closing execution workflow commit a61ac56661b89ebb0cb0fbc7b36d9ed6082c525d;
+  - workflow invariant test commit ef86630883c90cf8949d62519ab695cfccf512a5;
+  - deploy/execution qualification CI commit dce4296444555c578e287ec8efe131f84dce8795;
+  - Run 37660471589: SUCCESS.
+- Production deploy: NO.
+- Production frontend change: NO.
+- Server ARM: NO.
+- Seventh canary executed: NO.
+- GENERAL opened: NO.
+- Result: PASS — A2.13 CUSTODY CLOSE SERVER/FRONTEND/DEPLOY/EXECUTION PATHS QUALIFIED REPO-ONLY.
+
+
+## Entry ACC-130 — A2.13 Custody Close seventh-canary owner Decision Gate reached
+- Date: 2026-10-07
+- Read-only decision-gate workflow:
+  - .github/workflows/easystore-a213-decision-gate-readonly.yml;
+  - source commit effff6b5ca375c48ed16310191d4247fc829a065;
+  - Run 37660587510, Job 112926795717: SUCCESS.
+- Fresh Production runtime truth:
+  - ACTIVE_API_VERSION=9882154b-1ea6-4632-bf9c-471ba9546caf
+  - FRONTEND_MODE=OFF
+  - FRONTEND_CANARY_ACTIONS=[]
+  - A213_FRONTEND_LIVE=NO
+  - BACKEND_MODE=READONLY
+  - POLICY_EPOCH=37
+  - AUTHORITATIVE_WRITES=false
+  - SERVER_USERS_ACTIONS=0/0
+  - COMMAND_BUDGET=0/0
+  - GOOGLE_BUSINESS_CALLS=0
+  - GENERAL_OPENED=NO
+- Exact six-canary D1 baseline:
+  - MATERIALS=1
+  - TEMPLATES=1
+  - PARTIES=1
+  - PARTY_BALANCES=1
+  - WASTE=1
+  - DEPT_LINES=1
+  - CUSTODY_CLOSES=0
+  - CUSTODY_EVENTS=0
+  - REQUEST_LEDGER=6
+  - EVENTS=6
+  - STOCK_MOVES=0
+  - PARTY_LEDGER=0
+  - CASHBOX=0
+  - OTHER_TRACKED_TABLES=0
+  - ACTIVE_MATERIALS=0
+  - ACTIVE_TEMPLATES=0
+  - ACTIVE_SUPPLIERS=0
+  - DIAA_ADMIN_COUNT=1
+- Qualification state:
+  - A213_SERVER_GUARD=QUALIFIED_REPO_ONLY_NOT_DEPLOYED
+  - A213_FRONTEND_CANDIDATE=QUALIFIED_REPO_ONLY_NOT_DEPLOYED
+  - A213_DEPLOY_WORKFLOW=QUALIFIED_MANUAL_ONLY_NOT_RUN
+  - A213_EXECUTION_WORKFLOW=QUALIFIED_MANUAL_ONLY_NOT_RUN
+  - SEVENTH_CANARY_EXECUTED=NO
+  - PRODUCTION_MUTATION=NO
+- Proposed seventh bounded Production canary, only if separately approved:
+  - canonical user ضياء;
+  - action closePurchaseCustodyV1920 only;
+  - one synthetic zero-balance custody close on workDate 2099-12-31;
+  - no custody event, no cashbox movement, no stock movement, no Party ledger movement;
+  - max one command, short TTL, automatic server disable;
+  - expected delta: custodyCloses +1, requestLedger +1, events +1; every other tracked table unchanged;
+  - GENERAL remains forbidden.
+- Result: PASS — A2.13 OWNER DECISION GATE REACHED WITH PRODUCTION FULLY CLOSED; SEVENTH CANARY NOT EXECUTED.
+- Owner approval is required before backend A2.13 guard deploy, isolated frontend publish, CANARY enablement, server ARM, or the seventh Production command.
