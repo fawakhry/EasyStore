@@ -4206,3 +4206,12 @@ This aligns with Autonomous Printshop Build Matrix module:
 - Proposed sixth bounded Production canary, only if separately approved: canonical user ضياء; action saveAccountingDeptLine only; one synthetic zero-value department-line draft; no customer, material, price or cost; no approval and therefore no stock movement; no cashbox or Party ledger movement; one command; short TTL; automatic server disable; expected delta deptLines +1, requestLedger +1, events +1; every other tracked table unchanged; GENERAL forbidden.
 - Result: PASS — A2.12 OWNER DECISION GATE REACHED WITH PRODUCTION FULLY CLOSED; SIXTH CANARY NOT EXECUTED.
 - Owner approval is required before backend A2.12 guard deploy, isolated frontend publish, CANARY enablement, server ARM, or the sixth Production command.
+
+
+## Entry ACC-121 — Owner approval for A2.12 bounded Dept Line Production canary
+- Date: 2026-10-07
+- Owner explicitly approved proceeding from ACC-120.
+- Approved scope only: canonical actor ضياء; action saveAccountingDeptLine; one synthetic A2-CANARY-DEPT-* department-line draft; request A212-DLINE-*; item A2-CANARY-DEPT-LINE-*; department عام; qty 1; zero price/cost/value; no customer; no material; no approval; no stock movement; no cashbox; no Party ledger; max one command; short TTL; automatic return to READONLY; GENERAL forbidden.
+- Expected successful delta only: deptLines 0→1; requestLedger 5→6; events 5→6; all other tracked/protected tables invariant.
+- This approval does not itself deploy, ARM, or mutate business data.
+- Result: APPROVED — A2.12 MAY PROCEED ONLY WITHIN THE BOUNDED SCOPE ABOVE.
