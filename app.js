@@ -1480,7 +1480,7 @@
     },
     async saveWaste(){
       if(a211WasteCanaryEnabled()){
-        if(!isAdmin()) return deny('A2.11 Waste Canary متاح لضياء فقط.');
+        if(!user.token) return flash('جلسة TrendOS غير متاحة. افتح الحسابات من TrendOS مرة أخرى.',true);
         const orderId='A2-CANARY-WASTE-'+Date.now().toString(36).toUpperCase();
         const payload={requestId:newAccountingRequestId('A211-WASTE'),department:'عام',orderId,reason:'A2_CANARY',amount:0.01,paid:0};
         try{
