@@ -1,0 +1,63 @@
+name: Accounting Master Book Append ACC-101
+
+on:
+  push:
+    branches:
+      - candidate/easystore-zero-google-audit-20261004
+    paths:
+      - '.github/workflows/accounting-master-book-append-acc101.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  append:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: candidate/easystore-zero-google-audit-20261004
+      - name: Append ACC-101 once
+        shell: bash
+        run: |
+          set -euo pipefail
+          BOOK=EASYSTORE_ACCOUNTING_MASTER_BOOK.md
+          if grep -q '^## Entry ACC-101 ' "$BOOK"; then
+            echo ACC101_ALREADY_PRESENT=YES
+            exit 0
+          fi
+          cat >> "$BOOK" <<'EOF'
+          
+          
+          ## Entry ACC-101 — A2.10 Supplier guard deployed READONLY with zero drift
+          - Date: 2026-10-07
+          - Owner approval prerequisite: ACC-100.
+          - Production deploy workflow: `.github/workflows/easystore-a210-supplier-guard-readonly-deploy.yml`.
+          - Run `37602789752`, Job `112730963921`: **SUCCESS**.
+          - Qualified source/guard tests: PASS.
+          - Preflight: Production frontend OFF; backend READONLY; server canary cleared; Google business calls 0; exact three-canary zero-party baseline matched.
+          - Postflight:
+            ```ini
+            A210_DEPLOY_POST=READONLY
+            A210_DEPLOY_ROW_COUNTS_INVARIANT=PASS
+            A210_DEPLOY_SUPPLIER_GUARD_LIVE=YES
+            PRODUCTION_BUSINESS_MUTATION=NO
+            GENERAL_OPENED=NO
+            ```
+          - D1 remained unchanged:
+            - materials=1;
+            - templates=1;
+            - parties=0;
+            - partyBalances=0;
+            - requestLedger=3;
+            - events=3;
+            - all other tracked/protected accounting tables=0;
+            - active materials/templates=0.
+          - Data mutation: NO.
+          - Result: **PASS — SUPPLIER GUARD LIVE IN READONLY WITH ZERO ACCOUNTING DRIFT**.
+          EOF
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add "$BOOK"
+          git commit -m "ACC-101: record A2.10 Supplier guard READONLY deploy"
+          git push origin HEAD:candidate/easystore-zero-google-audit-20261004
