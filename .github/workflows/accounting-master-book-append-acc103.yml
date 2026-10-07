@@ -1,0 +1,47 @@
+name: Accounting Master Book Append ACC-103
+on:
+  push:
+    branches:
+      - candidate/easystore-zero-google-audit-20261004
+    paths:
+      - '.github/workflows/accounting-master-book-append-acc103.yml'
+permissions:
+  contents: write
+jobs:
+  append:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: candidate/easystore-zero-google-audit-20261004
+      - name: Append ACC-103 once
+        shell: bash
+        run: |
+          set -euo pipefail
+          BOOK=EASYSTORE_ACCOUNTING_MASTER_BOOK.md
+          if grep -q '^## Entry ACC-103 ' "$BOOK"; then exit 0; fi
+          cat >> "$BOOK" <<'EOF'
+          
+          
+          ## Entry ACC-103 — A2.10 Supplier frontend CANARY live; server still unarmed
+          - Date: 2026-10-07
+          - Owner approval prerequisite: ACC-100.
+          - Production frontend config commit: `2c38b60e17ad0d49b8a70c8730cf3041d8122c1d`.
+          - Frontend mode: CANARY.
+          - Frontend canary action: `saveEasyStoreSupplier` only.
+          - D1 read flag remains true; legacy D1 writes remain false.
+          - Fresh pre-arm read-only audit: Run `37603654957`: **SUCCESS**.
+          - Backend mode: READONLY.
+          - Server users/actions: 0/0.
+          - Command budget: 0/0.
+          - Google business calls: 0.
+          - D1 baseline: materials=1, templates=1, parties=0, partyBalances=0, requestLedger=3, events=3, all other tracked/protected tables=0.
+          - GENERAL opened: NO.
+          - Production business mutation: NO.
+          - Result: **PASS — FRONTEND CANARY BOUNDED TO SUPPLIER ONLY; SERVER NOT YET ARMED**.
+          EOF
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add "$BOOK"
+          git commit -m "ACC-103: record A2.10 Supplier CANARY pre-arm state"
+          git push origin HEAD:candidate/easystore-zero-google-audit-20261004
