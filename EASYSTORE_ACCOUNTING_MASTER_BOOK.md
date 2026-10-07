@@ -3639,3 +3639,43 @@ This aligns with Autonomous Printshop Build Matrix module:
   - active materials/templates=0.
 - Data mutation: NO.
 - Result: **PASS — SUPPLIER GUARD LIVE IN READONLY WITH ZERO ACCOUNTING DRIFT**.
+
+
+## Entry ACC-102 — A2.10 isolated Supplier frontend published live while still OFF
+- Date: 2026-10-07
+- Owner approval prerequisite: ACC-100.
+- Production frontend commits:
+  - app.js: `42608d235d57a28028784e60516276e41d7a4463`;
+  - config.js: `46353c89f3984519f70a638cf5e6b178db8e3bbe`;
+  - index.html: `344db9b79717fefeac88065613210b14eed90f10`.
+- GitHub Pages Run `37602957415`: **SUCCESS**.
+- Live frontend contains the isolated A2.10 Supplier gate and synthetic `A2-CANARY-SUPPLIER-*` payload path, but remains unarmed:
+  ```ini
+  FRONTEND_MODE=OFF
+  FRONTEND_CANARY_ACTIONS=[]
+  D1_READONLY=true
+  LEGACY_D1_WRITES=false
+  ```
+- Independent post-publish read-only audit:
+  - workflow `.github/workflows/easystore-a210-post-frontend-publish-readonly.yml`;
+  - Run `37603349737`: **SUCCESS**.
+- Exact live post-publish state:
+  ```ini
+  A210_POST_FRONTEND_PUBLISH=PASS
+  A210_ISOLATED_FRONTEND_LIVE=YES
+  BACKEND_MODE=READONLY
+  SERVER_USERS_ACTIONS=0/0
+  COMMAND_BUDGET=0/0
+  GOOGLE_BUSINESS_CALLS=0
+  MATERIALS=1
+  TEMPLATES=1
+  PARTIES=0
+  PARTY_BALANCES=0
+  REQUEST_LEDGER=3
+  EVENTS=3
+  OTHER_TRACKED_TABLES=0
+  GENERAL_OPENED=NO
+  PRODUCTION_BUSINESS_MUTATION=NO
+  ```
+- Data mutation: NO.
+- Result: **PASS — A2.10 FRONTEND LIVE BUT STILL CLOSED; READY FOR BOUNDED CANARY ENABLEMENT**.
