@@ -3381,3 +3381,39 @@ This aligns with Autonomous Printshop Build Matrix module:
   - prepare a manual-only auto-closing execution workflow preserving the three-canary baseline;
   - refresh live Production truth;
   - stop at a fresh owner Decision Gate before any A2.10 deploy/ARM/write.
+
+
+## Entry ACC-096 — A2.10 Supplier frontend candidate qualified repo-only and remains OFF
+- Date: 2026-10-07
+- Goal: Qualify a frontend path that cannot accidentally route any accounting write family except the bounded Supplier Canary.
+- Isolated branch: `candidate/easystore-a210-supplier-canary-prodpatch-20261007`.
+- Candidate source:
+  - app isolation commit: `2739ff02f81ac1c15e7c0a70e03832296a8ddc0a`;
+  - unarmed config commit: `9e3ecc9a28fc99be133142c9658fb57a3af45ac4`;
+  - cache/index commit: `570d35ca0c1bf217fcc1ca705b255f4242ecd2d6`;
+  - frontend invariant test commit: `4435fda341a052385a41e0236657a8897a80f644`;
+  - CI workflow commit: `2f27077075324c66b02f566305d2c849905c8a36`.
+- CI Run: `37550055846` — **SUCCESS**.
+- Frontend contract:
+  - D1 write action set contains only `saveEasyStoreSupplier`;
+  - all other accounting write actions fail closed while CANARY is active;
+  - Supplier Canary ignores the supplier form values and generates a fresh synthetic name `A2-CANARY-SUPPLIER-*`;
+  - payload uses a fresh `A210-SUP-*` request ID, opening/openingDebt=0 and active=`لا`;
+  - returned supplier must match the synthetic name, opening balance zero and inactive status before UI reports success.
+- Candidate is intentionally unarmed:
+  ```ini
+  EASYSTORE_ACCOUNTING_D1_READONLY=true
+  EASYSTORE_ACCOUNTING_D1_WRITES=false
+  EASYSTORE_ACCOUNTING_D1_WRITE_MODE=OFF
+  EASYSTORE_ACCOUNTING_D1_WRITE_CANARY_ACTIONS=[]
+  ```
+- Production `main` was not changed by this qualification and remains OFF from ACC-092.
+- Production deploy: NO.
+- Server ARM: NO.
+- Business-data mutation: NO.
+- GENERAL opened: NO.
+- Result: **PASS — A2.10 SUPPLIER FRONTEND CANDIDATE QUALIFIED REPO-ONLY / NOT DEPLOYED / NOT ARMED**.
+- Next:
+  - prove the exact live three-canary baseline including Party master count before supplier qualification is finalized;
+  - prepare manual-only backend guard deploy and auto-closing execution paths;
+  - refresh Production and stop at owner Decision Gate.
