@@ -3417,3 +3417,58 @@ This aligns with Autonomous Printshop Build Matrix module:
   - prove the exact live three-canary baseline including Party master count before supplier qualification is finalized;
   - prepare manual-only backend guard deploy and auto-closing execution paths;
   - refresh Production and stop at owner Decision Gate.
+
+
+## Entry ACC-097 — A2.10 exact live Supplier preflight PASS
+- Date: 2026-10-07
+- Goal: Prove the complete closed Production baseline, including Party master tables, before preparing any Supplier canary deployment.
+- Read-only workflow:
+  - backend workflow commit: `2408fe153a5269fed61ec23363ade136a9f9fd28`;
+  - Run: `37550182411` — **SUCCESS**.
+- Live authority:
+  ```ini
+  FRONTEND_MODE=OFF
+  BACKEND_MODE=READONLY
+  POLICY_EPOCH=10
+  SERVER_USERS_ACTIONS=0/0
+  COMMAND_BUDGET=0/0
+  GOOGLE_BUSINESS_CALLS=0
+  GENERAL_OPENED=NO
+  ```
+- Exact Production D1 baseline:
+  ```ini
+  materials=1
+  templates=1
+  parties=0
+  deptLines=0
+  finalInvoices=0
+  partyLedger=0
+  stockMoves=0
+  purchases=0
+  dailyPurchases=0
+  cashbox=0
+  waste=0
+  custodyEvents=0
+  custodyCloses=0
+  dayCloses=0
+  partyBalances=0
+  requestLedger=3
+  events=3
+  activeMaterials=0
+  activeTemplates=0
+  ```
+- Identity precondition: canonical active admin `ضياء` exists exactly once.
+- Production deploy: NO.
+- Server ARM: NO.
+- Business-data mutation: NO.
+- Result: **PASS — A2.10 SUPPLIER CANARY HAS AN EXACT ZERO-PARTY THREE-CANARY STARTING BASELINE**.
+- Expected bounded fourth-canary delta, if separately approved later:
+  - parties 0→1;
+  - partyBalances 0→1 with balance=0;
+  - requestLedger 3→4;
+  - events 3→4;
+  - partyLedger/cashbox/stock/purchases/dept/invoices/custody/waste/dayClose remain unchanged at zero.
+- Next:
+  - prepare manual-only backend source deploy and manual-only auto-closing execution workflow;
+  - qualify those files repo-only;
+  - do not run either deploy or canary before owner Decision Gate.
