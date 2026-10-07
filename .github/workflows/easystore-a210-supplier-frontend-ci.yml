@@ -1,0 +1,75 @@
+name: EasyStore A2.10 Supplier Frontend Qualification
+
+on:
+  push:
+    branches:
+      - candidate/easystore-a210-supplier-canary-prodpatch-20261007
+    paths:
+      - 'app.js'
+      - 'config.js'
+      - 'index.html'
+      - 'tests/easystore_a210_supplier_frontend.test.mjs'
+      - '.github/workflows/easystore-a210-supplier-frontend-ci.yml'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: easystore-a210-supplier-frontend-ci
+  cancel-in-progress: false
+
+jobs:
+  qualify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: candidate/easystore-a210-supplier-canary-prodpatch-20261007
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Qualify isolated frontend candidate
+        id: test
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check app.js
+          node tests/easystore_a210_supplier_frontend.test.mjs
+          {
+            echo "A210_SUPPLIER_FRONTEND_QUALIFICATION=PASS"
+            echo "RUN_ID=$GITHUB_RUN_ID"
+            echo "WRITE_ACTION=saveEasyStoreSupplier"
+            echo "CANDIDATE_DEFAULT_MODE=OFF"
+            echo "CANDIDATE_CANARY_ACTIONS=[]"
+            echo "SYNTHETIC_INACTIVE_ZERO_OPENING=PASS"
+            echo "OTHER_ACCOUNTING_WRITES_FAIL_CLOSED=PASS"
+            echo "PRODUCTION_DEPLOY=NO"
+            echo "PRODUCTION_MUTATION=NO"
+            echo "GENERAL_OPENED=NO"
+          } > /tmp/result.txt
+      - name: Persist result
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ "${{ steps.test.outcome }}" = "success" ]; then
+            cp /tmp/result.txt .github/a210-supplier-frontend-ci-result.txt
+          else
+            {
+              echo "A210_SUPPLIER_FRONTEND_QUALIFICATION=FAIL"
+              echo "RUN_ID=$GITHUB_RUN_ID"
+              echo "PRODUCTION_DEPLOY=NO"
+              echo "PRODUCTION_MUTATION=NO"
+              echo "GENERAL_OPENED=NO"
+            } > .github/a210-supplier-frontend-ci-result.txt
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add .github/a210-supplier-frontend-ci-result.txt
+          git commit -m "A2.10: persist supplier frontend qualification result" || exit 0
+          git push origin HEAD:candidate/easystore-a210-supplier-canary-prodpatch-20261007
+      - name: Enforce result
+        if: steps.test.outcome != 'success'
+        run: exit 1
