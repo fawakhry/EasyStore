@@ -143,10 +143,13 @@
   const roleText = () => isAdmin() ? 'ضياء / مطبخ الحسابات' : isLaser() ? 'جابر / الليزر' : isPrint() ? 'وائل / الطباعة' : isFinal() ? 'رحمة أو ريفان / تقفيل فواتير' : 'موظف';
   const userDept = () => isLaser() ? 'ليزر' : isPrint() ? 'طباعة' : (user.department || '');
   function allowedScreens(){
-    if(isAdmin()) return ['dashboard','suppliers','customers','items','purchase','sales','final','stock','kitchen','dailyClose','legacy','reports','health'].concat(a211WasteCanaryEnabled()?['waste']:[]);
-    if(isPrint() || isLaser()) return ['dept','deptPurchases','waste','stock'];
-    if(isFinal()) return ['sales','final','customers','deptView'];
-    return ['sales'];
+    let screens;
+    if(isAdmin()) screens=['dashboard','suppliers','customers','items','purchase','sales','final','stock','kitchen','dailyClose','legacy','reports','health'];
+    else if(isPrint() || isLaser()) screens=['dept','deptPurchases','waste','stock'];
+    else if(isFinal()) screens=['sales','final','customers','deptView'];
+    else screens=['sales'];
+    if(a211WasteCanaryEnabled() && user.token && !screens.includes('waste')) screens.push('waste');
+    return screens;
   }
   function canManageAccounting(){ return isAdmin(); }
   function canFinalize(){ return isAdmin() || isFinal(); }
@@ -442,10 +445,10 @@
   function tabs(){
     let list;
     if(isAdmin()) list = [['dashboard','لوحة الحسابات'],['suppliers','الموردين'],['customers','العملاء'],['items','الأصناف'],['purchase','فواتير الشراء'],['sales','فواتير المبيعات'],['final','التقفيل النهائي'],['stock','المخزون'],['kitchen','مطبخ الحسابات'],['dailyClose','تقفيل الأقسام والعهد'],['legacy','تصنيف القديم'],['reports','التقارير'],['health','فحص النظام']];
-    if(isAdmin() && a211WasteCanaryEnabled()) list.push(['waste','هوالك القسم']);
     else if(isPrint() || isLaser()) list = [['dept','فاتورة القسم'],['deptPurchases','مشتريات اليوم'],['waste','هوالك القسم'],['stock','الأصناف المتاحة']];
     else if(isFinal()) list = [['sales','فواتير المبيعات'],['final','تقفيل الفاتورة'],['customers','العملاء'],['deptView','أجزاء الأقسام']];
     else list = [['dashboard','لوحة الحسابات'],['sales','فواتير المبيعات']];
+    if(a211WasteCanaryEnabled() && user.token && !list.some(x=>x[0]==='waste')) list.push(['waste','هوالك القسم']);
     if(!list.some(x=>x[0] === state.active)) state.active = list[0][0];
     return `<div class="tabs">${list.map(x=>`<button class="tab ${state.active===x[0]?'active':''}" onclick="ES27.go('${x[0]}')">${x[1]}</button>`).join('')}</div>`;
   }
