@@ -18,6 +18,8 @@ assert.ok(app.includes("if(!user.token) return flash('جلسة TrendOS غير م
 assert.ok(app.includes("if(a211WasteCanaryEnabled() && user.token && !screens.includes('waste')) screens.push('waste');"));
 assert.ok(app.includes("else if(/waste|هالك/.test(s)) requested = 'waste';"));
 assert.ok(app.includes("if(a211WasteCanaryEnabled() && user.token && !list.some(x=>x[0]==='waste')) list.push(['waste','هوالك القسم']);"));
+assert.ok(app.includes("protectAction('saveWaste',()=>a211WasteCanaryEnabled()?!!user.token:canUseDepartment());"));
+assert.ok(!app.includes("['saveDeptLine','saveDeptLineAndOpenSales','saveWaste'].forEach(name=>protectAction(name,canUseDepartment));"));
 assert.ok(app.includes("if(reply.stockBefore!==null||reply.stockAfter!==null)"));
 assert.ok(!app.includes('a210SupplierCanaryEnabled'));
 assert.ok(!app.includes('A2-CANARY-SUPPLIER-'));
@@ -36,6 +38,7 @@ console.log('SYNTHETIC_AMOUNT=0.01');
 console.log('SYNTHETIC_MATERIAL=NONE');
 console.log('WASTE_SCREEN=SSO_CANARY_ONLY_SERVER_ACTOR_ENFORCED');
 console.log('CANARY_ACTOR_AUTHORITY=SERVER_CANONICAL_USER_GUARD');
+console.log('LEGACY_WASTE_WRAPPER=A211_BYPASS_ONLY');
 console.log('CANDIDATE_MODE=OFF');
 console.log('CANDIDATE_ACTIONS=[]');
 console.log('PRODUCTION_MUTATION=NO');
