@@ -3334,3 +3334,50 @@ This aligns with Autonomous Printshop Build Matrix module:
   - compare the remaining low-risk families;
   - current next candidate is `saveEasyStoreSupplier` as an inactive synthetic zero-opening supplier master, subject to a dedicated server-side CANARY shape guard and repo-only qualification;
   - no Production deploy/ARM/write is authorized by this entry.
+
+
+## Entry ACC-095 — A2.10 inactive zero-opening Supplier server guard qualified repo-only
+- Date: 2026-10-07
+- Goal: Qualify the next lowest-risk meaningful write family after Archive Template was rejected as a no-op canary.
+- Proposed family: `saveEasyStoreSupplier` for canonical admin `ضياء` only.
+- Source review:
+  - supplier master requires full/admin accounting mode;
+  - opening balance > 0 creates supplier Party ledger debt, therefore it is forbidden for this Canary;
+  - opening balance = 0 creates only an authoritative supplier Party master plus a zero-balance Party balance row;
+  - no cashbox movement and no Party ledger transaction are created when opening balance is zero;
+  - command uses `beginCommandV1 / commitCommandV1` and immutable `supplier/create` audit event.
+- Dedicated CANARY server shape hardening:
+  - source commit: `a9ecf60e3268f78c2e3d998d8140592485be11ec`;
+  - supplier name must start `A2-CANARY-SUPPLIER-`;
+  - supplier must be inactive;
+  - opening debt/balance must be exactly zero;
+  - caller may not supply Party/Supplier ID;
+  - externalId, phone, address and notes must be empty;
+  - violations fail closed with `employee-accounting-canary-supplier-shape-blocked`.
+- Tests:
+  - policy guard update commit: `8c571d25fac3fe939b5c96c0132474fd15f1ee1a`;
+  - supplier invariant test commit: `78bd6631fef555f294f0adfcbe8a798ec3b48cf9`;
+  - qualification workflow commit: `ddee73c62316f59ffb245a7b50742a06d68105e7`;
+  - CI Run: `37549772898` — **SUCCESS**.
+- Qualified expected one-command delta from the current three-canary baseline:
+  ```ini
+  parties=+1
+  partyBalances=+1   # zero balance only
+  requestLedger=+1
+  events=+1
+  partyLedger=+0
+  cashbox=+0
+  purchases=+0
+  stock/material/template/dept/invoice/custody/waste/dayClose=+0
+  ```
+- Production backend deploy: NO.
+- Production frontend change: NO.
+- Server ARM: NO.
+- Business-data mutation: NO.
+- GENERAL opened: NO.
+- Result: **PASS — A2.10 SUPPLIER SERVER GUARD QUALIFIED REPO-ONLY / PRODUCTION REMAINS CLOSED**.
+- Next:
+  - qualify an isolated Production frontend patch that routes only `saveEasyStoreSupplier` and replaces form values with the synthetic inactive zero-opening Canary payload;
+  - prepare a manual-only auto-closing execution workflow preserving the three-canary baseline;
+  - refresh live Production truth;
+  - stop at a fresh owner Decision Gate before any A2.10 deploy/ARM/write.
