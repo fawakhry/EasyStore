@@ -3886,3 +3886,142 @@ This aligns with Autonomous Printshop Build Matrix module:
 - Production mutation from baseline alignment: NO.
 - GENERAL opened: NO.
 - Result: **PASS — CENTRAL SAFETY BASELINES NOW MATCH THE FOUR-CANARY RUNTIME TRUTH**.
+
+
+## Entry ACC-110 — A2.11 Waste selected and fully qualified repo-only
+- Date: 2026-10-07
+- Starting authoritative baseline: ACC-109 four-canary truth.
+- Candidate selection rationale:
+  - saveAccountingWaste is the lowest-risk untested deterministic write family that can be isolated without stock, cashbox, Party ledger, purchases, invoices, custody, or day-close mutation.
+  - Unlike Party ledger / purchases / sales, it can be exercised as one synthetic standalone record.
+  - Zero amount is rejected by the business rule, so the bounded synthetic amount is exactly 0.01.
+- Server guard:
+  - source commit 70f39d210ad16c6bc66e8bd061c5d582bf39726e;
+  - guard test commit aaf4a18105fc4890a1f502d044a445fae992bdb1;
+  - qualification workflow commit d42aed0c67dfeffbab812cf21ca4d84223b7895e;
+  - Run 37617123301: SUCCESS.
+- Required server shape while CANARY:
+  - action saveAccountingWaste only;
+  - orderId prefix A2-CANARY-WASTE-;
+  - reason exactly A2_CANARY;
+  - body department exactly عام;
+  - amount exactly 0.01;
+  - recovered/paid exactly 0;
+  - material quantity exactly 0;
+  - no material ID/name, item name, line ID, evidence, notes, or caller-supplied Waste ID.
+- Expected one-command delta:
+  - waste +1;
+  - requestLedger +1;
+  - events +1;
+  - stockMoves +0;
+  - cashbox +0;
+  - partyLedger +0;
+  - parties/partyBalances unchanged;
+  - all purchases/invoices/custody/day-close tables unchanged.
+- Isolated frontend candidate:
+  - branch candidate/easystore-a211-waste-canary-prodpatch-20261007;
+  - app isolation commit 750288dc9577b41e64efb1be2b39d5d53d3a3e03;
+  - unarmed config commit 8734b1bff952e7bbeb6bf57e8b32bffef03f7879;
+  - cache/index commit 291011cd2f7fd7b878f28223cfce01d254924194;
+  - frontend test commit 4ffb883729a65a02ae75a93498a416d5d26276f3;
+  - frontend CI workflow commit f2d4c3d87ea83c77defab4972442205a331056a2;
+  - Run 37617525153: SUCCESS.
+- Frontend contract:
+  - D1 write set contains only saveAccountingWaste;
+  - every other accounting write remains fail-closed while CANARY is active;
+  - admin Waste screen is exposed only while the exact A2.11 CANARY is active;
+  - user form values are ignored during A2.11 Canary;
+  - generated request prefix is A211-WASTE;
+  - returned response must prove amount 0.01, recovered 0, no material and null stock before/after.
+- Candidate config remains unarmed:
+  EASYSTORE_ACCOUNTING_D1_READONLY=true
+  EASYSTORE_ACCOUNTING_D1_WRITES=false
+  EASYSTORE_ACCOUNTING_D1_WRITE_MODE=OFF
+  EASYSTORE_ACCOUNTING_D1_WRITE_CANARY_ACTIONS=[]
+- Manual-only deploy/execution preparation:
+  - deploy workflow commit 7cb28e883084cf0e749c377b0e4fdd94e14bd897;
+  - execution workflow commit 8e0487a4554491abf640b82a245539e8d3e0068d;
+  - workflow invariant test commit 68900806664610f13d956917a81ced77ac1187c2;
+  - qualification CI commit 366a4c41813f3f04eb0f3e7aee10f5a40dc0a363;
+  - Run 37617854423: SUCCESS.
+- Execution workflow is limited to:
+  - canonical actor ضياء;
+  - one saveAccountingWaste command;
+  - max amount 0.01;
+  - max commands 1;
+  - 15-minute TTL;
+  - automatic return to READONLY on success/error/timeout;
+  - GENERAL forbidden.
+- Historical A2.10 regression CI incident:
+  - Run 37617036715: FAIL only because its evidence-persistence step lost a branch push race after all supplier/source/invariant tests had already passed;
+  - Production deploy/ARM/mutation: NO;
+  - root cause removed by commit 486c2c7f393373ac1e72a87d73685d027ab47fb9, converting the completed A2.10 CI to read-only/no-persistence;
+  - follow-up Run 37617973539: SUCCESS.
+- Production deploy for A2.11: NO.
+- Production frontend change for A2.11: NO.
+- Server ARM for A2.11: NO.
+- Fifth canary executed: NO.
+- GENERAL opened: NO.
+- Result: PASS — A2.11 WASTE SERVER/FRONTEND/DEPLOY/EXECUTION PATHS QUALIFIED REPO-ONLY; PRODUCTION REMAINS CLOSED.
+
+
+## Entry ACC-111 — A2.11 Waste fifth-canary owner Decision Gate reached
+- Date: 2026-10-07
+- Fresh read-only decision-gate workflow:
+  - .github/workflows/easystore-a211-decision-gate-readonly.yml;
+  - source commit fa59d8c9a05f99c8cf26f19875a44398a0c2f0a0;
+  - Run 37618036153, Job 112781070620: SUCCESS.
+- Fresh Production runtime truth:
+  ACTIVE_API_VERSION=482bc363-8f01-447b-bc00-3fca889bcb4f
+  FRONTEND_MODE=OFF
+  FRONTEND_CANARY_ACTIONS=[]
+  A211_FRONTEND_LIVE=NO
+  BACKEND_MODE=READONLY
+  POLICY_EPOCH=17
+  AUTHORITATIVE_WRITES=false
+  SERVER_USERS_ACTIONS=0/0
+  COMMAND_BUDGET=0/0
+  GOOGLE_BUSINESS_CALLS=0
+  GENERAL_OPENED=NO
+- Exact D1 four-canary baseline:
+  MATERIALS=1
+  TEMPLATES=1
+  PARTIES=1
+  PARTY_BALANCES=1
+  REQUEST_LEDGER=4
+  EVENTS=4
+  WASTE=0
+  STOCK_MOVES=0
+  PARTY_LEDGER=0
+  CASHBOX=0
+  OTHER_TRACKED_TABLES=0
+  ACTIVE_MATERIALS=0
+  ACTIVE_TEMPLATES=0
+  ACTIVE_SUPPLIERS=0
+- Canonical active admin ضياء exists exactly once.
+- A2.11 qualification state:
+  A211_SERVER_GUARD=QUALIFIED_REPO_ONLY_NOT_DEPLOYED
+  A211_FRONTEND_CANDIDATE=QUALIFIED_REPO_ONLY_NOT_DEPLOYED
+  A211_DEPLOY_WORKFLOW=QUALIFIED_MANUAL_ONLY_NOT_RUN
+  A211_EXECUTION_WORKFLOW=QUALIFIED_MANUAL_ONLY_NOT_RUN
+  FIFTH_CANARY_EXECUTED=NO
+  PRODUCTION_MUTATION=NO
+- Proposed bounded fifth-canary scope if the owner approves:
+  - actor: ضياء only;
+  - action: saveAccountingWaste only;
+  - one synthetic order A2-CANARY-WASTE-*;
+  - reason A2_CANARY;
+  - amount exactly 0.01;
+  - recovered 0;
+  - no material and therefore no stock movement;
+  - no cashbox or Party ledger movement;
+  - one command only, short TTL, automatic server disable;
+  - expected D1 delta: waste 0→1, requestLedger 4→5, events 4→5; every other tracked table invariant;
+  - GENERAL remains forbidden.
+- Result: PASS — A2.11 DECISION GATE REACHED WITH PRODUCTION FULLY CLOSED; FIFTH CANARY NOT EXECUTED.
+- Owner decision required before:
+  - backend A2.11 Waste guard READONLY deploy;
+  - isolated A2.11 frontend publish;
+  - frontend CANARY enablement;
+  - server ARM;
+  - fifth Production Waste command.
