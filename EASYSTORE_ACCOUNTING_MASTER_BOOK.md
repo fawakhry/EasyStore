@@ -3852,3 +3852,37 @@ This aligns with Autonomous Printshop Build Matrix module:
   PRODUCTION_CLOSED=YES
   ```
 - Result: **PASS — A2.10 CLOSED CLEANLY; FOUR-CANARY BASELINE IS NOW AUTHORITATIVE**.
+
+
+## Entry ACC-109 — Four-canary baseline aligned across runtime/schema/deploy guards
+- Date: 2026-10-07
+- Authoritative baseline after ACC-108:
+  - materials=1;
+  - templates=1;
+  - parties=1;
+  - partyBalances=1, zero-only;
+  - requestLedger=4;
+  - events=4;
+  - all other tracked/protected accounting tables=0.
+- Central runtime checkpoint updated:
+  - workflow `.github/workflows/easystore-accounting-runtime-checkpoint-audit.yml`;
+  - commit `d443d473801f7bf61de51a2fce4c8236516809be`;
+  - Run `37615641776`: **SUCCESS**.
+- Schema controlled guard updated:
+  - workflow commit `e8e51ad5adb7d5e36d93bfe9c98c685df7c29c0f`;
+  - initial repo-only guard Run `37615705154`: **FAIL** because the guard test itself still expected the historical 3-request/3-event baseline;
+  - no Production/schema/data mutation occurred;
+  - test corrected in commit `a98d082fa9bf5c6267f5ed9d75b0057551d623b9`;
+  - rerun Run `37615822308`: **SUCCESS**.
+- READONLY API deploy guard updated:
+  - commit `1ae8d247deabfa478a20263923ba771f7844c34b`;
+  - pre/post baseline now includes parties=1, partyBalances=1, requestLedger=4, events=4.
+- Cross-guard four-canary qualification:
+  - workflow `.github/workflows/easystore-a210-four-canary-baseline-ci.yml`;
+  - commit `f7338eeac0e2a419ff7bc5bae2f5dfa38ca86938`;
+  - Run `37615872157`: **SUCCESS**.
+- Schema apply executed: NO.
+- API deploy executed by baseline-alignment step: NO.
+- Production mutation from baseline alignment: NO.
+- GENERAL opened: NO.
+- Result: **PASS — CENTRAL SAFETY BASELINES NOW MATCH THE FOUR-CANARY RUNTIME TRUTH**.
