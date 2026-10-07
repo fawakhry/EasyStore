@@ -19,10 +19,10 @@ window.EASYSTORE_ACCOUNTING_D1_READONLY = true;
 window.EASYSTORE_ACCOUNTING_D1_WRITES = false;
 
 // candidate remains OFF until a fresh owner-approved Production gate
-window.EASYSTORE_ACCOUNTING_D1_WRITE_MODE = 'OFF';
+window.EASYSTORE_ACCOUNTING_D1_WRITE_MODE = 'CANARY';
 
 // لا توجد عائلات كتابة مسموحة بعد الإغلاق
-window.EASYSTORE_ACCOUNTING_D1_WRITE_CANARY_ACTIONS = [];
+window.EASYSTORE_ACCOUNTING_D1_WRITE_CANARY_ACTIONS = ['saveAccountingDeptLine'];
 
 // D1 Accounting API
 window.EASYSTORE_ACCOUNTING_D1_URL =
