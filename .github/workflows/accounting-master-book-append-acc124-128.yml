@@ -1,0 +1,172 @@
+name: Accounting Master Book Append ACC-124-128
+
+on:
+  push:
+    branches:
+      - candidate/easystore-zero-google-audit-20261004
+    paths:
+      - '.github/workflows/accounting-master-book-append-acc124-128.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  append:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: candidate/easystore-zero-google-audit-20261004
+      - name: Append A2.12 completion history
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 <<'PY'
+          from pathlib import Path
+          p=Path('EASYSTORE_ACCOUNTING_MASTER_BOOK.md')
+          s=p.read_text()
+
+          entries = {
+          'ACC-124': """## Entry ACC-124 — A2.12 frontend CANARY live; server unarmed before execution
+          - Date: 2026-10-07
+          - Production frontend config commit: 26e70f399131ab2422d5f95d1a57bffd1e5e8e92.
+          - GitHub Pages Run 37641254785: SUCCESS.
+          - Live frontend scope was CANARY with saveAccountingDeptLine only.
+          - Backend remained READONLY and unarmed.
+          - Pre-arm audit workflow commit 65a4f1ea03d2110fd45065725ec748310048664f; Run 37641680205: SUCCESS.
+          - Verified five-canary baseline remained materials=1, templates=1, parties=1, partyBalances=1, waste=1, deptLines=0, requestLedger=5, events=5; protected financial/stock tables zero.
+          - Canonical active admin ضياء existed exactly once.
+          - Server users/actions remained 0/0 and command budget 0/0.
+          - Production business mutation: NO.
+          - GENERAL opened: NO.
+          - Historical note: the first ACC-124 append workflow Run 37641901006 failed repo-only during workflow validation and did not affect Production.
+          - Result: PASS — A2.12 FRONTEND BOUNDED CANARY WAS LIVE WITH SERVER STILL UNARMED.
+          """,
+
+          'ACC-125': """## Entry ACC-125 — A2.12 blocked-safe attempts isolated; Dept Line TDZ defect found and repaired
+          - Date: 2026-10-07
+          - Execution workflow Run 37641980892 had three failed attempts before the final fresh successful run:
+            - attempt 1, Job 112863059546: timeout with no command accepted;
+            - attempt 2, Job 112877150827: one canary command budget reservation occurred, but the command failed before request-ledger creation;
+            - attempt 3, Job 112885083589: post-fix timeout with no command accepted.
+          - After attempt 2, read-only forensic workflow commit 292c861400c69479b41cc156a4823f2b4af9cf84; Run 37647219648: SUCCESS.
+          - Forensic truth after attempt 2:
+            - backend READONLY;
+            - deptLines=0;
+            - requestLedger=5;
+            - events=5;
+            - A212 request rows=0;
+            - A212 event rows=0;
+            - A212 Dept Line rows=0;
+            - stockMoves=0;
+            - partyLedger=0;
+            - cashbox=0.
+          - Root cause: JavaScript temporal-dead-zone/name-shadow defect inside saveDeptLineA2V1:
+            - local variable materialCost shadowed the materialCost() function in the same initializer;
+            - the ReferenceError occurred after canary budget reservation and before beginCommandV1, explaining commandsStarted=1 with zero D1 business/request/event rows.
+          - Frontend was safely returned OFF in commit 73625d0a6994403c9bc79af0f4eb5cce5da7ddb0; Pages Run 37647461768: SUCCESS.
+          - Backend fix:
+            - source commit 1cfdfb70b98cab2017f7b3138a8437d0f7ec0923 renamed the local value to materialCostValue;
+            - regression test commit e641ad63c9c1a3906c6be4646f30519e98ad832e;
+            - qualification workflow updated in commit 737ee2d1f9a128367066d5453a26ca608d7c9ec9;
+            - qualification Run 37647682692: SUCCESS.
+          - Corrected backend redeployed READONLY through guard deploy Run 37647827689: SUCCESS; row-count invariant PASS; Production business mutation NO; GENERAL NO.
+          - Frontend re-enabled to exact A2.12 CANARY in commit c0bba103468458c4c22e0573b26f6c9649cb8477; Pages Run 37648076014: SUCCESS.
+          - Pre-arm audit was strengthened to re-run the TDZ regression in commit 4479279834f710f62460b031c9fb41c123829296; Run 37648258262: SUCCESS.
+          - Result: BLOCKED_SAFE / REPAIRED — ALL FAILED ATTEMPTS LEFT THE FIVE-CANARY BUSINESS BASELINE UNCHANGED.
+          """,
+
+          'ACC-126': """## Entry ACC-126 — A2.12 sixth bounded Production canary succeeded: zero-value Dept Line
+          - Date: 2026-10-07
+          - Fresh execution Run 37656106936, Job 112911359946: SUCCESS.
+          - Preflight exact A2.12 scope: PASS.
+          - Server armed as CANARY_BOUNDED for canonical user ضياء, action saveAccountingDeptLine, max one command, max amount 0.
+          - Immutable execution evidence:
+            - A212_EXEC_EXACT_D1_EVIDENCE=PASS
+            - request key A212-DLINE-muyd2npv-tpu289zj
+            - Dept Line ID A212-DLINE-muyd2npv-tpu289zj
+            - order ID A2-CANARY-DEPT-MUYD2NPV
+            - item name A2-CANARY-DEPT-LINE-MUYD2NPV
+            - total cost 0
+            - sale price 0
+            - stock move delta 0
+            - cashbox delta 0
+            - Party ledger delta 0
+            - server auto-disable PASS
+            - GENERAL_OPENED=NO
+          - Observed successful delta only:
+            - deptLines 0→1;
+            - requestLedger 5→6;
+            - events 5→6;
+            - all other tracked/protected accounting tables invariant.
+          - Result: PASS — SIXTH BOUNDED PRODUCTION CANARY SUCCEEDED WITH ONE ZERO-VALUE SYNTHETIC DEPT LINE.
+          """,
+
+          'ACC-127': """## Entry ACC-127 — A2.12 final live closure verified
+          - Date: 2026-10-07
+          - Production frontend returned to OFF/actions=[] in commit 7df6359385e9711efa2f3bb4fc31011ec23ef566.
+          - GitHub Pages Run 37656837170: SUCCESS.
+          - Backend auto-disabled to READONLY with zero allowed users/actions and zero command budget.
+          - Independent final closure audit:
+            - workflow commit 70d80ef4ba934ad5c3591f9490b1ae27a5f16795;
+            - Run 37657054981, Job 112914708061: SUCCESS.
+          - Final authoritative six-canary Production truth:
+            - FRONTEND_MODE=OFF
+            - BACKEND_MODE=READONLY
+            - materials=1
+            - templates=1
+            - parties=1
+            - partyBalances=1
+            - waste=1
+            - deptLines=1
+            - requestLedger=6
+            - events=6
+            - stockMoves=0
+            - partyLedger=0
+            - cashbox=0
+            - all other tracked accounting tables=0
+            - request key A212-DLINE-muyd2npv-tpu289zj
+            - Dept Line ID A212-DLINE-muyd2npv-tpu289zj
+            - order ID A2-CANARY-DEPT-MUYD2NPV
+            - item name A2-CANARY-DEPT-LINE-MUYD2NPV
+            - GENERAL_OPENED=NO
+          - Result: PASS — A2.12 CLOSED CLEANLY; SIX-CANARY BASELINE IS NOW AUTHORITATIVE.
+          """,
+
+          'ACC-128': """## Entry ACC-128 — Six-canary baseline aligned across runtime/schema/deploy guards
+          - Date: 2026-10-07
+          - Authoritative baseline after ACC-127: materials=1, templates=1, parties=1, partyBalances=1, waste=1, deptLines=1, requestLedger=6, events=6; all other tracked/protected accounting tables=0.
+          - Runtime checkpoint:
+            - commit 6eb22477dfcf0f1c7b103a4afef8d8269e058d76;
+            - Run 37657194457: SUCCESS.
+          - READONLY API deploy guard:
+            - commit f53cb27c120136fb39b9d2c2cf41892929e3ba09;
+            - pre/post expectations now use the six-canary baseline.
+          - Schema controlled guard:
+            - workflow commit 019fd7964b949b2585059728e7ffbd6d108a3320;
+            - first guard Run 37657229331: FAILURE because it raced before the schema test commit and still read the prior requestLedger=5 assertion;
+            - schema guard test commit ec59b8f9939f1557024df378d8a34aebf74685a5;
+            - follow-up Run 37657244845: SUCCESS;
+            - explicit HEAD rerun marker commit 20cff5c27d75406756d567f745567351bcb51e1d; Run 37657339562: SUCCESS.
+          - Cross-guard six-canary qualification:
+            - workflow commit eb7fda0aa3b6a6c969e6776862f89a05673a7b06;
+            - Run 37657398257: SUCCESS.
+          - Schema apply executed by baseline alignment: NO.
+          - API deploy executed by baseline alignment: NO.
+          - Production business mutation from baseline alignment: NO.
+          - GENERAL opened: NO.
+          - Result: PASS — CENTRAL SAFETY BASELINES MATCH THE SIX-CANARY RUNTIME TRUTH.
+          """
+          }
+
+          for key in ['ACC-124','ACC-125','ACC-126','ACC-127','ACC-128']:
+              if f'## Entry {key} ' not in s:
+                  s += '\n\n' + entries[key].strip() + '\n'
+          p.write_text(s)
+          PY
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+fawakhry@users.noreply.github.com"
+          git add EASYSTORE_ACCOUNTING_MASTER_BOOK.md
+          git commit -m "ACC-124-128: complete A2.12 Dept Line history" || exit 0
+          git push origin HEAD:candidate/easystore-zero-google-audit-20261004
