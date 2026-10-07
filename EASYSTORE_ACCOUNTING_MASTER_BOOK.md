@@ -3266,3 +3266,47 @@ This aligns with Autonomous Printshop Build Matrix module:
     `materials=1, templates=1, requestLedger=3, events=3`, all other protected accounting tables zero;
   - then perform read-only/repo-only qualification for the next lowest-risk write family;
   - do not execute a fourth Production canary before a new explicit owner decision gate.
+
+
+## Entry ACC-093 — Three-canary runtime/schema/deploy safety baselines aligned
+- Date: 2026-10-07
+- Goal: Update all central safety baselines after final A2.9 closure so future maintenance cannot mistake the approved immutable canary evidence for drift.
+- Runtime truth used:
+  - ACC-092 live closure audit Run `37549191341` = **PASS**.
+  - Production frontend OFF; backend READONLY; server canary cleared; Google business calls=0.
+  - exact approved evidence: materials=1, templates=1, requestLedger=3, events=3; all other tracked accounting tables=0.
+- Central runtime checkpoint:
+  - `.github/workflows/easystore-accounting-runtime-checkpoint-audit.yml`
+  - commit: `0bfc3e9d8e31009c23303ef5a04431efe945b417`
+  - baseline updated to `materials=1, templates=1, requestLedger=3, events=3`.
+  - workflow remains read-only.
+- Schema safety baseline:
+  - `.github/workflows/easystore-a2-schema-apply-controlled.yml`
+  - commit: `2cfcd49e8e74f83e01898f2b042cd4ce4b2bac7f`
+  - guard test commit: `ec62a08e3c0590d08c770c70a38102f9767bc767`
+  - baseline updated to `materials=1, templates=1, requestLedger=3, events=3`; all guarded financial/operational tables remain expected zero.
+  - Schema Apply remains `workflow_dispatch` only and was **not executed**.
+- Deploy safety baseline:
+  - `.github/workflows/easystore-a2-accounting-readonly-api-deploy.yml`
+  - commit: `14960623708509c0fd3188fa66c7c73c4ff2cd2d`
+  - stale one-canary baseline replaced with three-canary truth.
+  - deploy workflow changed to `workflow_dispatch` only so a guard/baseline edit cannot itself deploy Production.
+  - Backend deploy was **not executed** by this baseline update.
+- Data mutation: NO.
+- Production impact: NO runtime authority or business-data change.
+- Result: **PASS — CENTRAL RUNTIME, SCHEMA SAFETY, AND DEPLOY SAFETY NOW SHARE THE THREE-CANARY BASELINE**.
+- Post-state:
+  ```ini
+  APPROVED_MATERIALS=1
+  APPROVED_TEMPLATES=1
+  APPROVED_REQUEST_LEDGER=3
+  APPROVED_EVENTS=3
+  OTHER_PROTECTED_ACCOUNTING_TABLES=0
+  FRONTEND_MODE=OFF
+  BACKEND_MODE=READONLY
+  GENERAL_OPENED=NO
+  FOURTH_CANARY_EXECUTED=NO
+  ```
+- Next gate:
+  - qualify the lowest-risk remaining write family read-only/repo-only;
+  - no Production deployment, ARM, or fourth write command before a fresh owner decision gate.
