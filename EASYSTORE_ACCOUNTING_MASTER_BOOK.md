@@ -3697,3 +3697,67 @@ This aligns with Autonomous Printshop Build Matrix module:
 - GENERAL opened: NO.
 - Production business mutation: NO.
 - Result: **PASS — FRONTEND CANARY BOUNDED TO SUPPLIER ONLY; SERVER NOT YET ARMED**.
+
+
+## Entry ACC-104 — A2.10 Supplier fourth-canary attempt blocked safely by EasyStore SSO handoff failure
+- Date: 2026-10-07
+- Execution workflow: `EasyStore A2.10 Supplier Canary Execution`, Run `37603841111`, attempt 2.
+- Exact preflight: PASS; server entered bounded CANARY for one user `ضياء`, one action `saveEasyStoreSupplier`, one zero-value command.
+- User-side evidence showed TrendOS itself authenticated, while EasyStore displayed `D1 READONLY / SSO WAIT` and the session-ended banner.
+- Runtime health after the attempted click still showed `writeCanaryCommandsStarted=0`; therefore the click never reached the accounting command path.
+- Fourth Supplier command executed: NO.
+- D1 business mutation: NO.
+- Immediate safe-close workflow:
+  - `.github/workflows/easystore-a210-immediate-safe-close.yml`
+  - source commit `caa6035607b8f43025d42f5913d30d885226808b`
+  - Run `37610729572`: SUCCESS.
+- Closed backend truth after safe close:
+  ```ini
+  BACKEND_MODE=READONLY
+  AUTHORITATIVE_WRITES=false
+  POLICY_EPOCH=14
+  SERVER_USERS_ACTIONS=0/0
+  COMMAND_BUDGET=0/0
+  GOOGLE_BUSINESS_CALLS=0
+  ```
+- Production EasyStore frontend was also returned to OFF:
+  - commit `0e4bd8fd8ac6440f1c5e47835484e4a94009d794`;
+  - GitHub Pages Run `37611105788`: SUCCESS;
+  - live mode `OFF`, canary actions `[]`.
+- GENERAL opened: NO.
+- Result: **BLOCKED_SAFE — NO FOURTH CANARY COMMAND; PRODUCTION ACCOUNTING CLOSED BEFORE SSO REPAIR**.
+
+
+## Entry ACC-105 — TrendOS to EasyStore secure SSO runtime handoff repaired frontend-only
+- Date: 2026-10-07
+- Root cause from runtime truth:
+  - live TrendOS `app.js` still used the older EasyStore handoff path and did not contain `TRENDOS_EMPLOYEE_SSO_V1`, `entry619PostEmployeeSso`, or `ssoNonce`;
+  - current EasyStore requires the nonce-bound `postMessage` handoff and does not trust a token from URL parameters;
+  - therefore TrendOS could remain logged in while EasyStore had no token and showed `SSO WAIT`.
+- Repair workflow:
+  - `.github/workflows/trendos-easystore-secure-sso-runtime-repair.yml`
+  - source commit `2df338f0aef70ddc34823eac0af00cb50bdce64a`
+  - Run `37611295795`: SUCCESS.
+- Repair method:
+  - snapshot the exact currently served TrendOS top-level static assets;
+  - patch only the live `app.js` EasyStore handoff;
+  - add nonce generation, repeated bounded `postMessage` delivery, and EasyStore ACK handling;
+  - never place the employee token in the EasyStore URL;
+  - deploy TrendOS frontend only;
+  - preserve every non-`app.js` live asset hash exactly;
+  - automatic Cloudflare frontend rollback on any postflight failure.
+- Postflight evidence:
+  ```ini
+  SECURE_SSO_MESSAGE=TRENDOS_EMPLOYEE_SSO_V1
+  SSO_NONCE=ENABLED
+  EASYSTORE_ACK=ENABLED
+  NON_APP_ASSETS_INVARIANT=PASS
+  ACCOUNTING_BACKEND=READONLY
+  EASYSTORE_FRONTEND=OFF
+  EASYSTORE_CANARY_ACTIONS=[]
+  GOOGLE_BUSINESS_CALLS=0
+  GENERAL_OPENED=NO
+  BUSINESS_DATA_MUTATION=NO
+  ```
+- Production impact: TrendOS frontend SSO handoff repaired only; platform non-app assets unchanged.
+- Result: **DEPLOY/PASS — SECURE TRENDOS→EASYSTORE SSO HANDOFF LIVE WITH ACCOUNTING FULLY CLOSED**.
