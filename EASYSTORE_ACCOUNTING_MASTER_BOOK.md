@@ -4233,3 +4233,26 @@ This aligns with Autonomous Printshop Build Matrix module:
   - GENERAL_OPENED=NO
 - Frontend remained OFF and server remained unarmed.
 - Result: PASS — A2.12 SERVER GUARD IS LIVE WHILE PRODUCTION WRITE AUTHORITY REMAINS CLOSED.
+
+
+## Entry ACC-123 — A2.12 isolated frontend published closed and independently verified
+- Date: 2026-10-07
+- Owner approval: ACC-121.
+- Isolated A2.12 frontend candidate merged to Production main through PR #16.
+- Production merge commit: 374aff3df16dcaef34d42b9749e015e4041948f2.
+- GitHub Pages Run 37640658231: SUCCESS.
+- Published frontend code contains only the A2.12 Dept Line canary write path, but config remained OFF/actions=[].
+- Independent post-publish readonly audit:
+  - workflow commit 7d09665aa2b95c32c75bd5c6542f745ffc51842d;
+  - Run 37641117896, Job 112860025521: SUCCESS.
+- Verified state:
+  - FRONTEND_CODE=A212_LIVE
+  - FRONTEND_MODE=OFF
+  - FRONTEND_ACTIONS=[]
+  - BACKEND_MODE=READONLY
+  - SERVER_USERS_ACTIONS=0/0
+  - COMMAND_BUDGET=0/0
+  - baseline materials1/templates1/parties1/partyBalances1/waste1/deptLines0/requestLedger5/events5
+  - PRODUCTION_BUSINESS_MUTATION=NO
+  - GENERAL_OPENED=NO
+- Result: PASS — A2.12 CODE IS LIVE WITH ALL WRITE AUTHORITY STILL CLOSED.
