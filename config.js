@@ -18,11 +18,11 @@ window.EASYSTORE_ACCOUNTING_D1_READONLY = true;
 // Legacy/general D1 writes تظل مقفولة
 window.EASYSTORE_ACCOUNTING_D1_WRITES = false;
 
-// candidate remains OFF until a fresh owner-approved Production gate
-window.EASYSTORE_ACCOUNTING_D1_WRITE_MODE = 'OFF';
+// activation candidate: bounded supplier Canary only; never GENERAL
+window.EASYSTORE_ACCOUNTING_D1_WRITE_MODE = 'CANARY';
 
 // لا توجد عائلات كتابة مسموحة بعد الإغلاق
-window.EASYSTORE_ACCOUNTING_D1_WRITE_CANARY_ACTIONS = [];
+window.EASYSTORE_ACCOUNTING_D1_WRITE_CANARY_ACTIONS = ['saveEasyStoreSupplier'];
 
 // D1 Accounting API
 window.EASYSTORE_ACCOUNTING_D1_URL =
