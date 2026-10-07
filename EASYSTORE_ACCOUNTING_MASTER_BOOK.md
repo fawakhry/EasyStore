@@ -3520,3 +3520,63 @@ This aligns with Autonomous Printshop Build Matrix module:
 - Next:
   - refresh exact live Production truth after this qualification;
   - stop at a fresh owner Decision Gate before backend guard deploy, frontend publish, server ARM, or fourth Production command.
+
+
+## Entry ACC-099 — A2.10 Supplier fourth-canary owner Decision Gate reached
+- Date: 2026-10-07
+- Goal: Refresh live Production after all repo-only A2.10 qualification and stop before any authoritative change.
+- Read-only decision-gate workflow:
+  - `.github/workflows/easystore-a210-decision-gate-readonly.yml`
+  - source commit: `7036a245ced43f34313f0e025d1200880a2660b3`
+  - Run `37554890024`, Job `112578735361`: **SUCCESS**.
+- Fresh Production runtime truth:
+  ```ini
+  ACTIVE_API_VERSION=e4322cbd-ac74-4f7c-b1ff-5833ea524e5a
+  FRONTEND_MODE=OFF
+  FRONTEND_CANARY_ACTIONS=[]
+  BACKEND_MODE=READONLY
+  POLICY_EPOCH=10
+  AUTHORITATIVE_WRITES=false
+  SERVER_USERS_ACTIONS=0/0
+  COMMAND_BUDGET=0/0
+  GOOGLE_BUSINESS_CALLS=0
+  GENERAL_OPENED=NO
+  ```
+- Exact D1 baseline remains:
+  ```ini
+  materials=1
+  templates=1
+  parties=0
+  partyBalances=0
+  requestLedger=3
+  events=3
+  all_other_tracked_accounting_tables=0
+  activeMaterials=0
+  activeTemplates=0
+  ```
+- Canonical active admin `ضياء` exists exactly once.
+- A2.10 qualification status:
+  ```ini
+  SERVER_GUARD=QUALIFIED_REPO_ONLY_NOT_DEPLOYED
+  FRONTEND_CANDIDATE=QUALIFIED_REPO_ONLY_NOT_DEPLOYED
+  DEPLOY_WORKFLOW=QUALIFIED_MANUAL_ONLY_NOT_RUN
+  EXECUTION_WORKFLOW=QUALIFIED_MANUAL_ONLY_NOT_RUN
+  FOURTH_CANARY_EXECUTED=NO
+  PRODUCTION_MUTATION=NO
+  ```
+- Proposed bounded fourth-canary scope if the owner approves:
+  - canonical user: `ضياء`;
+  - action: `saveEasyStoreSupplier` only;
+  - payload: one synthetic inactive `A2-CANARY-SUPPLIER-*`, opening balance exactly zero, no phone/address/notes/external ID and no caller-supplied Party ID;
+  - max one new command, zero amount, short TTL, automatic server disable;
+  - expected D1 delta: parties +1, zero-balance partyBalances +1, requestLedger +1, events +1; Party ledger/cash/stock/purchases/invoices/custody/waste/day-close unchanged;
+  - GENERAL remains forbidden.
+- Data mutation: NO.
+- Production impact: NO.
+- Result: **PASS — A2.10 DECISION GATE REACHED WITH PRODUCTION FULLY CLOSED; FOURTH CANARY NOT EXECUTED**.
+- Owner decision required before:
+  - backend Supplier guard READONLY deploy;
+  - isolated Supplier frontend publish;
+  - frontend CANARY enablement;
+  - server ARM;
+  - fourth Production Supplier command.
