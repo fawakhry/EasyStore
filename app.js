@@ -148,7 +148,7 @@
     else if(isPrint() || isLaser()) screens=['dept','deptPurchases','waste','stock'];
     else if(isFinal()) screens=['sales','final','customers','deptView'];
     else screens=['sales'];
-    if(a212DeptLineCanaryEnabled() && user.token && !screens.includes('dept')) screens.push('dept');
+    if(a213CustodyCloseCanaryEnabled() && user.token && !screens.includes('purchase')) screens.push('purchase');
     return screens;
   }
   function canManageAccounting(){ return isAdmin(); }
@@ -214,26 +214,26 @@
   }
 
   const D1_ACCOUNTING_READ_ACTIONS = new Set(['getAccounting','getDeptInvoiceDraftV1887','getPartyAccountV1858']);
-  const A212_ACCOUNTING_WRITE_ACTIONS_FAIL_CLOSED = new Set(["saveAccountingMaterial","saveAccountingTemplate","archiveAccountingTemplate","recalcAccountingMaterialsCascade","saveAccountingDeptLine","approveAccountingDeptInvoice","saveAccountingFinalInvoice","saveCustomerAccountMovementV1915","saveEasyStoreSupplier","saveEasyStorePurchaseV2","saveEasyStoreSaleV2","saveDeptDailyPurchaseV1917","approveDeptDailyPurchasesV1917","rejectDeptDailyPurchaseV1917","reverseApprovedPurchaseV1920","savePurchaseCustodyV1920","closePurchaseCustodyV1920","saveAccountingWaste","closeDepartmentDayV1920","runAccountingDayAutomationV1921","reopenAccountingFinalInvoice","classifyLegacyAccountingRowV1920","applySuggestedLegacyClassificationsV1921","reconcileLegacyCustomerDebtsV1914"]);
-  const D1_ACCOUNTING_WRITE_ACTIONS = new Set(['saveAccountingDeptLine']);
+  const A213_ACCOUNTING_WRITE_ACTIONS_FAIL_CLOSED = new Set(["saveAccountingMaterial","saveAccountingTemplate","archiveAccountingTemplate","recalcAccountingMaterialsCascade","saveAccountingDeptLine","approveAccountingDeptInvoice","saveAccountingFinalInvoice","saveCustomerAccountMovementV1915","saveEasyStoreSupplier","saveEasyStorePurchaseV2","saveEasyStoreSaleV2","saveDeptDailyPurchaseV1917","approveDeptDailyPurchasesV1917","rejectDeptDailyPurchaseV1917","reverseApprovedPurchaseV1920","savePurchaseCustodyV1920","closePurchaseCustodyV1920","saveAccountingWaste","closeDepartmentDayV1920","runAccountingDayAutomationV1921","reopenAccountingFinalInvoice","classifyLegacyAccountingRowV1920","applySuggestedLegacyClassificationsV1921","reconcileLegacyCustomerDebtsV1914"]);
+  const D1_ACCOUNTING_WRITE_ACTIONS = new Set(['closePurchaseCustodyV1920']);
 
-  function a212DeptLineCanaryEnabled(){
+  function a213CustodyCloseCanaryEnabled(){
     const mode=String(window.EASYSTORE_ACCOUNTING_D1_WRITE_MODE||'OFF').trim().toUpperCase();
     const actions=Array.isArray(window.EASYSTORE_ACCOUNTING_D1_WRITE_CANARY_ACTIONS)?window.EASYSTORE_ACCOUNTING_D1_WRITE_CANARY_ACTIONS.map(String):[];
-    return mode==='CANARY' && actions.length===1 && actions[0]==='saveAccountingDeptLine';
+    return mode==='CANARY' && actions.length===1 && actions[0]==='closePurchaseCustodyV1920';
   }
   function newAccountingRequestId(prefix){return String(prefix||'REQ')+'-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,10);}
 
   async function api(action, data){
     const actionName=String(action||'');
     const useD1Read = window.EASYSTORE_ACCOUNTING_D1_READONLY === true && D1_ACCOUNTING_READ_ACTIONS.has(actionName);
-    const accountingWriteRequested = A212_ACCOUNTING_WRITE_ACTIONS_FAIL_CLOSED.has(actionName);
+    const accountingWriteRequested = A213_ACCOUNTING_WRITE_ACTIONS_FAIL_CLOSED.has(actionName);
     const writeActionRequested = D1_ACCOUNTING_WRITE_ACTIONS.has(actionName);
     const writeMode=String(window.EASYSTORE_ACCOUNTING_D1_WRITE_MODE||'LEGACY').trim().toUpperCase();
-    if(accountingWriteRequested && !['OFF','LEGACY','CANARY'].includes(writeMode)) throw new Error('وضع كتابة الحسابات غير مسموح في كاناري بند القسم.');
-    if(accountingWriteRequested && writeMode==='CANARY' && !writeActionRequested) throw new Error('هذه الحركة خارج عائلة كاناري بند القسم؛ تم منعها محليًا.');
-    if(writeActionRequested && writeMode==='CANARY' && !a212DeptLineCanaryEnabled()) throw new Error('نطاق كاناري بند القسم غير مطابق؛ تم منع الحركة.');
-    const useD1Write = writeActionRequested && writeMode==='CANARY' && a212DeptLineCanaryEnabled();
+    if(accountingWriteRequested && !['OFF','LEGACY','CANARY'].includes(writeMode)) throw new Error('وضع كتابة الحسابات غير مسموح في كاناري تقفيل العهدة.');
+    if(accountingWriteRequested && writeMode==='CANARY' && !writeActionRequested) throw new Error('هذه الحركة خارج عائلة كاناري تقفيل العهدة؛ تم منعها محليًا.');
+    if(writeActionRequested && writeMode==='CANARY' && !a213CustodyCloseCanaryEnabled()) throw new Error('نطاق كاناري تقفيل العهدة غير مطابق؛ تم منع الحركة.');
+    const useD1Write = writeActionRequested && writeMode==='CANARY' && a213CustodyCloseCanaryEnabled();
     const useD1Accounting = useD1Read || useD1Write;
     const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),90000);
     try{
@@ -448,7 +448,7 @@
     else if(isPrint() || isLaser()) list = [['dept','فاتورة القسم'],['deptPurchases','مشتريات اليوم'],['waste','هوالك القسم'],['stock','الأصناف المتاحة']];
     else if(isFinal()) list = [['sales','فواتير المبيعات'],['final','تقفيل الفاتورة'],['customers','العملاء'],['deptView','أجزاء الأقسام']];
     else list = [['dashboard','لوحة الحسابات'],['sales','فواتير المبيعات']];
-    if(a212DeptLineCanaryEnabled() && user.token && !list.some(x=>x[0]==='dept')) list.push(['dept','فاتورة القسم']);
+    if(a213CustodyCloseCanaryEnabled() && user.token && !list.some(x=>x[0]==='purchase')) list.push(['purchase','كاناري العهدة']);
     if(!list.some(x=>x[0] === state.active)) state.active = list[0][0];
     return `<div class="tabs">${list.map(x=>`<button class="tab ${state.active===x[0]?'active':''}" onclick="ES27.go('${x[0]}')">${x[1]}</button>`).join('')}</div>`;
   }
@@ -596,10 +596,11 @@
   }
 
   function screenPurchase(){
+    const a213Canary=a213CustodyCloseCanaryEnabled()?`<section class="card"><h2>A2.13 Canary — تقفيل عهدة صفرية</h2><div class="hint">سجل صناعي فقط: موظف صناعي، قسم عام، تاريخ 2099-12-31، رصيد وتسوية صفر، بدون خزنة.</div><button class="btn" onclick="ES27.closeCustody()">تنفيذ تقفيل العهدة الصفرية مرة واحدة</button></section>`:'';
     const fixedDepartment=accountingScopeDepartment();
     const departmentField=fixedDepartment?`<div class="field"><label>القسم</label><select id="puDept" disabled>${accountingDeptOptions(fixedDepartment,false)}</select></div>`:`<div class="field"><label>القسم</label><select id="puDept" onchange="ES27.refreshPurchaseMaterials()">${accountingDeptOptions('',true)}</select></div>`;
     const materialsHtml=purchaseMaterialOptions(fixedDepartment);
-    return `${dailyPurchaseAdminReview()}<div class="card"><h2>${esc(accountingScopeTitle('فاتورة شراء مباشرة لضياء'))}</h2><div class="hint">كل فاتورة شراء تُسجل على قسم واحد حتى تظل حسابات الليزر والطباعة منفصلة.</div><div class="grid five">${departmentField}<div class="field"><label>رقم الفاتورة</label><input id="puNo" value="PUR-${Date.now().toString().slice(-6)}"></div><div class="field"><label>المورد</label><input id="puSupplier" list="supList"><datalist id="supList">${supplierOptions()}</datalist></div><div class="field"><label>نوع الدفع</label><select id="puPay"><option>نقدي</option><option>آجل</option><option>جزئي</option></select></div><div class="field"><label>تاريخ استحقاق</label><input id="puDue" type="date"></div></div><div class="grid six"><div class="field"><label>الخامة/الصنف</label><select id="puMat"><option value="">${fixedDepartment?'اختار الخامة':'اختار القسم أولًا'}</option>${materialsHtml}</select></div><div class="field"><label>الكمية</label><input id="puQty" type="number" value="1" oninput="ES27.calcPurchase()"></div><div class="field"><label>سعر الشراء</label><input id="puUnit" type="number" oninput="ES27.calcPurchase()"></div><div class="field"><label>الإجمالي</label><input id="puTotal" readonly></div><div class="field"><label>مدفوع</label><input id="puPaid" type="number" value="0" oninput="ES27.calcPurchase()"></div><div class="field"><label>متبقي</label><input id="puRemain" readonly></div></div><div class="field"><label>ملاحظات</label><input id="puNotes"></div><button class="btn" onclick="ES27.savePurchase()">حفظ فاتورة الشراء وزيادة المخزون</button></div><div class="card"><h3>${esc(accountingScopeTitle('فواتير الشراء المحفوظة'))}</h3>${table(scopedPurchases(),['رقم','القسم','مورد','خامة','كمية','إجمالي','مدفوع','متبقي'],p=>[esc(p.no||p.invoiceNo),esc(accountingRowDepartment(p)||'-'),esc(p.supplier),esc(p.material||p.materialName),esc(p.qty),money(p.total),money(p.paid),money(p.remain)])}</div>`;
+    return `${a213Canary}${dailyPurchaseAdminReview()}<div class="card"><h2>${esc(accountingScopeTitle('فاتورة شراء مباشرة لضياء'))}</h2><div class="hint">كل فاتورة شراء تُسجل على قسم واحد حتى تظل حسابات الليزر والطباعة منفصلة.</div><div class="grid five">${departmentField}<div class="field"><label>رقم الفاتورة</label><input id="puNo" value="PUR-${Date.now().toString().slice(-6)}"></div><div class="field"><label>المورد</label><input id="puSupplier" list="supList"><datalist id="supList">${supplierOptions()}</datalist></div><div class="field"><label>نوع الدفع</label><select id="puPay"><option>نقدي</option><option>آجل</option><option>جزئي</option></select></div><div class="field"><label>تاريخ استحقاق</label><input id="puDue" type="date"></div></div><div class="grid six"><div class="field"><label>الخامة/الصنف</label><select id="puMat"><option value="">${fixedDepartment?'اختار الخامة':'اختار القسم أولًا'}</option>${materialsHtml}</select></div><div class="field"><label>الكمية</label><input id="puQty" type="number" value="1" oninput="ES27.calcPurchase()"></div><div class="field"><label>سعر الشراء</label><input id="puUnit" type="number" oninput="ES27.calcPurchase()"></div><div class="field"><label>الإجمالي</label><input id="puTotal" readonly></div><div class="field"><label>مدفوع</label><input id="puPaid" type="number" value="0" oninput="ES27.calcPurchase()"></div><div class="field"><label>متبقي</label><input id="puRemain" readonly></div></div><div class="field"><label>ملاحظات</label><input id="puNotes"></div><button class="btn" onclick="ES27.savePurchase()">حفظ فاتورة الشراء وزيادة المخزون</button></div><div class="card"><h3>${esc(accountingScopeTitle('فواتير الشراء المحفوظة'))}</h3>${table(scopedPurchases(),['رقم','القسم','مورد','خامة','كمية','إجمالي','مدفوع','متبقي'],p=>[esc(p.no||p.invoiceNo),esc(accountingRowDepartment(p)||'-'),esc(p.supplier),esc(p.material||p.materialName),esc(p.qty),money(p.total),money(p.paid),money(p.remain)])}</div>`;
   }
 
 
@@ -1151,6 +1152,18 @@
       try{const reply=await api('savePurchaseCustodyV1920',{employee,department,amount,workDate,paymentMethod,notes,requestId:'CUS-'+workDate+'-'+nkey(employee)+'-'+Date.now()});if(!reply||reply.success===false)throw new Error((reply&&reply.message)||'تعذر حفظ العهدة.');await load(true);flash(reply.message||'تم تسليم العهدة.');}catch(e){flash(e.message||'تعذر حفظ العهدة.',true);}
     },
     async closeCustody(encodedEmployee,department,workDate){
+      if(a213CustodyCloseCanaryEnabled()){
+        if(!user.token) return flash('جلسة TrendOS غير متاحة. افتح الحسابات من TrendOS مرة أخرى.',true);
+        const suffix=Date.now().toString(36).toUpperCase();
+        const payload={requestId:newAccountingRequestId('A213-CCLOSE'),employee:'A2-CANARY-CUSTODY-'+suffix,department:'عام',workDate:'2099-12-31'};
+        try{
+          const reply=await api('closePurchaseCustodyV1920',payload);
+          if(!reply||reply.success===false) throw new Error((reply&&reply.message)||'تعذر تنفيذ كاناري تقفيل العهدة');
+          if(Number(reply.balanceBefore||0)!==0||String(reply.settlementType||'')!=='NONE'||Number(reply.settlementAmount||0)!==0||Number(reply.balanceAfter||0)!==0) throw new Error('نتيجة كاناري تقفيل العهدة خرجت عن الشكل الصفري.');
+          flash('تم تنفيذ A2.13 Canary: تقفيل عهدة صناعية صفرية بدون خزنة أو حركة عهدة.');
+          return true;
+        }catch(e){ flash('لم يتم تنفيذ A2.13 Canary: '+(e.message||e),true); return false; }
+      }
       if(!isAdmin()) return deny();let employee='';try{employee=decodeURIComponent(String(encodedEmployee||''));}catch(e){employee=String(encodedEmployee||'');}
       const summary=(state.data.custodySummary||[]).find(r=>nkey(r.employee)===nkey(employee)&&nkey(r.department)===nkey(department)&&String(r.workDate||'')===String(workDate||''));
       const resultText=summary&&summary.balance>0?'سيُسجل رد '+money(summary.balance)+' إلى الخزنة.':summary&&summary.balance<0?'سيُسجل دفع '+money(Math.abs(summary.balance))+' للموظف.':'لا يوجد فرق.';
@@ -1467,19 +1480,6 @@
     toggleLaserCalc(){ const b=$('laserCalcBox'); if(b) b.classList.toggle('hidden'); },
     async saveDeptLineAndOpenSales(){ const order=encodeURIComponent(val('dlOrder')); const customer=encodeURIComponent(val('dlCustomer')); const saved=await this.saveDeptLine(); if(saved) location.href='?screen=sales&orderId='+order+'&customer='+customer+'&v=es46-v1921-semi-automatic-accounting'; },
     async saveDeptLine(){
-      if(a212DeptLineCanaryEnabled()){
-        if(!user.token) return flash('جلسة TrendOS غير متاحة. افتح الحسابات من TrendOS مرة أخرى.',true);
-        const suffix=Date.now().toString(36).toUpperCase();
-        const requestId=newAccountingRequestId('A212-DLINE');
-        const payload={requestId,orderId:'A2-CANARY-DEPT-'+suffix,department:'عام',itemName:'A2-CANARY-DEPT-LINE-'+suffix,qty:1};
-        try{
-          const reply=await api('saveAccountingDeptLine',payload);
-          if(!reply||reply.success===false) throw new Error((reply&&reply.message)||'تعذر تنفيذ كاناري بند القسم');
-          if(String(reply.lineId||reply.id||'')!==requestId||Number(reply.totalCost||0)!==0||Number(reply.salePrice||0)!==0||Number(reply.profit||0)!==0||reply.updated===true) throw new Error('نتيجة كاناري بند القسم خرجت عن الشكل الصناعي الصفري.');
-          flash('تم تنفيذ A2.12 Canary: بند قسم صناعي صفري بدون خامة أو حركة مالية.');
-          return true;
-        }catch(e){ flash('لم يتم تنفيذ A2.12 Canary: '+(e.message||e),true); return false; }
-      }
       this.calcDept(); const tpl=selectedDeptTemplate(); const itemDept=tpl?matDept(tpl):val('dlItemDept'); const shared=($('dlSharedLine')&&$('dlSharedLine').checked)||isSharedDeptName(itemDept); const unitSale=num(val('dlSale')); const qty=num(val('dlQty'))||1; const quote=state.laserQuote||{}; const requestId='DLINE-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,10); const p={lineId:requestId,requestId:requestId,orderId:val('dlOrder'),customerName:val('dlCustomer'),department:userDept(),itemDepartment:itemDept||userDept(),sharedLine:shared?'نعم':'لا',billingStatus:'مسجل - قيد مراجعة القسم',closeStatus:'قيد مراجعة القسم',approvalStatus:'قيد مراجعة القسم',catalogItemId:tpl?(tpl.id||tpl.ID||tpl.catalogItemId||''):'',templateId:tpl?(tpl.id||tpl.ID||''):'',materialName:quote.materialName||(tpl?(tpl.materialName||tpl['الخامة']||''):''),itemName:val('dlItem'),qty:qty,systemSale:num(val('dlSystemSale')),systemSalePrice:num(val('dlSystemSale')),sale:unitSale,salePrice:unitSale,unitSalePrice:unitSale,lineTotal:unitSale*qty,diff:num(val('dlDiff')),laserDetailsJson:Object.keys(quote).length?JSON.stringify(quote):'',consumedAreaTotal:num(quote.consumedAreaTotal),wastePercent:num(quote.wastePercent),notes:val('dlNotes'),user:user.name,date:new Date().toISOString()}; if(!p.customerName||!p.orderId||!p.itemName){ flash('اسم العميل ورقم الأوردر والصنف مطلوبين.',true); return false; } if(shared){ const dup=(state.data.deptLines||[]).find(x=>isSharedLineRecord(x)&&sameDeptInvoiceContext(x,p.orderId,p.customerName)&&nkey(rowItem(x))===nkey(p.itemName)&&isUnbilledDeptLine(x)); if(dup){ flash('البند المشترك مسجل بالفعل بواسطة '+rowDept(dup)+' وسيظهر تلقائيًا عند القسم الآخر. لا تسجله مرتين.',true); return false; } } try{ const reply=await api('saveAccountingDeptLine',p); if(!reply||reply.success===false) throw new Error((reply&&reply.message)||'تعذر حفظ مسودة القسم'); if(reply.lineId){p.id=reply.lineId;p.ID=reply.lineId;} if(!reply.duplicatePrevented) state.data.deptLines.unshift(p); if(p.diff&&!reply.duplicatePrevented) state.data.wasteLines.unshift({department:p.department,orderId:p.orderId,reason:'فرق سعر عن السيستم',amount:p.diff,paid:0}); saveLocal(); state.laserQuote=null; set('dlItemSel',''); set('dlItem',''); set('dlItemDept',''); set('dlSystemSale',''); set('dlSale',''); set('dlDiff',''); set('dlNotes',''); set('dlQty','1'); refreshDeptContextUi(); flash(reply.message||(shared?'تم حفظ بند مشترك في مسودة القسم وسيظهر عند القسم الآخر':'تم حفظ البند في مسودة فاتورة القسم. يمكنك إضافة بند جديد ثم الاعتماد.')); return true; }catch(e){ flash('لم يتم حفظ مسودة القسم: '+(e.message||e),true); return false; } },
     async aiLaser(){
       const material=val('aiMat'), w=num(val('aiW')), h=num(val('aiH')), q=num(val('aiQty'))||1, waste=num(val('aiWaste')), customerUnitSale=num(val('aiUnitSale'));
@@ -1590,7 +1590,7 @@
     if(typeof original!=='function') return;
     window.ES27[name]=function(){ if(!allowed()) return deny(); return original.apply(this,arguments); };
   }
-  protectAction('saveDeptLine',()=>a212DeptLineCanaryEnabled()?!!user.token:canUseDepartment());
+  protectAction('saveDeptLine',canUseDepartment);
   protectAction('saveDeptLineAndOpenSales',canUseDepartment);
   protectAction('saveWaste',canUseDepartment);
 
