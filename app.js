@@ -596,7 +596,7 @@
   }
 
   function screenPurchase(){
-    const a213Canary=a213CustodyCloseCanaryEnabled()?\`<section class="card"><h2>A2.13 Canary — تقفيل عهدة صفرية</h2><div class="hint">سجل صناعي فقط: موظف صناعي، قسم عام، تاريخ 2099-12-31، رصيد وتسوية صفر، بدون خزنة.</div><button class="btn" onclick="ES27.closeCustody()">تنفيذ تقفيل العهدة الصفرية مرة واحدة</button></section>\`:'';
+    const a213Canary=a213CustodyCloseCanaryEnabled()?`<section class="card"><h2>A2.13 Canary — تقفيل عهدة صفرية</h2><div class="hint">سجل صناعي فقط: موظف صناعي، قسم عام، تاريخ 2099-12-31، رصيد وتسوية صفر، بدون خزنة.</div><button class="btn" onclick="ES27.closeCustody()">تنفيذ تقفيل العهدة الصفرية مرة واحدة</button></section>`:'';
     const fixedDepartment=accountingScopeDepartment();
     const departmentField=fixedDepartment?`<div class="field"><label>القسم</label><select id="puDept" disabled>${accountingDeptOptions(fixedDepartment,false)}</select></div>`:`<div class="field"><label>القسم</label><select id="puDept" onchange="ES27.refreshPurchaseMaterials()">${accountingDeptOptions('',true)}</select></div>`;
     const materialsHtml=purchaseMaterialOptions(fixedDepartment);
