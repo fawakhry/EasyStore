@@ -9,7 +9,7 @@ window.MATBAGY_SECURE_API_PROXY_URL = "";
 
 // ============================================================
 // EasyStore Accounting / D1
-// A2.9 — Post-canary default OFF
+// A2.10 — Supplier canary candidate, unarmed by default
 // ============================================================
 
 // القراءة من D1 مفعلة
@@ -18,7 +18,7 @@ window.EASYSTORE_ACCOUNTING_D1_READONLY = true;
 // Legacy/general D1 writes تظل مقفولة
 window.EASYSTORE_ACCOUNTING_D1_WRITES = false;
 
-// الكتابة الافتراضية مقفولة بعد إغلاق A2.9
+// candidate remains OFF until a fresh owner-approved Production gate
 window.EASYSTORE_ACCOUNTING_D1_WRITE_MODE = 'OFF';
 
 // لا توجد عائلات كتابة مسموحة بعد الإغلاق
@@ -41,9 +41,9 @@ window.EASYSTORE_VERSION = 'ES47 V1922 Unified Safe Build';
 window.EASYSTORE_SESSION_CATALOG_FIX =
   window.EASYSTORE_VERSION;
 
-// A2.9 cache tag
+// A2.10 candidate cache tag
 window.EASYSTORE_CACHE_TAG =
-  'a29-recalc-canary-20261007';
+  'a210-supplier-canary-20261007';
 
 window.EASYSTORE_AUTO_REFRESH =
   'safe-3-minutes-when-clean';
