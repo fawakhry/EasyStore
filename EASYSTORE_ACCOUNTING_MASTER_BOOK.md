@@ -4025,3 +4025,25 @@ This aligns with Autonomous Printshop Build Matrix module:
   - frontend CANARY enablement;
   - server ARM;
   - fifth Production Waste command.
+
+## Entry ACC-113 — A2.11 guard and isolated frontend deployed closed
+- Date: 2026-10-07
+- Owner approval: ACC-112.
+- Backend guard deploy Run 37618838245: SUCCESS.
+- Post-deploy authority remained READONLY; row counts invariant; A2.11 guard live; GENERAL not opened.
+- Isolated frontend was published to main through PR #14 and GitHub Pages Run 37619214701: SUCCESS.
+- Independent post-publish audit Run 37619382667: SUCCESS.
+- At the end of this entry frontend was OFF, backend READONLY, server unarmed, four-canary baseline unchanged, waste=0.
+- Result: PASS — A2.11 CODE LIVE WHILE PRODUCTION WRITE AUTHORITY REMAINED CLOSED.
+
+## Entry ACC-114 — A2.11 frontend CANARY live; server still unarmed
+- Date: 2026-10-07
+- Production config commit 486352bf0c27ad7e0f4acd054f960ec84a1b966b.
+- GitHub Pages Run 37619553914: SUCCESS.
+- Fresh pre-arm audit Run 37619726563: SUCCESS.
+- Frontend scope is CANARY with saveAccountingWaste only.
+- Backend remains READONLY; server users/actions=0/0; command budget=0/0.
+- Four-canary baseline remains unchanged and waste=0.
+- GENERAL opened: NO.
+- Production business mutation at this step: NO.
+- Result: PASS — A2.11 FRONTEND BOUNDED CANARY LIVE; SERVER NOT YET ARMED.
