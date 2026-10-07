@@ -3310,3 +3310,27 @@ This aligns with Autonomous Printshop Build Matrix module:
 - Next gate:
   - qualify the lowest-risk remaining write family read-only/repo-only;
   - no Production deployment, ARM, or fourth write command before a fresh owner decision gate.
+
+
+## Entry ACC-094 — Archive Template rejected as the next meaningful Production canary
+- Date: 2026-10-07
+- Goal: Select the lowest-risk remaining A2 write family without creating a false-positive Production canary.
+- Read-only/source qualification:
+  - `archiveAccountingTemplate` is a soft archive only; it never deletes a Template.
+  - its real mutation path is idempotent, version-guarded, commits a request-ledger command and appends immutable `template/archive` audit evidence.
+  - however, if the target Template is already inactive, the function returns `success=true, duplicatePrevented=true` **before** `beginCommandV1`; therefore it creates no request-ledger row and no archive audit event.
+- Current Production baseline from ACC-092:
+  - templates=1;
+  - activeTemplates=0;
+  - the only Template is the first inactive zero-value Canary evidence and must be retained unchanged.
+- Safety conclusion:
+  - there is no active Production Template that can exercise the real archive mutation path;
+  - creating an active Template merely to archive it would require an additional write family/action and would violate the one-family bounded-canary discipline;
+  - archiving the existing inactive evidence would be a no-op and would not qualify the deterministic command/audit path.
+- Data mutation: NO.
+- Production impact: NO.
+- Result: **BLOCKED_SAFE — ARCHIVE TEMPLATE IS NOT A MEANINGFUL NEXT PRODUCTION CANARY UNDER THE CURRENT BASELINE**.
+- Next gate:
+  - compare the remaining low-risk families;
+  - current next candidate is `saveEasyStoreSupplier` as an inactive synthetic zero-opening supplier master, subject to a dedicated server-side CANARY shape guard and repo-only qualification;
+  - no Production deploy/ARM/write is authorized by this entry.
