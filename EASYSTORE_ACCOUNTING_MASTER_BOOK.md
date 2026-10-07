@@ -3580,3 +3580,34 @@ This aligns with Autonomous Printshop Build Matrix module:
   - frontend CANARY enablement;
   - server ARM;
   - fourth Production Supplier command.
+
+
+## Entry ACC-100 — Owner approval for A2.10 bounded Supplier Production canary
+- Date: 2026-10-07
+- Owner decision: **APPROVED — proceed with A2.10 fourth bounded Production canary**.
+- Approval source: owner explicitly said `كمل` after ACC-099 decision gate.
+- Authorized scope only:
+  - canonical user: `ضياء`;
+  - action: `saveEasyStoreSupplier` only;
+  - one synthetic inactive `A2-CANARY-SUPPLIER-*`;
+  - opening balance exactly zero;
+  - no phone/address/notes/external ID and no caller-supplied Party ID;
+  - max one command, zero amount, short TTL, automatic server disable;
+  - GENERAL remains forbidden.
+- Required sequence:
+  1. deploy qualified Supplier guard while backend remains READONLY and verify zero drift;
+  2. publish isolated frontend candidate while config remains OFF and verify zero drift;
+  3. enable frontend CANARY for `saveEasyStoreSupplier` only while backend/server remain unarmed;
+  4. execute exactly one authenticated Supplier command as `ضياء` through the normal frontend path;
+  5. verify exact D1 delta and immutable request/audit evidence;
+  6. auto-disable server, return frontend to OFF, and re-verify closed Production.
+- Expected successful D1 delta from ACC-099 baseline:
+  - parties: 0 -> 1;
+  - partyBalances: 0 -> 1, zero-only;
+  - requestLedger: 3 -> 4;
+  - events: 3 -> 4;
+  - materials/templates remain 1/1;
+  - partyLedger/cash/stock/purchases/invoices/custody/waste/day-close and all other protected tables remain unchanged.
+- Data mutation at approval-record step: NO.
+- Production impact at approval-record step: NO.
+- Result: **APPROVED — AUTHORITATIVE DEPLOYMENT MAY PROCEED ONLY WITHIN THE BOUNDED A2.10 SCOPE ABOVE**.
