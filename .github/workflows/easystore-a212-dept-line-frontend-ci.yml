@@ -1,0 +1,45 @@
+name: EasyStore A2.12 Dept Line Frontend Qualification
+
+on:
+  push:
+    branches:
+      - candidate/easystore-a212-dept-line-canary-prodpatch-20261007
+    paths:
+      - 'app.js'
+      - 'config.js'
+      - 'index.html'
+      - 'tests/easystore_a212_dept_line_frontend_canary.test.mjs'
+      - '.github/workflows/easystore-a212-dept-line-frontend-ci.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  qualify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: candidate/easystore-a212-dept-line-canary-prodpatch-20261007
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Qualify isolated Dept Line candidate
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check app.js
+          node tests/easystore_a212_dept_line_frontend_canary.test.mjs
+          echo A212_DEPT_LINE_FRONTEND_QUALIFICATION=PASS
+          echo D1_WRITE_ACTION=saveAccountingDeptLine_ONLY
+          echo SYNTHETIC_REQUEST_PREFIX=A212-DLINE
+          echo SYNTHETIC_ORDER_PREFIX=A2-CANARY-DEPT-
+          echo SYNTHETIC_ITEM_PREFIX=A2-CANARY-DEPT-LINE-
+          echo SYNTHETIC_VALUE=0
+          echo DEPARTMENT=عام
+          echo QTY=1
+          echo CANDIDATE_MODE=OFF
+          echo CANDIDATE_ACTIONS=[]
+          echo PRODUCTION_DEPLOY=NO
+          echo PRODUCTION_MUTATION=NO
