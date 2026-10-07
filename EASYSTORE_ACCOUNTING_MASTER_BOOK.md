@@ -4215,3 +4215,21 @@ This aligns with Autonomous Printshop Build Matrix module:
 - Expected successful delta only: deptLines 0→1; requestLedger 5→6; events 5→6; all other tracked/protected tables invariant.
 - This approval does not itself deploy, ARM, or mutate business data.
 - Result: APPROVED — A2.12 MAY PROCEED ONLY WITHIN THE BOUNDED SCOPE ABOVE.
+
+
+## Entry ACC-122 — A2.12 Dept Line guard deployed READONLY with zero mutation
+- Date: 2026-10-07
+- Owner approval: ACC-121.
+- Manual guard deploy workflow: EasyStore A2.12 Dept Line Guard Readonly Deploy.
+- Run 37640370494, Job 112857404376: SUCCESS.
+- Shared-base merge safety: A212_DEPLOY_SHARED_OVERLAP=NONE.
+- Source qualification: A212_DEPLOY_SOURCE_TESTS=PASS.
+- Pre-deploy Production state: READONLY on the exact five-canary baseline with deptLines=0.
+- Post-deploy evidence:
+  - A212_DEPLOY_POST=READONLY
+  - A212_DEPLOY_ROW_COUNTS_INVARIANT=PASS
+  - A212_DEPLOY_DEPT_LINE_GUARD_LIVE=YES
+  - PRODUCTION_BUSINESS_MUTATION=NO
+  - GENERAL_OPENED=NO
+- Frontend remained OFF and server remained unarmed.
+- Result: PASS — A2.12 SERVER GUARD IS LIVE WHILE PRODUCTION WRITE AUTHORITY REMAINS CLOSED.
