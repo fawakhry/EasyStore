@@ -4546,3 +4546,14 @@ This aligns with Autonomous Printshop Build Matrix module:
 - Historical duplicate entry numbers ACC-034,035,044,077,086,088 retained; no historical deletion or renumbering.
 - Network requirements saved additively: api.github.com, fawakhry.github.io, trendos-d1-api.trendmall-contact.workers.dev, results-receiver.actions.githubusercontent.com. Draft saving is not publication.
 - Next: qualify the repaired source, safely deploy it READONLY, independently verify current D1 before any bounded execution; complete cloud development startup configuration. No accounting records were written to TrendOS_MASTER_BOOK.md.
+
+
+## Entry ACC-135 — Cloud development started; accounting read routing and safety fixes merged
+- Recorded: 2026-10-08T21:22:03+03:00.
+- Owner clarified both objectives: Codex cloud development and Cloudflare D1 accounting migration. GENERAL remains forbidden; no new financial family approval.
+- Local HTTP server started for /workspace/EasyStore on port 8000. index.html, app.js, config.js and styles.css each returned HTTP 200 and expected content. No authenticated browser financial operation performed.
+- Frontend eleven-read D1 routing commit 2220941a00a7bdeef9e8f197b6c5b4508ee6f833; Cloud Safety Runs 37823480523 and 37823487096 SUCCESS. PR #18 merged at ce281c0ada34a5719e31fccbee60e6a29450ed2e. Pages publication remains pending independent live readback.
+- Backend exact-source qualification commit 175f70b897eba17874214ae2c9621f9a49da3206; Run 37823531575 SUCCESS; shared transport regression Run 37823537756 SUCCESS. PR #31 merged into accounting candidate at a6c2da546f9c377a3b8019b873e4eaa435803795; not merged into backend main. No backend deployment yet.
+- External Cloudflare Workers Builds checks for trendos and trendos-tasks-v3-t1-preview-20260914 failed; API check summaries contain build IDs but no cause. These are distinct from the accounting API deployment target trendos-d1-api; failure cause unresolved and not claimed fixed. Merge required no admin override.
+- Initial PR description edit failed because installed gh CLI requested deprecated classic project fields; REST PATCH succeeded. No production effect.
+- Next: verify frontend publication, dispatch qualified accounting guard deploy in READONLY, verify independent final runtime; save reusable cloud startup and repository membership.
