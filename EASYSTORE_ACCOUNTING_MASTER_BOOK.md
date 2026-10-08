@@ -4581,3 +4581,12 @@ This aligns with Autonomous Printshop Build Matrix module:
 - Dependency refresh while an old Wrangler dev session was running disrupted its local loopback process; stale task-owned processes caused port conflict. Identified/stopped only those task-owned processes, restarted via direct Wrangler CLI and revalidated HTTP checks. Install script now reuses verified pinned Wrangler4.33.2; replay completed without disrupting services. Optional Request.cf metadata fetch warns and falls back; required local HTTP behavior passes.
 - Saved configuration confirmed: install_script, start_skill and repositories EasyStore@ba54f990b0bb4a6835d6b382a07dc5eaa03d9f9d and TrendOs@af2aabdfec84dd90b73152e78c313363a1e05a10, exact nonoverlapping checkout paths. Cloud draft requires user review/save/publish; fresh-task restoration not independently tested. Live processes are not snapshot guarantees.
 - Next approved A2.13 step: register the repaired manual execution workflow on backend main, re-enable only frontend Custody Close CANARY, fresh D1 pre-arm audit, then exactly one owner GUI click after bounded server ARM. No direct AI business DB write and no GENERAL.
+
+
+## Entry ACC-138 — Repaired A2.13 workflow registered; frontend reactivation qualified
+- Recorded: 2026-10-08T21:36:30+03:00.
+- Backend main before registration 6453cb54f0c1c0a0e1900217a05ab0727aedcc75; execution workflow positively absent from main tree.
+- Registered only .github/workflows/easystore-a213-custody-close-canary-execution.yml from qualified repaired candidate; main commit172bc062d9c23541e859dbf2a66bd7b733904c93. GitHub content readback byte-identical. No execution dispatch and no ARM at this step.
+- Frontend candidate/easystore-a213-repaired-arm-20261008 commit07bdc915bd7a8a184c7d8707b479efd69c00673b enables only closePurchaseCustodyV1920 in CANARY and refreshes cache; all other financial actions remain blocked. PR20 Cloud Safety Run37825446152 SUCCESS.
+- Environment reported starting then ready; re-read actual files/HEAD and live backend. Files/helpers retained; backend remains READONLY epoch37, users/actions0/0, maxAmount0,maxCommands0,commandsStarted0,expiry0. This does not independently establish a new-task snapshot restoration or completed environment publication.
+- Next: verify PR20 Pages/live frontend publication, rerun fresh D1 pre-arm read-only audit, and only then dispatch the already-approved bounded execution. GENERAL forbidden; no financial mutation yet.
