@@ -4590,3 +4590,13 @@ This aligns with Autonomous Printshop Build Matrix module:
 - Frontend candidate/easystore-a213-repaired-arm-20261008 commit07bdc915bd7a8a184c7d8707b479efd69c00673b enables only closePurchaseCustodyV1920 in CANARY and refreshes cache; all other financial actions remain blocked. PR20 Cloud Safety Run37825446152 SUCCESS.
 - Environment reported starting then ready; re-read actual files/HEAD and live backend. Files/helpers retained; backend remains READONLY epoch37, users/actions0/0, maxAmount0,maxCommands0,commandsStarted0,expiry0. This does not independently establish a new-task snapshot restoration or completed environment publication.
 - Next: verify PR20 Pages/live frontend publication, rerun fresh D1 pre-arm read-only audit, and only then dispatch the already-approved bounded execution. GENERAL forbidden; no financial mutation yet.
+
+
+## Entry ACC-139 — Repaired A2.13 frontend published and fresh pre-arm D1 audit passed
+- Recorded: 2026-10-08T21:39:33+03:00.
+- Frontend PR20 merged at c295efecc02a85d4e24f3f9836f6c94589355104; Pages Run37825592720 SUCCESS. Live config CANARY with exactly closePurchaseCustodyV1920, asset tag arm1.
+- Backend main execution workflow172bc062d9c23541e859dbf2a66bd7b733904c93 registered and active. Backend source remains deployed READONLY with safety fixes; no server ARM yet.
+- Fresh pre-arm readonly audit Run37662509226 attempt3, Job113478226003 SUCCESS; logs confirm frontend exact action, backendREADONLY, users/actions0/0,budget0/0,six-canary baseline with custodyCloses0,requests/events6/6,GENERAL NO.
+- Current checkout HEADs re-read: frontendc295efecc02a85d4e24f3f9836f6c94589355104,backendaf2aabdfec84dd90b73152e78c313363a1e05a10. Updated saved cloud repository membership accordingly; install/start instructions retained.
+- Local frontend returned an empty response after reconnect because its original task-output pipe was no longer usable. Restarted only the task-owned server with output redirected to a retained file; verified local config remains OFF and uses only local backend. Saved start_skill updated with persistent log redirection. No production effect.
+- Next: dispatch exact approved A2.13 manual workflow once, confirm preflight complete and live CANARY_BOUNDED with one command and commandsStarted0, then request exactly one owner GUI click. No new approval requested; no financial command issued by assistant.
