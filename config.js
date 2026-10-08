@@ -19,10 +19,10 @@ window.EASYSTORE_ACCOUNTING_D1_READONLY = true;
 window.EASYSTORE_ACCOUNTING_D1_WRITES = false;
 
 // candidate remains OFF until a fresh owner-approved Production gate
-window.EASYSTORE_ACCOUNTING_D1_WRITE_MODE = 'CANARY';
+window.EASYSTORE_ACCOUNTING_D1_WRITE_MODE = 'OFF';
 
 // لا توجد عائلات كتابة مسموحة بعد الإغلاق
-window.EASYSTORE_ACCOUNTING_D1_WRITE_CANARY_ACTIONS = ['closePurchaseCustodyV1920'];
+window.EASYSTORE_ACCOUNTING_D1_WRITE_CANARY_ACTIONS = [];
 
 // D1 Accounting API
 window.EASYSTORE_ACCOUNTING_D1_URL =
@@ -43,7 +43,7 @@ window.EASYSTORE_SESSION_CATALOG_FIX =
 
 // A2.13 candidate cache tag
 window.EASYSTORE_CACHE_TAG =
-  'a213-custody-close-canary-20261007';
+  'a213-custody-close-canary-20261007-cloud-safety-20261008';
 
 window.EASYSTORE_AUTO_REFRESH =
   'safe-3-minutes-when-clean';
