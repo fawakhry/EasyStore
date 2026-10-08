@@ -4600,3 +4600,13 @@ This aligns with Autonomous Printshop Build Matrix module:
 - Current checkout HEADs re-read: frontendc295efecc02a85d4e24f3f9836f6c94589355104,backendaf2aabdfec84dd90b73152e78c313363a1e05a10. Updated saved cloud repository membership accordingly; install/start instructions retained.
 - Local frontend returned an empty response after reconnect because its original task-output pipe was no longer usable. Restarted only the task-owned server with output redirected to a retained file; verified local config remains OFF and uses only local backend. Saved start_skill updated with persistent log redirection. No production effect.
 - Next: dispatch exact approved A2.13 manual workflow once, confirm preflight complete and live CANARY_BOUNDED with one command and commandsStarted0, then request exactly one owner GUI click. No new approval requested; no financial command issued by assistant.
+
+
+## Entry ACC-140 — Owner-approved A2.13 execution window armed; awaiting one owner GUI command
+- Recorded: 2026-10-08T21:41:09+03:00.
+- Execution workflow dispatched once directly via GitHub workflow_dispatch; no one-shot dispatcher needed. Run37825991019,Job113478882411,sourceaf2aabdfec84dd90b73152e78c313363a1e05a10.
+- GitHub job reports exact preflight step SUCCESS. Verified source emits A213_EXEC_PREFLIGHT=PASS only after frontend action, READONLY/unarmed server, exact six-canary D1 counts and one canonical Diaa admin checks pass. Active job logs are not yet a completed execution result.
+- Fresh live armed health: modeCANARY,writeAuthorityModeCANARY_BOUNDED,policyEpoch38,canaryPolicyEpoch37,users/actions1/1,maxAmount0,maxCommands1,commandsStarted0,expiresAtMs1791485692679. Workflow arm SQL specifies only ضياء and closePurchaseCustodyV1920, TTL15minutes. GENERAL not opened.
+- Current status: ARMED_WAITING_FOR_OWNER_ONE_GUI_CLICK. No business command started at observation; success and seven-canary baseline NOT claimed. Automatic cleanup is registered in this running workflow; final READONLY closure still requires observed confirmation.
+- Owner action: refresh published EasyStore from TrendOS; open Purchase/A2.13 canary; click تنفيذ تقفيل العهدة الصفرية مرة واحدة exactly once, without real data.
+- After owner reports تم or screenshot: inspect workflow and exact D1 evidence immediately; never request another click or blindly retry. Expected custodyCloses1,requestLedger7,events7 only; other tables invariant. Then observe server cleanup, close frontend OFF/actions=[], independent final audit, align guards to seven-canary baseline and persist actual results here. Other families remain at Decision Gate.
