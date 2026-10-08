@@ -382,19 +382,23 @@ TrendOS should contain only the minimum integration contract necessary for its o
 ## Current next gate
 
 ```ini
-STATUS=A2_13_ARMED_WAITING_FOR_OWNER_ONE_GUI_CLICK
-LATEST_ACCOUNTING_ENTRY=ACC-140
-FRONTEND=CANARY_CLOSE_PURCHASE_CUSTODY_ONLY
-BACKEND=CANARY_BOUNDED_ONE_USER_ONE_ACTION_ZERO_AMOUNT_ONE_COMMAND
-EXECUTION_RUN=37825991019
-COMMANDS_STARTED_AT_LAST_HEALTH_OBSERVATION=0
-LAST_VERIFIED_D1_BASELINE=SIX_CANARY
-SEVENTH_CANARY_SUCCESS=NOT_YET_PROVEN
-GENERAL=FORBIDDEN
-NEXT_GATE=OWNER_ONE_GUI_CLICK_THEN_D1_RECONCILIATION_AND_AUTO_CLOSURE
+CURRENT_STATUS=A213_BLOCKED_SAFE_ZERO_BUSINESS_REQUEST_EVENT_MUTATION
+FRONTEND_WRITE_MODE=OFF
+FRONTEND_ACTIONS=[]
+BACKEND_MODE=READONLY
+POLICY_EPOCH=39
+SERVER_USERS_ACTIONS=0/0
+COMMAND_BUDGET=0/0
+CUSTODY_CLOSES=0
+REQUEST_LEDGER=6
+EVENTS=6
+GENERAL_OPENED=NO
+DEPARTMENT_NORMALIZATION_FIX=DEPLOYED_AND_AUDITED
+AGENT_API_CONNECTION=PREPARED_AUTHENTICATED_SESSION_BINDING_PENDING
+NEXT=SECURE_EMPLOYEE_SESSION_CONNECTION_THEN_FRESH_BOUNDED_PREFLIGHT
 ```
 
-This is a time-limited checkpoint, not continuing authorization to re-arm. Read current runtime and the latest entry before resuming; the running workflow must return server policy to READONLY. Full accounting migration is still in progress.
+The consumed attempt is reconciled with zero business/request/event mutation. No execution is currently armed. Read current runtime and the latest entry before resuming. The existing A2.13 approval remains limited to its exact zero-value scope; delegated API execution additionally requires the secure employee session binding and fresh preflight. Full accounting migration is still in progress.
 
 ## Product operating model — locked
 
