@@ -230,6 +230,7 @@
     const accountingWriteRequested = A213_ACCOUNTING_WRITE_ACTIONS_FAIL_CLOSED.has(actionName);
     const writeActionRequested = D1_ACCOUNTING_WRITE_ACTIONS.has(actionName);
     const writeMode=String(window.EASYSTORE_ACCOUNTING_D1_WRITE_MODE||'LEGACY').trim().toUpperCase();
+    if(accountingWriteRequested && writeMode!=='CANARY') throw new Error('كتابة الحسابات مغلقة؛ لا يُسمح بالتحويل إلى Google.');
     if(accountingWriteRequested && !['OFF','LEGACY','CANARY'].includes(writeMode)) throw new Error('وضع كتابة الحسابات غير مسموح في كاناري تقفيل العهدة.');
     if(accountingWriteRequested && writeMode==='CANARY' && !writeActionRequested) throw new Error('هذه الحركة خارج عائلة كاناري تقفيل العهدة؛ تم منعها محليًا.');
     if(writeActionRequested && writeMode==='CANARY' && !a213CustodyCloseCanaryEnabled()) throw new Error('نطاق كاناري تقفيل العهدة غير مطابق؛ تم منع الحركة.');
