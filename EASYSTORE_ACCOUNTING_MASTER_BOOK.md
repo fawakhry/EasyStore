@@ -4510,3 +4510,39 @@ This aligns with Autonomous Printshop Build Matrix module:
   - GENERAL remains forbidden.
 - Result: PASS — A2.13 OWNER DECISION GATE REACHED WITH PRODUCTION FULLY CLOSED; SEVENTH CANARY NOT EXECUTED.
 - Owner approval is required before backend A2.13 guard deploy, isolated frontend publish, CANARY enablement, server ARM, or the seventh Production command.
+
+
+## Entry ACC-131 — Owner A2.13 approval recovered from current-session handoff
+- Recorded: 2026-10-08T21:19:03+03:00.
+- Owner explicitly confirms prior approval with "كمل" for the exact A2.13 scope and instructs not to request it again.
+- Earlier attempt to record ACC-131 was reportedly blocked before commit; inspection confirmed this entry was absent. This entry is recorded now, not backdated.
+- Scope: canonical actor ضياء; closePurchaseCustodyV1920 only; A213-CCLOSE-* request; A2-CANARY-CUSTODY-* employee; عام; 2099-12-31; balance 0; NONE settlement; amount 0; max one command; short TTL; server cleanup to READONLY; GENERAL forbidden.
+- No approval for another financial family is implied.
+
+## Entry ACC-132 — Historical closed guard deployment and frontend publication reconciled
+- Recorded: 2026-10-08T21:19:03+03:00.
+- GitHub API confirms guard deploy Run 37661794220 SUCCESS; frontend closed publication Pages Run 37662026410 SUCCESS at e55c2d41a7fdaa6aa3b11e25d9b7489f11139119; independent audit Run 37662239128 SUCCESS at fa044fb56d10b2d70c671b43500b47e6f0f5032d.
+- Historical detailed log markers were supplied in the owner handoff; this session initially could not download Actions logs because results-receiver.actions.githubusercontent.com was restricted. Do not treat API conclusions as independently re-read historical D1 rows.
+- No deploy or business command was repeated during this reconciliation.
+
+## Entry ACC-133 — Current frontend CANARY and server READONLY revalidated
+- Recorded: 2026-10-08T21:19:03+03:00.
+- EasyStore main HEAD cb20c0ce0a94b198022ee8bf660c235b8f70f12f; backend main 6453cb54f0c1c0a0e1900217a05ab0727aedcc75; accounting candidate ab01814dc9abddefb0d572d49b64c70a3e83b57f.
+- Live frontend config read: CANARY, only closePurchaseCustodyV1920.
+- Live backend health: READONLY, authoritativeWrites=false, policyEpoch=37, canaryPolicyEpoch=36, allowed users/actions=0/0, maxAmount=0, maxCommands=0, commandsStarted=0, expiry=0.
+- Original frontend enablement Pages Run 37662333236 SUCCESS confirmed by API.
+- Fresh read-only audit: Run 37662509226 attempt 2, Job 113467546747, SUCCESS. Inspected workflow checks six-canary counts, zero custody close/event, requests/events 6/6, and exactly one active Diaa admin. This read-only rerun does not arm the server.
+- Execution workflow absent from backend main; candidate version matches a61ac56661b89ebb0cb0fbc7b36d9ed6082c525d before maintenance edits.
+- No new financial command; GENERAL not opened by this session.
+
+## Entry ACC-134 — Cloud-readiness review and safety repairs prepared repo-only
+- Recorded: 2026-10-08T21:19:03+03:00.
+- Owner requested organizing, running and moving the program to cloud. Default scope: continue existing Cloudflare D1 accounting migration while keeping GENERAL closed and preserving all business data. Cloud accounting migration is not complete.
+- Review reproduced locally: frontend OFF financial operations fell through to Google; computed nonzero custody balance could create a settlement; custody business row, COMMITTED response and audit were separate writes; cleanup suppressed SQL errors; workflow timeout 14 minutes was shorter than TTL 15 minutes.
+- Frontend fix 7c78b6d on fix/easystore-cloud-readiness-20261008, PR #18: financial actions fail closed outside exact bounded canary. Behavioral routing tests cover all listed actions in OFF/LEGACY/GENERAL/CANARY plus D1 reads. Cloud Safety Run 37823162790 SUCCESS.
+- Backend fix c1e29345 on fix/easystore-accounting-cloud-readiness-20261008, PR #31: reject any nonzero derived CANARY custody balance before PREPARED; close row, audit event and COMMITTED response share one D1 batch; cleanup errors are surfaced and health verified; workflow timeout 18 minutes with unchanged TTL 15 minutes.
+- Behavioral tests and existing policy, A2.13, command foundation and custody source checks PASS locally. YAML/bash validation initially treated a Python-shell step as Bash and failed locally; corrected validator respects shell language and passes. This was a validation-tool error, no Production change.
+- Source tests cannot establish production readiness. Backend financial execution has not been triggered; seven-canary baseline not claimed.
+- Historical duplicate entry numbers ACC-034,035,044,077,086,088 retained; no historical deletion or renumbering.
+- Network requirements saved additively: api.github.com, fawakhry.github.io, trendos-d1-api.trendmall-contact.workers.dev, results-receiver.actions.githubusercontent.com. Draft saving is not publication.
+- Next: qualify the repaired source, safely deploy it READONLY, independently verify current D1 before any bounded execution; complete cloud development startup configuration. No accounting records were written to TrendOS_MASTER_BOOK.md.
