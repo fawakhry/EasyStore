@@ -4557,3 +4557,14 @@ This aligns with Autonomous Printshop Build Matrix module:
 - External Cloudflare Workers Builds checks for trendos and trendos-tasks-v3-t1-preview-20260914 failed; API check summaries contain build IDs but no cause. These are distinct from the accounting API deployment target trendos-d1-api; failure cause unresolved and not claimed fixed. Merge required no admin override.
 - Initial PR description edit failed because installed gh CLI requested deprecated classic project fields; REST PATCH succeeded. No production effect.
 - Next: verify frontend publication, dispatch qualified accounting guard deploy in READONLY, verify independent final runtime; save reusable cloud startup and repository membership.
+
+
+## Entry ACC-136 — Cloud accounting reads published; frontend closed before guarded backend deployment
+- Recorded: 2026-10-08T21:24:56+03:00.
+- Frontend PR #18 Pages Run 37823612803 SUCCESS; live app.js readback confirms eleven accounting reads use D1 and financial OFF requests cannot fall back to Google. Authenticated account read behavior still requires employee session validation.
+- Frontend closure/cache commit 202e168 prepared and A2.13 frontend isolation plus cloud routing behavior tests PASS; PR #19 Cloud Safety Run 37823895354 SUCCESS; merged main ba54f990b0bb4a6835d6b382a07dc5eaa03d9f9d. Pages Run 37823983277 pending at recording time. No A2.13 business command executed.
+- Backend merged-candidate qualification Run 37823629566 SUCCESS; party, purchase, custody, reversal, waste/stock, sale and policy source CI also PASS.
+- Runs 37823629436 (A2.13), 37823629514 (historical A2.11), 37823629384 (historical A2.12) failed their live-readonly qualification step with frontend not OFF, confirmed by logs. A2.11/A2.12 also retain historical four/five-canary baselines and must not be treated as current production audits. Source checks in those runs passed. No business mutation caused by these audits.
+- Logs now accessible after network update; Run 37662509226 attempt2 logs explicitly confirm A213_PREARM_AUDIT=PASS, CANARY frontend, READONLY backend, users/actions0/0, budget0/0 and six-canary baseline.
+- Wrangler4.33.2 installed outside checkouts at /workspace/scratch/easystore-tools. First npm install failed on unwritable home cache; supported --cache /workspace/scratch/npm-cache corrected it. TLS/integrity verification retained.
+- Next: prepare isolated local D1 and validate local backend; after frontend OFF publication, rerun current A2.13 closed qualification and execute READONLY code-only guard deploy.
