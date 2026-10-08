@@ -213,7 +213,7 @@
     ['materials','templates','suppliers','purchases','dailyPurchases','sales','customers','stockMoves','wasteLines','deptLines','finalInvoices','custodyEntries','custodySummary','departmentDayCloses','unclassifiedRows'].forEach(k=>{ if(!Array.isArray(state.data[k])) state.data[k] = []; });
   }
 
-  const D1_ACCOUNTING_READ_ACTIONS = new Set(['getAccounting','getDeptInvoiceDraftV1887','getPartyAccountV1858']);
+  const D1_ACCOUNTING_READ_ACTIONS = new Set(['getAccounting','getDeptInvoiceDraftV1887','getPartyAccountV1858','getCustomerAccountV1915','getEasyStoreCustomers','searchCustomers','getEasyStoreSuppliers','easyStoreSystemHealth','calculateAccountingLaserQuoteV1913','getDailyDepartmentReportV1920','previewAccountingAutomationV1921']);
   const A213_ACCOUNTING_WRITE_ACTIONS_FAIL_CLOSED = new Set(["saveAccountingMaterial","saveAccountingTemplate","archiveAccountingTemplate","recalcAccountingMaterialsCascade","saveAccountingDeptLine","approveAccountingDeptInvoice","saveAccountingFinalInvoice","saveCustomerAccountMovementV1915","saveEasyStoreSupplier","saveEasyStorePurchaseV2","saveEasyStoreSaleV2","saveDeptDailyPurchaseV1917","approveDeptDailyPurchasesV1917","rejectDeptDailyPurchaseV1917","reverseApprovedPurchaseV1920","savePurchaseCustodyV1920","closePurchaseCustodyV1920","saveAccountingWaste","closeDepartmentDayV1920","runAccountingDayAutomationV1921","reopenAccountingFinalInvoice","classifyLegacyAccountingRowV1920","applySuggestedLegacyClassificationsV1921","reconcileLegacyCustomerDebtsV1914"]);
   const D1_ACCOUNTING_WRITE_ACTIONS = new Set(['closePurchaseCustodyV1920']);
 
@@ -230,6 +230,7 @@
     const accountingWriteRequested = A213_ACCOUNTING_WRITE_ACTIONS_FAIL_CLOSED.has(actionName);
     const writeActionRequested = D1_ACCOUNTING_WRITE_ACTIONS.has(actionName);
     const writeMode=String(window.EASYSTORE_ACCOUNTING_D1_WRITE_MODE||'LEGACY').trim().toUpperCase();
+    if(accountingWriteRequested && writeMode!=='CANARY') throw new Error('كتابة الحسابات مغلقة؛ لا يُسمح بالتحويل إلى Google.');
     if(accountingWriteRequested && !['OFF','LEGACY','CANARY'].includes(writeMode)) throw new Error('وضع كتابة الحسابات غير مسموح في كاناري تقفيل العهدة.');
     if(accountingWriteRequested && writeMode==='CANARY' && !writeActionRequested) throw new Error('هذه الحركة خارج عائلة كاناري تقفيل العهدة؛ تم منعها محليًا.');
     if(writeActionRequested && writeMode==='CANARY' && !a213CustodyCloseCanaryEnabled()) throw new Error('نطاق كاناري تقفيل العهدة غير مطابق؛ تم منع الحركة.');
