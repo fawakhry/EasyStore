@@ -2,7 +2,7 @@ name: EasyStore Cloud Safety
 on:
   push:
     branches: [main, fix/easystore-cloud-readiness-20261008]
-    paths: [app.js, tests/easystore_cloud_write_routing.test.mjs, .github/workflows/easystore-cloud-safety-ci.yml]
+    paths: [app.js, scripts/easystore-platform.mjs, tests/easystore_platform_connection.test.mjs, tests/easystore_cloud_write_routing.test.mjs, .github/workflows/easystore-cloud-safety-ci.yml]
   pull_request:
     branches: [main]
 permissions:
@@ -18,3 +18,4 @@ jobs:
           node-version: '22'
       - run: node --check app.js
       - run: node tests/easystore_cloud_write_routing.test.mjs
+      - run: node tests/easystore_platform_connection.test.mjs
