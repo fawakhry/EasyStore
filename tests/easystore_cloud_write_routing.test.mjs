@@ -17,7 +17,7 @@ for(const mode of ['OFF','LEGACY','GENERAL','CANARY']) {
     fetch:async(url)=>{calls.push(url);return {ok:true,text:async()=>'{"success":true}'};}
   };
   vm.createContext(context);
-  vm.runInContext(app.slice(start,end)+'\nglobalThis.apiTest=api; globalThis.actionsTest=[...A213_ACCOUNTING_WRITE_ACTIONS_FAIL_CLOSED];',context);
+  vm.runInContext(app.slice(start,end)+'\nglobalThis.apiTest=api; globalThis.actionsTest=[...A213_ACCOUNTING_WRITE_ACTIONS_FAIL_CLOSED]; globalThis.readActionsTest=[...D1_ACCOUNTING_READ_ACTIONS];',context);
   for(const action of context.actionsTest) {
     calls.length=0;
     if(mode==='CANARY' && action==='closePurchaseCustodyV1920') {
@@ -28,8 +28,11 @@ for(const mode of ['OFF','LEGACY','GENERAL','CANARY']) {
       assert.equal(calls.length,0,mode+' '+action+' must not reach any backend');
     }
   }
-  calls.length=0;
-  await context.apiTest('getAccounting',{});
-  assert.deepEqual(calls,['https://example.invalid/d1'],'D1 reads remain available');
+  assert.equal(context.readActionsTest.length,11);
+  for(const action of context.readActionsTest) {
+    calls.length=0;
+    await context.apiTest(action,{});
+    assert.deepEqual(calls,['https://example.invalid/d1'],action+' must reach D1');
+  }
 }
 console.log('CLOUD_WRITE_ROUTING_BEHAVIOR=PASS: all financial actions fail closed except the exact bounded canary; D1 reads remain available');
