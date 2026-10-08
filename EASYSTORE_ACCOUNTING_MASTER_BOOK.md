@@ -382,11 +382,19 @@ TrendOS should contain only the minimum integration contract necessary for its o
 ## Current next gate
 
 ```ini
-STATUS=ACCOUNTING_MASTER_BOOK_ESTABLISHED
-ROADMAP=RECORDED
-LOGGING_POLICY=ACCOUNTING_BOOK_ONLY
-NEXT_GATE=A0_ACCOUNTING_ONLY_PURGE
+STATUS=A2_13_ARMED_WAITING_FOR_OWNER_ONE_GUI_CLICK
+LATEST_ACCOUNTING_ENTRY=ACC-140
+FRONTEND=CANARY_CLOSE_PURCHASE_CUSTODY_ONLY
+BACKEND=CANARY_BOUNDED_ONE_USER_ONE_ACTION_ZERO_AMOUNT_ONE_COMMAND
+EXECUTION_RUN=37825991019
+COMMANDS_STARTED_AT_LAST_HEALTH_OBSERVATION=0
+LAST_VERIFIED_D1_BASELINE=SIX_CANARY
+SEVENTH_CANARY_SUCCESS=NOT_YET_PROVEN
+GENERAL=FORBIDDEN
+NEXT_GATE=OWNER_ONE_GUI_CLICK_THEN_D1_RECONCILIATION_AND_AUTO_CLOSURE
 ```
+
+This is a time-limited checkpoint, not continuing authorization to re-arm. Read current runtime and the latest entry before resuming; the running workflow must return server policy to READONLY. Full accounting migration is still in progress.
 
 ## Product operating model — locked
 
