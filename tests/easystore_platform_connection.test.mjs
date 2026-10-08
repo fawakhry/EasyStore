@@ -30,7 +30,8 @@ try {
     assert.equal(action,'closePurchaseCustodyV1920');
     assert.match(payload.requestId,/^A213-CCLOSE-/);assert.match(payload.employee,/^A2-CANARY-CUSTODY-/);
     assert.equal(payload.department,'عام');assert.equal(payload.workDate,'2099-12-31');
-    assert.deepEqual(Object.keys(payload).sort(),['department','employee','requestId','workDate']);
+    assert.equal(payload.sourceSystem,'EasyStore-Agent','audit must distinguish delegated agent requests');
+    assert.deepEqual(Object.keys(payload).sort(),['department','employee','requestId','sourceSystem','workDate']);
     return {success:true,closeId:'LOCAL-ONLY',balanceBefore:0,settlementType:'NONE',settlementAmount:0,balanceAfter:0};
   }});
   assert.equal(response.status,'AWAITING_D1_AUDIT');

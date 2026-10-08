@@ -46,7 +46,7 @@ export function executeZeroCustody({token,stateFile='/workspace/scratch/easystor
   if(fs.existsSync(stateFile))throw Error('A prior attempt is recorded; inspect D1 before any further financial action');
   requireBoundedCustodyHealth(request(),now);
   const id=randomUUID().replaceAll('-','').toUpperCase();
-  const payload={requestId:'A213-CCLOSE-'+id,employee:'A2-CANARY-CUSTODY-'+id,department:'عام',workDate:'2099-12-31'};
+  const payload={requestId:'A213-CCLOSE-'+id,employee:'A2-CANARY-CUSTODY-'+id,department:'عام',workDate:'2099-12-31',sourceSystem:'EasyStore-Agent'};
   fs.mkdirSync(path.dirname(stateFile),{recursive:true});
   const fd=fs.openSync(stateFile,'wx',0o600);
   try{fs.writeFileSync(fd,JSON.stringify({status:'SENT_UNKNOWN_NO_AUTOMATIC_RETRY',actor:ACTOR,payload}));}finally{fs.closeSync(fd);}
