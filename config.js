@@ -19,10 +19,10 @@ window.EASYSTORE_ACCOUNTING_D1_READONLY = true;
 window.EASYSTORE_ACCOUNTING_D1_WRITES = false;
 
 // STAGED pilot candidate ONLY: do not merge/publish before timed A2.13 test.
-window.EASYSTORE_ACCOUNTING_D1_WRITE_MODE = 'CANARY';
+window.EASYSTORE_ACCOUNTING_D1_WRITE_MODE = 'OFF';
 
 // كاناري العهدة التجريبي فقط: أي كتابة أخرى مغلقة على الخادم
-window.EASYSTORE_ACCOUNTING_D1_WRITE_CANARY_ACTIONS = ['closePurchaseCustodyV1920'];
+window.EASYSTORE_ACCOUNTING_D1_WRITE_CANARY_ACTIONS = [];
 
 // D1 Accounting API
 window.EASYSTORE_ACCOUNTING_D1_URL =
