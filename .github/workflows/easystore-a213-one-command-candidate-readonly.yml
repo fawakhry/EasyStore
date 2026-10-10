@@ -1,0 +1,57 @@
+name: A2.13 One-command Frontend Release Candidate — NO LIVE WRITES
+
+on:
+  push:
+    branches:
+      - pilot/a213-one-command-frontend-20261010
+    paths:
+      - 'config.js'
+      - 'app.js'
+      - 'tests/easystore_a213_one_command_release_gate.test.mjs'
+      - '.github/workflows/easystore-a213-one-command-candidate-readonly.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  pilot-preflight:
+    runs-on: ubuntu-latest
+    timeout-minutes: 7
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Execute only offline frontend safety and fake single-click tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check app.js
+          node tests/easystore_cloud_write_routing.test.mjs
+          node tests/easystore_platform_connection.test.mjs
+          node tests/easystore_sso_fresh_handoff.test.mjs
+          node tests/easystore_sso_opener_role_replay.test.mjs
+          node tests/easystore_a213_one_command_release_gate.test.mjs
+          echo A213_PILOT_DEPLOYMENT=NOT_PERFORMED
+          echo A213_PILOT_FINANCIAL_MUTATION=NO
+      - name: Assert actual production D1 is READONLY via unauthenticated GET
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -fsS --retry 2 --max-time 25 'https://trendos-d1-api.trendmall-contact.workers.dev/v1/employee/accounting/health' -o /tmp/a213-pilot-health.json
+          node <<'NODE'
+          const fs=require('node:fs'),assert=require('node:assert/strict');
+          const h=JSON.parse(fs.readFileSync('/tmp/a213-pilot-health.json','utf8'));
+          assert.equal(h.success,true);
+          assert.equal(h.mode,'READONLY');
+          assert.equal(h.authoritativeWrites,false);
+          assert.equal(Number(h.writeCanaryMaxCommands||0),0);
+          assert.equal(Number(h.writeCanaryCommandsStarted||0),0);
+          assert.equal(Number(h.writeCanaryAllowedUserCount||0),0);
+          assert.equal(Number(h.writeCanaryAllowedActionCount||0),0);
+          console.log('A213_PILOT_PRODUCTION_READONLY=PASS');
+          console.log('A213_PILOT_PRODUCTION_BUDGET_ZERO=PASS');
+          console.log('A213_PILOT_BACKEND_FINANCIAL_MUTATION=NO');
+          NODE
