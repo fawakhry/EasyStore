@@ -237,9 +237,45 @@
     const actions=Array.isArray(window.EASYSTORE_ACCOUNTING_D1_WRITE_CANARY_ACTIONS)?window.EASYSTORE_ACCOUNTING_D1_WRITE_CANARY_ACTIONS.map(String):[];
     return mode==='CANARY' && actions.length===1 && actions[0]==='closePurchaseCustodyV1920';
   }
+  // A published CANARY configuration alone is never sufficient to expose the button.
+  // The server must report an unexpired, unconsumed ONE-command window.
+  let a213PilotServerReady=false;
+  function a213PilotHealthAllowsOneCommand(h){
+    const expiry=Number(h&&h.writeCanaryExpiresAtMs||0);
+    return !!h && h.success===true && h.mode==='CANARY' && h.writeAuthorityMode==='CANARY_BOUNDED'
+      && Number(h.writeCanaryAllowedUserCount)===1
+      && Number(h.writeCanaryAllowedActionCount)===1
+      && Number(h.writeCanaryMaxAmount)===0
+      && Number(h.writeCanaryMaxCommands)===1
+      && Number(h.writeCanaryCommandsStarted)===0
+      && expiry>Date.now()+10000;
+  }
   // Match the native A2.13 one-employee allowlist exactly; no role/name substring shortcuts.
   function a213CustodyClosePilotEligible(){
-    return a213CustodyCloseCanaryEnabled() && String(user.username||'').trim()==='ضياء' && !!String(user.token||'').trim();
+    return a213PilotServerReady && a213CustodyCloseCanaryEnabled()
+      && String(user.username||'').trim()==='ضياء' && !!String(user.token||'').trim();
+  }
+  async function refreshA213PilotArmState(){
+    let next=false;
+    if(a213CustodyCloseCanaryEnabled() && String(user.username||'').trim()==='ضياء' && !!String(user.token||'').trim()){
+      const endpoint=String(window.EASYSTORE_ACCOUNTING_D1_URL||'').replace(/\/+$/,'');
+      if(endpoint==='https://trendos-d1-api.trendmall-contact.workers.dev/v1/employee/accounting'){
+        const controller=new AbortController();
+        const timer=setTimeout(()=>controller.abort(),4000);
+        try{
+          const response=await fetch(endpoint+'/health?pilotStatus='+Date.now(),{
+            method:'GET',cache:'no-store',credentials:'omit',signal:controller.signal
+          });
+          if(response.ok) next=a213PilotHealthAllowsOneCommand(await response.json());
+        }catch(e){ /* fail closed on network errors */ }
+        finally{ clearTimeout(timer); }
+      }
+    }
+    if(a213PilotServerReady!==next){
+      a213PilotServerReady=next;
+      if(!state.formDirty) shell();
+    }
+    return next;
   }
   function newAccountingRequestId(prefix){return String(prefix||'REQ')+'-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,10);}
 
@@ -1660,6 +1696,10 @@
   try{localStorage.removeItem(STORE_KEY);}catch(e){} // إلغاء الكاش القديم غير المرتبط بجلسة موظف
   mergeData();
   shell();
+  if(a213CustodyCloseCanaryEnabled()){
+    setTimeout(refreshA213PilotArmState,1500);
+    if(typeof setInterval==='function') setInterval(refreshA213PilotArmState,5000);
+  }
   setTimeout(()=>load(true), 350); // تحميل أولي ثم تحديث آمن كل 3 دقائق عند عدم وجود نموذج مفتوح بتعديلات
 })();
 
