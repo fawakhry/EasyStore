@@ -17,6 +17,13 @@
   window.set = set;
 
   function readSso(){
+    // A new cross-origin TrendOS handoff must replace, never inherit, a
+    // prior popup's sessionStorage credential. The token arrives only by
+    // verified origin + opener + nonce + freshness postMessage below.
+    if(qs.get('from')==='trendos' && qs.get('employeeSSO')==='1' && qs.get('ssoNonce')){
+      try{ sessionStorage.removeItem('EASYSTORE_SESSION_V1922'); }catch(e){}
+      return {name:'موظف', username:'employee', token:'', mode:'', department:''};
+    }
     let handoff = {};
     try{ handoff = JSON.parse(sessionStorage.getItem('EASYSTORE_SESSION_V1922') || '{}'); }catch(e){}
     if(!handoff || !handoff.user || !((handoff.params&&handoff.params.token)||(handoff.user&&handoff.user.token))){
@@ -80,6 +87,11 @@
     };
     try{ sessionStorage.setItem('EASYSTORE_SESSION_V1922', JSON.stringify(handoff)); }catch(e){}
     if(!ssoReadySettled){ ssoReadySettled = true; ssoReadyResolve(true); }
+    // The shell was initially rendered with a provisional employee identity.
+    // Recompute the authorized screen and navigation after verified SSO.
+    state.active = initialScreen();
+    state.accountingScope = initialAccountingScope();
+    shell();
     entry619SchedulePostSsoRead();
     return true;
   }
@@ -112,11 +124,14 @@
     const data = event && event.data || {};
     if(data.type !== TRENDOS_SSO_MESSAGE_V1) return;
     if(!TRENDOS_SSO_ALLOWED_ORIGINS.has(String(event.origin || ''))) return;
-    if(window.opener && event.source !== window.opener) return;
+    // A nonce-bound handoff is valid only from the popup's actual opener.
+    if(!window.opener || event.source !== window.opener) return;
     const expectedNonce = String(qs.get('ssoNonce') || '');
     if(!expectedNonce || String(data.nonce || '') !== expectedNonce) return;
     const issuedAt = Number(data.issuedAt || 0);
     if(!issuedAt || Math.abs(Date.now() - issuedAt) > 30000) return;
+    // Nonces are single-use; replay must never switch employee or role.
+    if(ssoReadySettled) return;
     if(!persistTrendosSso(data)) return;
     try{
       event.source && event.source.postMessage({
