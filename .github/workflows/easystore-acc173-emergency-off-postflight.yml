@@ -1,0 +1,46 @@
+name: ACC-173 Emergency OFF Zero-Policy Postflight (GET only)
+
+on:
+  push:
+    branches:
+      - fix/acc173-emergency-off-strong-health-readonly-20261010
+    paths:
+      - '.github/workflows/easystore-a213-emergency-off.yml'
+      - '.github/workflows/easystore-acc173-emergency-off-postflight.yml'
+      - 'tests/easystore_a213_emergency_off_postflight.test.mjs'
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  published-off-safety-only:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Original emergency OFF conversion and strong backend postflight negatives
+        run: |
+          set -euo pipefail
+          node tests/easystore_a213_emergency_off_preflight.test.mjs
+          node tests/easystore_a213_emergency_off_postflight.test.mjs
+      - name: Public GET-only EasyStore OFF and Cloudflare finance READONLY
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -fsSL --max-time 25 "https://fawakhry.github.io/EasyStore/config.js?acc173=$GITHUB_RUN_ID" -o /tmp/acc173-published-config.js
+          curl -fsSL --max-time 25 "https://trendos-d1-api.trendmall-contact.workers.dev/v1/employee/accounting/health?acc173=$GITHUB_RUN_ID" -o /tmp/acc173-published-health.json
+          node tests/easystore_a213_emergency_off_postflight.test.mjs /tmp/acc173-published-config.js /tmp/acc173-published-health.json
+      - name: Record no financial launch
+        run: |
+          {
+            echo '## ACC-173 — Emergency frontend OFF and backend zero-policy safety'
+            echo 'Read-only published resource GET plus local original restore conversion and zero-policy negative tests.'
+            echo 'No emergency workflow dispatch, GitHub Pages publication, D1 write, Worker deploy or production finance POST.'
+            echo 'The real rollback dispatch→commit→GitHub Pages propagation is NOT tested by this CI.'
+          } >> "$GITHUB_STEP_SUMMARY"
