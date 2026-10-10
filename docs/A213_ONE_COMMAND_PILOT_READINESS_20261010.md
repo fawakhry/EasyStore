@@ -20,3 +20,12 @@ TrendOS monitored canary workflow: `candidate/easystore-accounting-a2-20261005`,
 
 ## Current status
 **NOT DEPLOYED, NOT ARMED, NO LIVE FINANCIAL PILOT RUN.** This document/branch is a release candidate, not permission to bypass SSO, server authorization, owner signoff, or idempotency/cleanup controls. Real-user browser smoke and explicit timed launch coordination remain required.
+
+
+## 2026-10-10 — safe OFF recovery and server-armed UI gate
+- Pilot frontend **still not deployed**. The public site remains `WRITE_MODE=OFF`, allowed actions `[]`, global writes=false.
+- `a213PilotHealthAllowsOneCommand()` additionally requires a GET-only live API health report of `CANARY` + `CANARY_BOUNDED`, one allowed user, one action, zero max amount, max one command, zero consumed, unexpired by more than 10 seconds, plus exact authenticated Diaa username. Network failures/mismatches hide the button. Browser polls every 5 seconds while pilot candidate config is present and automatically hides after server shutdown; only D1 grants authority.
+- New automatic visual hiding does **not** undo the published static `CANARY` config. The production `OFF` restore remains a required step after the pilot. A dedicated `scripts/a213-close-frontend-config.mjs` requires explicit `--write <config.js>`, rejects unrecognized modes or permissions, and was successfully tested on temporary files. Do not claim this alone establishes a working GitHub Pages production rollback.
+- The stale rollback branch `rollback/a213-off-after-pilot-20261010` was corrected to the byte-verified `OFF` and SSO-safe baseline commit `d075694ba9d5dddf50da919587084a9630ad8f1b` (Git blob `504a4b3df0e7aebc57c5e589298df4c126fa0454`). `release/a213-off-sso-verified-20261010` provides another immutable-pinned naming reference to the same baseline.
+- [ACC pilot and simulated OFF recovery run 38058989097](https://github.com/fawakhry/EasyStore/actions/runs/38058989097) **PASS**; [Cloud Safety 38058991234](https://github.com/fawakhry/EasyStore/actions/runs/38058991234) **PASS**. No live A2.13 execution, financial D1 SQL write, frontend CANARY deploy, or Google Sheets mutation.
+- Required before real pilot: production frontend-only publish with tested rollback deployment path; single authorized operator present; exactly one manual GitHub A2.13 workflow dispatch; wait until its `A213_EXEC_WAITING_FOR_DIAA_CLICK=YES` log before clicking; observe atomic D1 outcome and automatic server READONLY cleanup; then publish `OFF` and independently verify live frontend and backend closure.
