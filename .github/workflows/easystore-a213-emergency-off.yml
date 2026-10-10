@@ -65,6 +65,7 @@ jobs:
           if(!/EASYSTORE_ACCOUNTING_D1_WRITE_MODE\s*=\s*'OFF'/.test(s))process.exit(1);
           if(!/EASYSTORE_ACCOUNTING_D1_WRITE_CANARY_ACTIONS\s*=\s*\[\]/.test(s))process.exit(1);
           if(!/EASYSTORE_ACCOUNTING_D1_WRITES\s*=\s*false/.test(s))process.exit(1);
+          if(!/EASYSTORE_ACCOUNTING_D1_READONLY\s*=\s*true/.test(s))process.exit(1);
           NODE
               then
                 echo A213_DEPLOYED_FRONTEND_OFF=PASS
@@ -84,8 +85,10 @@ jobs:
           node <<'NODE'
           const fs=require('node:fs');
           const h=JSON.parse(fs.readFileSync('/tmp/a213-backend-health.json','utf8'));
-          const closed=h.mode==='READONLY' && h.authoritativeWrites===false &&
-            Number(h.writeCanaryMaxCommands||0)===0 && Number(h.writeCanaryCommandsStarted||0)===0;
+          const closed=h.success===true && h.mode==='READONLY' && h.authoritativeWrites===false &&
+            Number(h.writeCanaryAllowedUserCount)===0 && Number(h.writeCanaryAllowedActionCount)===0 &&
+            Number(h.writeCanaryMaxAmount)===0 && Number(h.writeCanaryMaxCommands)===0 &&
+            Number(h.writeCanaryCommandsStarted)===0 && Number(h.writeCanaryExpiresAtMs)===0;
           console.log('A213_BACKEND_READONLY_AFTER_UI_CLOSE='+(closed?'PASS':'REQUIRES_SEPARATE_SERVER_CLEANUP'));
           if(!closed)process.exit(1);
           NODE
