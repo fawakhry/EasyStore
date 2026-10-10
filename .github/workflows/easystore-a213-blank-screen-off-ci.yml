@@ -1,0 +1,43 @@
+name: ACC-160 EasyStore Blank Screen Hotfix / Finance OFF
+
+on:
+  push:
+    branches:
+      - fix/a213-blank-screen-restore-off-20261010
+    paths:
+      - 'app.js'
+      - 'config.js'
+      - 'tests/easystore_a213_blank_screen_boot.test.mjs'
+      - '.github/workflows/easystore-a213-blank-screen-off-ci.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  safe-render:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Verify SSO boot renders and financial writes are OFF
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check app.js
+          node tests/easystore_a213_blank_screen_boot.test.mjs
+          node tests/easystore_cloud_write_routing.test.mjs
+          node tests/easystore_sso_fresh_handoff.test.mjs
+          node tests/easystore_sso_opener_role_replay.test.mjs
+          node <<'NODE'
+          const fs=require('node:fs'),assert=require('node:assert/strict');
+          const src=fs.readFileSync('config.js','utf8');
+          assert.match(src,/EASYSTORE_ACCOUNTING_D1_READONLY\s*=\s*true/);
+          assert.match(src,/EASYSTORE_ACCOUNTING_D1_WRITES\s*=\s*false/);
+          assert.match(src,/EASYSTORE_ACCOUNTING_D1_WRITE_MODE\s*=\s*'OFF'/);
+          assert.match(src,/EASYSTORE_ACCOUNTING_D1_WRITE_CANARY_ACTIONS\s*=\s*\[\]/);
+          console.log('A213_FRONTEND_SAFE_OFF=PASS');
+          console.log('A213_PRODUCTION_FINANCIAL_MUTATION=NO');
+          NODE
