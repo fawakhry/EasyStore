@@ -1,0 +1,55 @@
+name: ACC-160 Published EasyStore Bootstrap And D1 OFF Audit
+
+on:
+  push:
+    branches:
+      - audit/a213-blank-screen-live-off-20261010
+    paths:
+      - '.github/workflows/easystore-a213-blank-screen-live-off-audit.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 7
+    steps:
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Fetch currently published frontend and backend health (GET only)
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -fsSL --retry 2 --max-time 35 "https://fawakhry.github.io/EasyStore/app.js?acc160=$GITHUB_RUN_ID" -o /tmp/acc160-live-app.js
+          curl -fsSL --retry 2 --max-time 35 "https://fawakhry.github.io/EasyStore/config.js?acc160=$GITHUB_RUN_ID" -o /tmp/acc160-live-config.js
+          curl -fsS --retry 2 --max-time 35 "https://trendos-d1-api.trendmall-contact.workers.dev/v1/employee/accounting/health?acc160=$GITHUB_RUN_ID" -o /tmp/acc160-health.json
+      - name: Require safe live published app and D1 closure
+        run: |
+          set -euo pipefail
+          node <<'NODE'
+          const assert=require('node:assert/strict'),fs=require('node:fs');
+          const app=fs.readFileSync('/tmp/acc160-live-app.js','utf8');
+          const cfg=fs.readFileSync('/tmp/acc160-live-config.js','utf8');
+          const h=JSON.parse(fs.readFileSync('/tmp/acc160-health.json','utf8'));
+          const marker="  let a213PilotServerReady=false;";
+          assert.ok(app.includes(marker),'missing startup readiness initialization');
+          assert.equal(app.split(marker).length-1,1,'duplicate startup readiness declaration');
+          assert.ok(app.indexOf(marker)<app.indexOf('  const state = {'),'live bootstrap still broken');
+          assert.match(cfg,/EASYSTORE_ACCOUNTING_D1_READONLY\s*=\s*true/);
+          assert.match(cfg,/EASYSTORE_ACCOUNTING_D1_WRITES\s*=\s*false/);
+          assert.match(cfg,/EASYSTORE_ACCOUNTING_D1_WRITE_MODE\s*=\s*'OFF'/);
+          assert.match(cfg,/EASYSTORE_ACCOUNTING_D1_WRITE_CANARY_ACTIONS\s*=\s*\[\]/);
+          assert.equal(h.success,true);
+          assert.equal(h.mode,'READONLY');
+          assert.equal(h.authoritativeWrites,false);
+          assert.equal(Number(h.writeCanaryMaxCommands||0),0);
+          assert.equal(Number(h.writeCanaryCommandsStarted||0),0);
+          assert.equal(Number(h.writeCanaryAllowedUserCount||0),0);
+          assert.equal(Number(h.writeCanaryAllowedActionCount||0),0);
+          console.log('ACC160_DEPLOYED_EASYSTORE_BOOT_ORDER=PASS');
+          console.log('ACC160_DEPLOYED_FINANCIAL_OFF=PASS');
+          console.log('ACC160_DEPLOYED_D1_READONLY_ZERO_BUDGET=PASS');
+          console.log('ACC160_FINANCIAL_MUTATION=NO');
+          NODE
