@@ -157,6 +157,8 @@
   const isFinal = () => /رحمه|رحمة|ريفان|ريڤان|rahma|revan|rivan|final/.test(roleKey());
   const roleText = () => isAdmin() ? 'ضياء / مطبخ الحسابات' : isLaser() ? 'جابر / الليزر' : isPrint() ? 'وائل / الطباعة' : isFinal() ? 'رحمة أو ريفان / تقفيل فواتير' : 'موظف';
   const userDept = () => isLaser() ? 'ليزر' : isPrint() ? 'طباعة' : (user.department || '');
+  // Must initialize before state.active -> initialScreen() -> allowedScreens().
+  let a213PilotServerReady=false;
   function allowedScreens(){
     let screens;
     if(isAdmin()) screens=['dashboard','suppliers','customers','items','purchase','sales','final','stock','kitchen','dailyClose','legacy','reports','health'];
@@ -239,7 +241,6 @@
   }
   // A published CANARY configuration alone is never sufficient to expose the button.
   // The server must report an unexpired, unconsumed ONE-command window.
-  let a213PilotServerReady=false;
   function a213PilotHealthAllowsOneCommand(h){
     const expiry=Number(h&&h.writeCanaryExpiresAtMs||0);
     return !!h && h.success===true && h.mode==='CANARY' && h.writeAuthorityMode==='CANARY_BOUNDED'
