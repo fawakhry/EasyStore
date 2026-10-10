@@ -1,0 +1,52 @@
+name: A2.13 Emergency OFF Restore — Offline Gate
+
+on:
+  push:
+    branches:
+      - safety/a213-emergency-off-workflow-20261010
+    paths:
+      - '.github/workflows/easystore-a213-emergency-off.yml'
+      - '.github/workflows/easystore-a213-emergency-off-preflight-ci.yml'
+      - 'scripts/a213-close-frontend-config.mjs'
+      - 'tests/easystore_a213_emergency_off_preflight.test.mjs'
+
+permissions:
+  contents: read
+
+jobs:
+  prove-no-finance-mutation:
+    runs-on: ubuntu-latest
+    timeout-minutes: 7
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Verify isolated OFF recovery exact transformation
+        run: |
+          set -euo pipefail
+          node --check scripts/a213-close-frontend-config.mjs
+          node tests/easystore_a213_emergency_off_preflight.test.mjs
+          echo A213_EMERGENCY_OFF_DEPLOYMENT=NOT_PERFORMED
+          echo A213_EMERGENCY_OFF_REAL_FINANCE_WRITES=ZERO
+      - name: Prove deployed main remains OFF and backend READONLY (GET only)
+        run: |
+          set -euo pipefail
+          curl -fsS --max-time 25 "https://fawakhry.github.io/EasyStore/config.js?a213Safe=$GITHUB_RUN_ID" -o /tmp/live-config.js
+          curl -fsS --max-time 25 'https://trendos-d1-api.trendmall-contact.workers.dev/v1/employee/accounting/health' -o /tmp/live-health.json
+          node <<'NODE'
+          const fs=require('node:fs'),assert=require('node:assert/strict');
+          const cfg=fs.readFileSync('/tmp/live-config.js','utf8');
+          const h=JSON.parse(fs.readFileSync('/tmp/live-health.json','utf8'));
+          assert.match(cfg,/EASYSTORE_ACCOUNTING_D1_WRITE_MODE\s*=\s*'OFF'/);
+          assert.match(cfg,/EASYSTORE_ACCOUNTING_D1_WRITE_CANARY_ACTIONS\s*=\s*\[\]/);
+          assert.match(cfg,/EASYSTORE_ACCOUNTING_D1_WRITES\s*=\s*false/);
+          assert.equal(h.mode,'READONLY');
+          assert.equal(h.authoritativeWrites,false);
+          assert.equal(Number(h.writeCanaryMaxCommands||0),0);
+          assert.equal(Number(h.writeCanaryCommandsStarted||0),0);
+          console.log('A213_EMERGENCY_OFF_LIVE_FRONTEND_SAFE=PASS');
+          console.log('A213_EMERGENCY_OFF_LIVE_BACKEND_SAFE=PASS');
+          NODE
