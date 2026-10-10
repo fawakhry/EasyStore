@@ -1,0 +1,91 @@
+name: A2.13 Emergency Frontend OFF Restore
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirmation:
+        description: 'Type CLOSE_A213_OFF to restore the safe frontend configuration'
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+concurrency:
+  group: easystore-a213-emergency-off-main
+  cancel-in-progress: false
+
+jobs:
+  restore-safe-off:
+    if: github.ref == 'refs/heads/main' && inputs.confirmation == 'CLOSE_A213_OFF'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout the current production main branch
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          persist-credentials: true
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Only restore exact pilot CANARY configuration to OFF
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check scripts/a213-close-frontend-config.mjs
+          node scripts/a213-close-frontend-config.mjs --write config.js
+          node <<'NODE'
+          const assert=require('node:assert/strict');
+          const fs=require('node:fs');
+          const cfg=fs.readFileSync('config.js','utf8');
+          assert.match(cfg,/EASYSTORE_ACCOUNTING_D1_READONLY\s*=\s*true/);
+          assert.match(cfg,/EASYSTORE_ACCOUNTING_D1_WRITES\s*=\s*false/);
+          assert.match(cfg,/EASYSTORE_ACCOUNTING_D1_WRITE_MODE\s*=\s*'OFF'/);
+          assert.match(cfg,/EASYSTORE_ACCOUNTING_D1_WRITE_CANARY_ACTIONS\s*=\s*\[\]/);
+          console.log('A213_OFF_CONFIG_RESTORED=PASS');
+          NODE
+          git add -- config.js
+          if ! git diff --cached --quiet -- config.js; then
+            git -c user.name='github-actions[bot]' -c user.email='41898282+github-actions[bot]@users.noreply.github.com' commit -m 'safety(easystore): close A2.13 frontend to OFF and zero allowed actions' -- config.js
+            git push origin HEAD:refs/heads/main
+            echo 'A213_OFF_COMMIT_PUSHED=YES'
+          else
+            echo 'A213_OFF_CONFIG_ALREADY_SAFE=YES'
+          fi
+      - name: Verify public GitHub Pages frontend is OFF
+        shell: bash
+        run: |
+          set -euo pipefail
+          for i in $(seq 1 24); do
+            if curl -fsS --max-time 20 "https://fawakhry.github.io/EasyStore/config.js?a213Off=$GITHUB_RUN_ID-$i" -o /tmp/a213-public-config.js; then
+              if node - <<'NODE'
+          const fs=require('node:fs');
+          const s=fs.readFileSync('/tmp/a213-public-config.js','utf8');
+          if(!/EASYSTORE_ACCOUNTING_D1_WRITE_MODE\s*=\s*'OFF'/.test(s))process.exit(1);
+          if(!/EASYSTORE_ACCOUNTING_D1_WRITE_CANARY_ACTIONS\s*=\s*\[\]/.test(s))process.exit(1);
+          if(!/EASYSTORE_ACCOUNTING_D1_WRITES\s*=\s*false/.test(s))process.exit(1);
+          NODE
+              then
+                echo A213_DEPLOYED_FRONTEND_OFF=PASS
+                exit 0
+              fi
+            fi
+            sleep 10
+          done
+          echo A213_DEPLOYED_FRONTEND_OFF=UNKNOWN_RECONCILE_DEPLOYMENT >&2
+          exit 1
+      - name: Read the backend state without authorizing any D1 mutation
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -fsS --max-time 25 'https://trendos-d1-api.trendmall-contact.workers.dev/v1/employee/accounting/health' -o /tmp/a213-backend-health.json
+          node <<'NODE'
+          const fs=require('node:fs');
+          const h=JSON.parse(fs.readFileSync('/tmp/a213-backend-health.json','utf8'));
+          const closed=h.mode==='READONLY' && h.authoritativeWrites===false &&
+            Number(h.writeCanaryMaxCommands||0)===0 && Number(h.writeCanaryCommandsStarted||0)===0;
+          console.log('A213_BACKEND_READONLY_AFTER_UI_CLOSE='+(closed?'PASS':'REQUIRES_SEPARATE_SERVER_CLEANUP'));
+          if(!closed)process.exit(1);
+          NODE
