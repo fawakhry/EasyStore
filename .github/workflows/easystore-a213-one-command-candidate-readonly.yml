@@ -9,6 +9,7 @@ on:
       - 'app.js'
       - 'tests/easystore_a213_one_command_release_gate.test.mjs'
       - 'tests/easystore_a213_frontend_off_recovery.test.mjs'
+      - 'tests/easystore_a213_server_armed_visibility.test.mjs'
       - 'scripts/a213-close-frontend-config.mjs'
       - '.github/workflows/easystore-a213-one-command-candidate-readonly.yml'
 
@@ -37,6 +38,7 @@ jobs:
           node tests/easystore_sso_opener_role_replay.test.mjs
           node tests/easystore_a213_one_command_release_gate.test.mjs
           node tests/easystore_a213_frontend_off_recovery.test.mjs
+          node tests/easystore_a213_server_armed_visibility.test.mjs
           echo A213_OFF_RECOVERY_PRODUCTION_NOT_INVOKED=PASS
           echo A213_PILOT_DEPLOYMENT=NOT_PERFORMED
           echo A213_PILOT_FINANCIAL_MUTATION=NO
