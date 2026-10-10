@@ -23,13 +23,13 @@ const authEnd=app.indexOf('\n  function newAccountingRequestId(',authStart);
 assert.ok(authStart>=0&&authEnd>authStart,'exact employee gate must be present');
 const authSource=app.slice(authStart,authEnd);
 const alerts=[];
-function scenario({token='FAKE-SESSION-NOT-REAL',username='ضياء',result={success:true,balanceBefore:0,settlementType:'NONE',settlementAmount:0,balanceAfter:0}}={}){
+function scenario({token='FAKE-SESSION-NOT-REAL',username='ضياء',serverArmed=true,result={success:true,balanceBefore:0,settlementType:'NONE',settlementAmount:0,balanceAfter:0}}={}){
   const calls=[],window={};
   const context={
     window,Date,console,alerts,
     user:{token,username},
+    a213PilotServerReady:serverArmed,
     deny:(message)=>{alerts.push({message,bad:true});return false;},
-    a213CustodyCloseCanaryEnabled:()=>true,
     a213CustodyCloseCanaryEnabled:()=>true,
     flash:(message,bad)=>{alerts.push({message,bad});},
     newAccountingRequestId:prefix=>prefix+'-FAKE-UNIQUE-LOCAL-ONLY',
@@ -71,6 +71,13 @@ function scenario({token='FAKE-SESSION-NOT-REAL',username='ضياء',result={suc
   assert.equal(s.calls.length,0,'only exact authoritative Diaa username may access pilot');
   assert.equal(s.window.__EASYSTORE_A213_PILOT_ATTEMPTED,undefined,'denied employee does not consume client attempt');
 }
+{
+  const s=scenario({serverArmed:false});
+  await s.action();
+  assert.equal(s.calls.length,0,'backend READONLY must hide and block a pilot click');
+  assert.equal(s.window.__EASYSTORE_A213_PILOT_ATTEMPTED,undefined,'not armed must not burn browser attempt');
+}
+console.log('A213_PILOT_REQUIRES_LIVE_SERVER_WINDOW=PASS');
 console.log('A213_PILOT_EXACT_DIAA_ONLY=PASS');
 console.log('A213_PILOT_CLIENT_SINGLE_DISPATCH=PASS');
 console.log('A213_PILOT_UNKNOWN_OUTCOME_NO_RETRY=PASS');
