@@ -163,7 +163,7 @@
     else if(isPrint() || isLaser()) screens=['dept','deptPurchases','waste','stock'];
     else if(isFinal()) screens=['sales','final','customers','deptView'];
     else screens=['sales'];
-    if(a213CustodyCloseCanaryEnabled() && user.token && !screens.includes('purchase')) screens.push('purchase');
+    if(a213CustodyClosePilotEligible() && !screens.includes('purchase')) screens.push('purchase');
     return screens;
   }
   function canManageAccounting(){ return isAdmin(); }
@@ -236,6 +236,10 @@
     const mode=String(window.EASYSTORE_ACCOUNTING_D1_WRITE_MODE||'OFF').trim().toUpperCase();
     const actions=Array.isArray(window.EASYSTORE_ACCOUNTING_D1_WRITE_CANARY_ACTIONS)?window.EASYSTORE_ACCOUNTING_D1_WRITE_CANARY_ACTIONS.map(String):[];
     return mode==='CANARY' && actions.length===1 && actions[0]==='closePurchaseCustodyV1920';
+  }
+  // Match the native A2.13 one-employee allowlist exactly; no role/name substring shortcuts.
+  function a213CustodyClosePilotEligible(){
+    return a213CustodyCloseCanaryEnabled() && String(user.username||'').trim()==='ضياء' && !!String(user.token||'').trim();
   }
   function newAccountingRequestId(prefix){return String(prefix||'REQ')+'-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,10);}
 
@@ -464,7 +468,7 @@
     else if(isPrint() || isLaser()) list = [['dept','فاتورة القسم'],['deptPurchases','مشتريات اليوم'],['waste','هوالك القسم'],['stock','الأصناف المتاحة']];
     else if(isFinal()) list = [['sales','فواتير المبيعات'],['final','تقفيل الفاتورة'],['customers','العملاء'],['deptView','أجزاء الأقسام']];
     else list = [['dashboard','لوحة الحسابات'],['sales','فواتير المبيعات']];
-    if(a213CustodyCloseCanaryEnabled() && user.token && !list.some(x=>x[0]==='purchase')) list.push(['purchase','كاناري العهدة']);
+    if(a213CustodyClosePilotEligible() && !list.some(x=>x[0]==='purchase')) list.push(['purchase','كاناري العهدة']);
     if(!list.some(x=>x[0] === state.active)) state.active = list[0][0];
     return `<div class="tabs">${list.map(x=>`<button class="tab ${state.active===x[0]?'active':''}" onclick="ES27.go('${x[0]}')">${x[1]}</button>`).join('')}</div>`;
   }
@@ -612,7 +616,7 @@
   }
 
   function screenPurchase(){
-    const a213Canary=a213CustodyCloseCanaryEnabled()?`<section class="card"><h2>A2.13 Canary — تقفيل عهدة صفرية</h2><div class="hint">سجل صناعي فقط: موظف صناعي، قسم عام، تاريخ 2099-12-31، رصيد وتسوية صفر، بدون خزنة.</div><button class="btn" onclick="ES27.closeCustody()">تنفيذ تقفيل العهدة الصفرية مرة واحدة</button></section>`:'';
+    const a213Canary=a213CustodyClosePilotEligible()?`<section class="card"><h2>A2.13 Canary — تقفيل عهدة صفرية</h2><div class="hint">سجل صناعي فقط: موظف صناعي، قسم عام، تاريخ 2099-12-31، رصيد وتسوية صفر، بدون خزنة.</div><button class="btn" onclick="ES27.closeCustody()">تنفيذ تقفيل العهدة الصفرية مرة واحدة</button></section>`:'';
     const fixedDepartment=accountingScopeDepartment();
     const departmentField=fixedDepartment?`<div class="field"><label>القسم</label><select id="puDept" disabled>${accountingDeptOptions(fixedDepartment,false)}</select></div>`:`<div class="field"><label>القسم</label><select id="puDept" onchange="ES27.refreshPurchaseMaterials()">${accountingDeptOptions('',true)}</select></div>`;
     const materialsHtml=purchaseMaterialOptions(fixedDepartment);
@@ -1169,6 +1173,7 @@
     },
     async closeCustody(encodedEmployee,department,workDate){
       if(a213CustodyCloseCanaryEnabled()){
+        if(!a213CustodyClosePilotEligible()) return deny('اختبار A2.13 متاح فقط لجلسة ضياء المعتمدة.');
         if(!user.token) return flash('جلسة TrendOS غير متاحة. افتح الحسابات من TrendOS مرة أخرى.',true);
         // Fail closed after the FIRST dispatch, even on timeout/unknown result.
         // Reload does not authorize a second server command: the D1 budget does.
