@@ -19,3 +19,5 @@ jobs:
       - run: node --check app.js
       - run: node tests/easystore_cloud_write_routing.test.mjs
       - run: node tests/easystore_platform_connection.test.mjs
+      - run: node tests/easystore_sso_fresh_handoff.test.mjs
+      - run: node tests/entry619_d1_readonly_sso.test.js
