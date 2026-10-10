@@ -17,6 +17,13 @@
   window.set = set;
 
   function readSso(){
+    // A new cross-origin TrendOS handoff must replace, never inherit, a
+    // prior popup's sessionStorage credential. The token arrives only by
+    // verified origin + opener + nonce + freshness postMessage below.
+    if(qs.get('from')==='trendos' && qs.get('employeeSSO')==='1' && qs.get('ssoNonce')){
+      try{ sessionStorage.removeItem('EASYSTORE_SESSION_V1922'); }catch(e){}
+      return {name:'موظف', username:'employee', token:'', mode:'', department:''};
+    }
     let handoff = {};
     try{ handoff = JSON.parse(sessionStorage.getItem('EASYSTORE_SESSION_V1922') || '{}'); }catch(e){}
     if(!handoff || !handoff.user || !((handoff.params&&handoff.params.token)||(handoff.user&&handoff.user.token))){
