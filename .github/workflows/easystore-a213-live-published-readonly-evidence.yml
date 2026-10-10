@@ -1,0 +1,60 @@
+name: A2.13 Published UI / Server READONLY Evidence
+
+on:
+  push:
+    branches:
+      - audit/a213-frontend-published-readonly-20261010
+    paths:
+      - '.github/workflows/easystore-a213-live-published-readonly-evidence.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  public-get-only:
+    runs-on: ubuntu-latest
+    timeout-minutes: 7
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: GET only deployed frontend and native D1 health
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -fsSL --retry 2 --max-time 35 "https://fawakhry.github.io/EasyStore/config.js?a213Live=$GITHUB_RUN_ID" -o /tmp/a213-config.js
+          curl -fsSL --retry 2 --max-time 35 "https://fawakhry.github.io/EasyStore/app.js?a213Live=$GITHUB_RUN_ID" -o /tmp/a213-app.js
+          curl -fsS --retry 2 --max-time 35 "https://trendos-d1-api.trendmall-contact.workers.dev/v1/employee/accounting/health?a213Live=$GITHUB_RUN_ID" -o /tmp/a213-health.json
+      - name: Verify frontend pilot installed but server finance write authority disabled
+        run: |
+          set -euo pipefail
+          node <<'NODE'
+          const assert=require('node:assert/strict'),fs=require('node:fs');
+          const cfg=fs.readFileSync('/tmp/a213-config.js','utf8');
+          const app=fs.readFileSync('/tmp/a213-app.js','utf8');
+          const h=JSON.parse(fs.readFileSync('/tmp/a213-health.json','utf8'));
+          assert.match(cfg,/EASYSTORE_ACCOUNTING_D1_READONLY\s*=\s*true/);
+          assert.match(cfg,/EASYSTORE_ACCOUNTING_D1_WRITES\s*=\s*false/);
+          assert.match(cfg,/EASYSTORE_ACCOUNTING_D1_WRITE_MODE\s*=\s*'CANARY'/);
+          assert.match(cfg,/EASYSTORE_ACCOUNTING_D1_WRITE_CANARY_ACTIONS\s*=\s*\['closePurchaseCustodyV1920'\]/);
+          assert.ok(app.includes('function a213PilotHealthAllowsOneCommand(h)'));
+          assert.ok(app.includes('async function refreshA213PilotArmState()'));
+          assert.ok(app.includes('a213PilotServerReady && a213CustodyCloseCanaryEnabled()'));
+          assert.ok(app.includes("String(user.username||'').trim()==='ضياء'"));
+          assert.ok(app.includes('__EASYSTORE_A213_PILOT_ATTEMPTED'));
+          assert.ok(fs.existsSync('.github/workflows/easystore-a213-emergency-off.yml'));
+          assert.ok(fs.existsSync('scripts/a213-close-frontend-config.mjs'));
+          assert.equal(h.success,true);
+          assert.equal(h.mode,'READONLY');
+          assert.equal(h.authoritativeWrites,false);
+          assert.equal(Number(h.writeCanaryAllowedUserCount||0),0);
+          assert.equal(Number(h.writeCanaryAllowedActionCount||0),0);
+          assert.equal(Number(h.writeCanaryMaxCommands||0),0);
+          assert.equal(Number(h.writeCanaryCommandsStarted||0),0);
+          console.log('A213_LIVE_FRONTEND_ONE_ACTION_CANDIDATE=PASS');
+          console.log('A213_LIVE_BUTTON_HIDDEN_SERVER_READONLY=PASS');
+          console.log('A213_LIVE_EMERGENCY_OFF_CONTROL_INSTALLED=PASS');
+          console.log('A213_LIVE_D1_READONLY_ZERO_BUDGET=PASS');
+          console.log('A213_LIVE_FINANCIAL_MUTATION=NO');
+          NODE
