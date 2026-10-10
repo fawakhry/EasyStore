@@ -1170,6 +1170,10 @@
     async closeCustody(encodedEmployee,department,workDate){
       if(a213CustodyCloseCanaryEnabled()){
         if(!user.token) return flash('جلسة TrendOS غير متاحة. افتح الحسابات من TrendOS مرة أخرى.',true);
+        // Fail closed after the FIRST dispatch, even on timeout/unknown result.
+        // Reload does not authorize a second server command: the D1 budget does.
+        if(window.__EASYSTORE_A213_PILOT_ATTEMPTED === true) return flash('تم إرسال محاولة A2.13 بالفعل. لا تكرر التنفيذ؛ راجع نتيجة GitHub وD1 أولًا.',true);
+        window.__EASYSTORE_A213_PILOT_ATTEMPTED = true;
         const suffix=Date.now().toString(36).toUpperCase();
         const payload={requestId:newAccountingRequestId('A213-CCLOSE'),employee:'A2-CANARY-CUSTODY-'+suffix,department:'عام',workDate:'2099-12-31'};
         try{
