@@ -163,7 +163,7 @@
     else if(isPrint() || isLaser()) screens=['dept','deptPurchases','waste','stock'];
     else if(isFinal()) screens=['sales','final','customers','deptView'];
     else screens=['sales'];
-    if(a213CustodyCloseCanaryEnabled() && user.token && !screens.includes('purchase')) screens.push('purchase');
+    if(a213CustodyClosePilotEligible() && !screens.includes('purchase')) screens.push('purchase');
     return screens;
   }
   function canManageAccounting(){ return isAdmin(); }
@@ -236,6 +236,46 @@
     const mode=String(window.EASYSTORE_ACCOUNTING_D1_WRITE_MODE||'OFF').trim().toUpperCase();
     const actions=Array.isArray(window.EASYSTORE_ACCOUNTING_D1_WRITE_CANARY_ACTIONS)?window.EASYSTORE_ACCOUNTING_D1_WRITE_CANARY_ACTIONS.map(String):[];
     return mode==='CANARY' && actions.length===1 && actions[0]==='closePurchaseCustodyV1920';
+  }
+  // A published CANARY configuration alone is never sufficient to expose the button.
+  // The server must report an unexpired, unconsumed ONE-command window.
+  let a213PilotServerReady=false;
+  function a213PilotHealthAllowsOneCommand(h){
+    const expiry=Number(h&&h.writeCanaryExpiresAtMs||0);
+    return !!h && h.success===true && h.mode==='CANARY' && h.writeAuthorityMode==='CANARY_BOUNDED'
+      && Number(h.writeCanaryAllowedUserCount)===1
+      && Number(h.writeCanaryAllowedActionCount)===1
+      && Number(h.writeCanaryMaxAmount)===0
+      && Number(h.writeCanaryMaxCommands)===1
+      && Number(h.writeCanaryCommandsStarted)===0
+      && expiry>Date.now()+10000;
+  }
+  // Match the native A2.13 one-employee allowlist exactly; no role/name substring shortcuts.
+  function a213CustodyClosePilotEligible(){
+    return a213PilotServerReady && a213CustodyCloseCanaryEnabled()
+      && String(user.username||'').trim()==='ضياء' && !!String(user.token||'').trim();
+  }
+  async function refreshA213PilotArmState(){
+    let next=false;
+    if(a213CustodyCloseCanaryEnabled() && String(user.username||'').trim()==='ضياء' && !!String(user.token||'').trim()){
+      const endpoint=String(window.EASYSTORE_ACCOUNTING_D1_URL||'').replace(/\/+$/,'');
+      if(endpoint==='https://trendos-d1-api.trendmall-contact.workers.dev/v1/employee/accounting'){
+        const controller=new AbortController();
+        const timer=setTimeout(()=>controller.abort(),4000);
+        try{
+          const response=await fetch(endpoint+'/health?pilotStatus='+Date.now(),{
+            method:'GET',cache:'no-store',credentials:'omit',signal:controller.signal
+          });
+          if(response.ok) next=a213PilotHealthAllowsOneCommand(await response.json());
+        }catch(e){ /* fail closed on network errors */ }
+        finally{ clearTimeout(timer); }
+      }
+    }
+    if(a213PilotServerReady!==next){
+      a213PilotServerReady=next;
+      if(!state.formDirty) shell();
+    }
+    return next;
   }
   function newAccountingRequestId(prefix){return String(prefix||'REQ')+'-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,10);}
 
@@ -464,7 +504,7 @@
     else if(isPrint() || isLaser()) list = [['dept','فاتورة القسم'],['deptPurchases','مشتريات اليوم'],['waste','هوالك القسم'],['stock','الأصناف المتاحة']];
     else if(isFinal()) list = [['sales','فواتير المبيعات'],['final','تقفيل الفاتورة'],['customers','العملاء'],['deptView','أجزاء الأقسام']];
     else list = [['dashboard','لوحة الحسابات'],['sales','فواتير المبيعات']];
-    if(a213CustodyCloseCanaryEnabled() && user.token && !list.some(x=>x[0]==='purchase')) list.push(['purchase','كاناري العهدة']);
+    if(a213CustodyClosePilotEligible() && !list.some(x=>x[0]==='purchase')) list.push(['purchase','كاناري العهدة']);
     if(!list.some(x=>x[0] === state.active)) state.active = list[0][0];
     return `<div class="tabs">${list.map(x=>`<button class="tab ${state.active===x[0]?'active':''}" onclick="ES27.go('${x[0]}')">${x[1]}</button>`).join('')}</div>`;
   }
@@ -612,7 +652,7 @@
   }
 
   function screenPurchase(){
-    const a213Canary=a213CustodyCloseCanaryEnabled()?`<section class="card"><h2>A2.13 Canary — تقفيل عهدة صفرية</h2><div class="hint">سجل صناعي فقط: موظف صناعي، قسم عام، تاريخ 2099-12-31، رصيد وتسوية صفر، بدون خزنة.</div><button class="btn" onclick="ES27.closeCustody()">تنفيذ تقفيل العهدة الصفرية مرة واحدة</button></section>`:'';
+    const a213Canary=a213CustodyClosePilotEligible()?`<section class="card"><h2>A2.13 Canary — تقفيل عهدة صفرية</h2><div class="hint">سجل صناعي فقط: موظف صناعي، قسم عام، تاريخ 2099-12-31، رصيد وتسوية صفر، بدون خزنة.</div><button class="btn" onclick="ES27.closeCustody()">تنفيذ تقفيل العهدة الصفرية مرة واحدة</button></section>`:'';
     const fixedDepartment=accountingScopeDepartment();
     const departmentField=fixedDepartment?`<div class="field"><label>القسم</label><select id="puDept" disabled>${accountingDeptOptions(fixedDepartment,false)}</select></div>`:`<div class="field"><label>القسم</label><select id="puDept" onchange="ES27.refreshPurchaseMaterials()">${accountingDeptOptions('',true)}</select></div>`;
     const materialsHtml=purchaseMaterialOptions(fixedDepartment);
@@ -1169,7 +1209,12 @@
     },
     async closeCustody(encodedEmployee,department,workDate){
       if(a213CustodyCloseCanaryEnabled()){
+        if(!a213CustodyClosePilotEligible()) return deny('اختبار A2.13 متاح فقط لجلسة ضياء المعتمدة.');
         if(!user.token) return flash('جلسة TrendOS غير متاحة. افتح الحسابات من TrendOS مرة أخرى.',true);
+        // Fail closed after the FIRST dispatch, even on timeout/unknown result.
+        // Reload does not authorize a second server command: the D1 budget does.
+        if(window.__EASYSTORE_A213_PILOT_ATTEMPTED === true) return flash('تم إرسال محاولة A2.13 بالفعل. لا تكرر التنفيذ؛ راجع نتيجة GitHub وD1 أولًا.',true);
+        window.__EASYSTORE_A213_PILOT_ATTEMPTED = true;
         const suffix=Date.now().toString(36).toUpperCase();
         const payload={requestId:newAccountingRequestId('A213-CCLOSE'),employee:'A2-CANARY-CUSTODY-'+suffix,department:'عام',workDate:'2099-12-31'};
         try{
@@ -1651,6 +1696,10 @@
   try{localStorage.removeItem(STORE_KEY);}catch(e){} // إلغاء الكاش القديم غير المرتبط بجلسة موظف
   mergeData();
   shell();
+  if(a213CustodyCloseCanaryEnabled()){
+    setTimeout(refreshA213PilotArmState,1500);
+    if(typeof setInterval==='function') setInterval(refreshA213PilotArmState,5000);
+  }
   setTimeout(()=>load(true), 350); // تحميل أولي ثم تحديث آمن كل 3 دقائق عند عدم وجود نموذج مفتوح بتعديلات
 })();
 

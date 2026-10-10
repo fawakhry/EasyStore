@@ -18,11 +18,11 @@ window.EASYSTORE_ACCOUNTING_D1_READONLY = true;
 // Legacy/general D1 writes تظل مقفولة
 window.EASYSTORE_ACCOUNTING_D1_WRITES = false;
 
-// candidate remains OFF until a fresh owner-approved Production gate
-window.EASYSTORE_ACCOUNTING_D1_WRITE_MODE = 'OFF';
+// STAGED pilot candidate ONLY: do not merge/publish before timed A2.13 test.
+window.EASYSTORE_ACCOUNTING_D1_WRITE_MODE = 'CANARY';
 
-// لا توجد عائلات كتابة مسموحة بعد الإغلاق
-window.EASYSTORE_ACCOUNTING_D1_WRITE_CANARY_ACTIONS = [];
+// كاناري العهدة التجريبي فقط: أي كتابة أخرى مغلقة على الخادم
+window.EASYSTORE_ACCOUNTING_D1_WRITE_CANARY_ACTIONS = ['closePurchaseCustodyV1920'];
 
 // D1 Accounting API
 window.EASYSTORE_ACCOUNTING_D1_URL =
