@@ -18,18 +18,25 @@ const start=app.indexOf('    async closeCustody(encodedEmployee,department,workD
 const end=app.indexOf('\n    async loadDailyReport(){',start);
 assert.ok(start>=0&&end>start,'must find exactly one custody handler');
 const method=app.slice(start,end).trim().replace(/,\s*$/,'');
+const authStart=app.indexOf('  function a213CustodyClosePilotEligible(){');
+const authEnd=app.indexOf('\n  function newAccountingRequestId(',authStart);
+assert.ok(authStart>=0&&authEnd>authStart,'exact employee gate must be present');
+const authSource=app.slice(authStart,authEnd);
 const alerts=[];
-function scenario({token='FAKE-SESSION-NOT-REAL',result={success:true,balanceBefore:0,settlementType:'NONE',settlementAmount:0,balanceAfter:0}}={}){
+function scenario({token='FAKE-SESSION-NOT-REAL',username='ضياء',result={success:true,balanceBefore:0,settlementType:'NONE',settlementAmount:0,balanceAfter:0}}={}){
   const calls=[],window={};
   const context={
     window,Date,console,alerts,
-    user:{token},
+    user:{token,username},
+    deny:(message)=>{alerts.push({message,bad:true});return false;},
+    a213CustodyCloseCanaryEnabled:()=>true,
     a213CustodyCloseCanaryEnabled:()=>true,
     flash:(message,bad)=>{alerts.push({message,bad});},
     newAccountingRequestId:prefix=>prefix+'-FAKE-UNIQUE-LOCAL-ONLY',
     api:async(action,payload)=>{calls.push({action,payload});if(result instanceof Error)throw result;return result;}
   };
   vm.createContext(context);
+  vm.runInContext(authSource,context);
   const action=vm.runInContext('({'+method+'})',context).closeCustody;
   return {action,calls,window};
 }
@@ -58,6 +65,13 @@ function scenario({token='FAKE-SESSION-NOT-REAL',result={success:true,balanceBef
   assert.equal(s.calls.length,0,'no token must block before latching');
   assert.equal(s.window.__EASYSTORE_A213_PILOT_ATTEMPTED,undefined);
 }
+{
+  const s=scenario({username:'NOT-DIAA'});
+  await s.action();
+  assert.equal(s.calls.length,0,'only exact authoritative Diaa username may access pilot');
+  assert.equal(s.window.__EASYSTORE_A213_PILOT_ATTEMPTED,undefined,'denied employee does not consume client attempt');
+}
+console.log('A213_PILOT_EXACT_DIAA_ONLY=PASS');
 console.log('A213_PILOT_CLIENT_SINGLE_DISPATCH=PASS');
 console.log('A213_PILOT_UNKNOWN_OUTCOME_NO_RETRY=PASS');
 console.log('A213_PILOT_CANARY_ONLY_GENERAL_WRITES_OFF=PASS');
