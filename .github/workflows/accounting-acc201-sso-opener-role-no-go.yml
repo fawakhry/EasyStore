@@ -29,6 +29,11 @@ jobs:
           test -z "$CLOUDFLARE_ACCOUNT_ID"
           node --check app.js
           node --test tests/accounting_acc201_sso_opener_role_no_go.test.cjs
+          node tests/easystore_a2_no_legacy_accounting_fallback.test.js
+          node tests/easystore_a2_write_router.test.js
+          node tests/easystore_a1_all_reads_d1_only.test.js
+          node tests/easystore_a1_core_read_router.test.js
+          node tests/accounting_agent_policy_v1.test.js
           echo 'ACC201_SOURCE_ONLY_REAL_BROWSER_BOOTSTRAP_SSO_DENIAL=PASS'
           echo 'ACC201_REAL_EMPLOYEE_AUTHENTICATION=NOT_VERIFIED'
           echo 'ACC201_FINANCE_RELEASE=NO_GO'
