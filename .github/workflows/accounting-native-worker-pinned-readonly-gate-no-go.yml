@@ -1,0 +1,55 @@
+name: EasyStore Pinned Native Worker D1 Readonly Gate (SOURCE ONLY NO_GO)
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  pinned-native-accounting-denial:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - name: Checkout EasyStore source without write credentials
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Checkout exact upstream TrendOs native Worker code READ-ONLY (never run deploy)
+        uses: actions/checkout@v4
+        with:
+          repository: fawakhry/TrendOs
+          ref: 90795b9d05b3cc72051be50683c7942b87d07452
+          path: native-trendos-pinned
+          persist-credentials: false
+          sparse-checkout: |
+            cloudflare-d1/src
+      - name: Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Real pinned Worker fake-HTTP D1 read-only denial and prior EasyStore join regression
+        shell: bash
+        env:
+          EASYSTORE_PINNED_NATIVE_ROOT: ${{ github.workspace }}/native-trendos-pinned/cloudflare-d1/src
+          CLOUDFLARE_API_TOKEN: ''
+          CLOUDFLARE_ACCOUNT_ID: ''
+          GOOGLE_APPLICATION_CREDENTIALS: ''
+        run: |
+          set -euo pipefail
+          test -z "$CLOUDFLARE_API_TOKEN"
+          test -z "$CLOUDFLARE_ACCOUNT_ID"
+          test -z "$GOOGLE_APPLICATION_CREDENTIALS"
+          test -f "$EASYSTORE_PINNED_NATIVE_ROOT/employee-accounting-native-v1.mjs"
+          test -f "$EASYSTORE_PINNED_NATIVE_ROOT/cloud-session-bridge-v3.mjs"
+          node --check tests/accounting_native_worker_readonly_gate_pinned.test.cjs
+          node --test tests/accounting_native_worker_readonly_gate_pinned.test.cjs
+          node --test tests/accounting_joined_day_flow_offline.test.cjs
+          node --test tests/accounting_acc202_d1_action_failclosed_no_go.test.cjs
+          node --test tests/accounting_acc201_sso_opener_role_no_go.test.cjs
+          node tests/easystore_a1_all_reads_d1_only.test.js
+          node tests/easystore_a2_no_legacy_accounting_fallback.test.js
+          echo 'PINNED_NATIVE_WORKER_READONLY_FINANCE_DENIAL=PASS'
+          echo 'PINNED_NATIVE_WORKER_FINANCIAL_WRITES=ZERO_FAKE_D1'
+          echo 'PINNED_NATIVE_WORKER_REAL_AUTH_SSO=NOT_VERIFIED'
+          echo 'PINNED_NATIVE_WORKER_WRITABLE_D1_FULL_FLOW=NOT_TESTED'
+          echo 'FINANCE_RELEASE=NO_GO'
