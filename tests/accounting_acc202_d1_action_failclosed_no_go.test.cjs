@@ -159,3 +159,34 @@ test('20 default checked-in config requires D1 read only and financial write OFF
   assert.match(config,/EASYSTORE_ACCOUNTING_D1_WRITES\s*=\s*false/);
   assert.match(app,/if\(!readActionRequested && !writeActionRequested\)/);
 });
+
+test('21 D1 read cannot accept a caller forged stale request timestamp',async()=>{
+  const before=Date.now();
+  const h=fixture();await h.api('getAccounting',{_ts:0,action:'saveEasyStoreSaleV2',username:'FAKE_ADMIN'});
+  const after=Date.now();
+  const body=JSON.parse(h.calls[0].options.body);
+  assert.ok(body._ts>=before && body._ts<=after,'timestamp must be generated after caller-provided data');
+  assert.equal(body.action,'getAccounting');
+  assert.equal(body.username,'fake_clerk');
+});
+test('22 D1 canary write cannot accept a caller forged future timestamp',async()=>{
+  const h=fixture({config:{EASYSTORE_ACCOUNTING_D1_WRITE_MODE:'CANARY',EASYSTORE_ACCOUNTING_D1_WRITE_CANARY_ACTIONS:['saveAccountingMaterial']}});
+  const before=Date.now();
+  await h.api('saveAccountingMaterial',{_ts:Number.MAX_SAFE_INTEGER,action:'getAccounting',username:'FAKE_OWNER'});
+  const after=Date.now();
+  const body=JSON.parse(h.calls[0].options.body);
+  assert.ok(body._ts>=before && body._ts<=after);
+  assert.equal(body.action,'saveAccountingMaterial');
+  assert.equal(body.username,'fake_clerk');
+});
+test('23 source-only legacy serializer must also bind timestamp after caller data',()=>{
+  assert.match(app,/Object\.assign\(\{name:user\.name\},data\|\|\{\},\{action:actionName,username:user\.username,token:user\.token,_ts:Date\.now\(\)\}\)/);
+});
+test('24 ordinary business data fields are preserved when reserved timestamps are replaced',async()=>{
+  const h=fixture();await h.api('getEasyStoreSuppliers',{_ts:'INVALID_INPUT_TIME',supplier:'FAKE_SUPPLIER',name:'FAKE SUPPLIER BUSINESS NAME'});
+  const body=JSON.parse(h.calls[0].options.body);
+  assert.equal(body.supplier,'FAKE_SUPPLIER');
+  assert.equal(body.name,'FAKE SUPPLIER BUSINESS NAME');
+  assert.equal(typeof body._ts,'number');
+  assert.notEqual(body._ts,'INVALID_INPUT_TIME');
+});
