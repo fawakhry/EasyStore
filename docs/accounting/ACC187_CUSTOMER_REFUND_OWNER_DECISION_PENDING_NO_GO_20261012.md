@@ -28,10 +28,24 @@ The owner confirmed **"agree"** to this question: whether items customized with 
 
 This records **two bounded owner decisions** (method choice, personalized-item exception), not the entire ACC-187 procedure.
 
-## Remaining decisions not covered by the two owner approvals
+## Owner's return timing decision — case-by-case management discretion (2026-10-12)
+
+On 2026-10-12 the owner explicitly decided: **«تترك المدة حسب تقدير الإدارة لكل حالة»**. This answers the proposed choice between a fixed 7/14-day return-request deadline and individual management judgment.
+
+**DECIDED BUSINESS RULE:**
+- There is **NO internal fixed-day auto-expiry** for asking for a return. Do not hard-code 7, 14, or another day count as an automatic eligibility approval or rejection.
+- Management must assess the **timing of each distinct request** and record a case-specific decision and supporting reason. A decision on one request cannot authorize another invoice, request, item, or date.
+- Submission timestamps and case data are needed for an audit trail, **not for an automatic legal deadline or refusal**. Claims presented by the client and `role=admin` flags are not authentic managerial verification.
+- This timing choice is **separate** from the independently evidenced manufacturing defect or Trend Mall error requirement on personalized name/photo items and from the separate management decision to choose refund of money or customer credit.
+- Applicable consumer-protection law and mandatory consumer rights take priority over internal management discretion. Legal applicability has **not** been adjudicated by these synthetic tests.
+- Real manager identity/authority, decision evidence capture and actual cash/credit transactions are **NOT IMPLEMENTED/NOT AUTHORIZED** by this source-only rule.
+
+This records the **third bounded owner decision**: method choice, personalized product exception, and case-specific review timing. It does **not** resolve the remaining refund amount, inventory and production acceptance requirements.
+
+## Remaining decisions not covered by the three owner approvals
 The following requirements remain **UNDECIDED** and require separate decisions before implementation/acceptance.
 
-1. **Eligibility & proof — PARTIALLY DECIDED:** customer-name/photo customized products are ineligible except where a manufacturing defect or Trend Mall error is independently verified. Other product categories, time limits, invoice/payment evidence requirements, proof format, partial-item returns and detailed acceptance workflow still require **OWNER_DECISION=UNDECIDED**.
+1. **Eligibility & proof — PARTIALLY DECIDED:** customer-name/photo customized products are ineligible except where a manufacturing defect or Trend Mall error is independently verified. Other product categories, invoice/payment evidence requirements, proof format, partial-item returns and detailed acceptance workflow still require **OWNER_DECISION=UNDECIDED**. The **timing rule itself is DECIDED**: per-case management review without an internal fixed-day cutoff.
 2. **Refund amount:** cap at previously captured and *not already refunded* money; how discounts, fees, deposits and unpaid balances affect entitlement; how multi-payment methods are allocated. **OWNER_DECISION=UNDECIDED**
 3. **Remaining payment detail and authority:** the two business routes are approved conditionally; whether cash reimbursement is paid from cashbox vs InstaPay/bank/original tender, daily/per-employee limits, specific manager identity and role verification, any dual approval, custody/handover and signed receipt requirements are **OWNER_DECISION=UNDECIDED**.
 4. **Inventory treatment:** physical receipt and inspection required? eligible restock quantity, damaged/customized work, cost/waste accounting, quantity conservation, supplier impact, delayed return without stock credit. **OWNER_DECISION=UNDECIDED**
@@ -52,6 +66,10 @@ ACC187_CUSTOMER_CREDIT_POSTING=UNSUPPORTED_FAIL_CLOSED
 ACC187_PERSONALIZED_NAME_PHOTO_RETURN=ONLY_VERIFIED_MANUFACTURING_DEFECT_OR_TREND_MALL_ERROR
 ACC187_PERSONALIZED_CHANGE_OF_MIND=INELIGIBLE
 ACC187_PERSONALIZED_EXCEPTION_STILL_REQUIRES_MANAGEMENT_APPROVAL=YES
+ACC187_RETURN_TIME_LIMIT=NO_FIXED_DAYS_CASE_SPECIFIC_MANAGEMENT_REVIEW
+ACC187_AUTOMATIC_TIME_APPROVAL_OR_EXPIRY=DISABLED
+ACC187_STATUTORY_CONSUMER_RIGHTS=NOT_OVERRIDDEN
+ACC187_REAL_MANAGEMENT_TIMING_VERIFIER=NOT_IMPLEMENTED
 ACC198_FULL_ACCEPTANCE=BLOCKED
 ACC199_RELEASE_HANDOFF=DRAFT
 FINANCE_RELEASE=NO_GO
