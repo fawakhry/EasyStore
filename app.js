@@ -30,11 +30,11 @@
     const hp = handoff.params || {};
     const hu = handoff.user || {};
     return {
-      name: hp.name || hp.username || hu.name || hu.username || qs.get('name') || qs.get('username') || 'موظف',
-      username: hp.username || hp.name || hu.username || hu.name || qs.get('username') || qs.get('name') || 'employee',
+      name: hp.name || hp.username || hu.name || hu.username || 'موظف',
+      username: hp.username || hp.name || hu.username || hu.name || 'employee',
       token: hp.token || hu.token || '',
-      mode: hp.mode || hp.roleMode || hu.mode || hu.roleMode || qs.get('mode') || qs.get('roleMode') || '',
-      department: hp.department || hu.department || qs.get('department') || ''
+      mode: hp.mode || hp.roleMode || hu.mode || hu.roleMode || '',
+      department: hp.department || hu.department || ''
     };
   }
 
@@ -48,6 +48,7 @@
   let ssoReadyResolve;
   const ssoReady = new Promise(resolve => { ssoReadyResolve = resolve; });
   let ssoReadySettled = !!user.token;
+  let ssoMessageConsumed = false;
   if(ssoReadySettled) ssoReadyResolve(true);
 
   function persistTrendosSso(payload){
@@ -111,13 +112,16 @@
   window.addEventListener('message', function(event){
     const data = event && event.data || {};
     if(data.type !== TRENDOS_SSO_MESSAGE_V1) return;
+    if(qs.get('from') !== 'trendos' || qs.get('employeeSSO') !== '1') return;
+    if(ssoMessageConsumed) return;
     if(!TRENDOS_SSO_ALLOWED_ORIGINS.has(String(event.origin || ''))) return;
-    if(window.opener && event.source !== window.opener) return;
+    if(!window.opener || !event.source || event.source !== window.opener) return;
     const expectedNonce = String(qs.get('ssoNonce') || '');
     if(!expectedNonce || String(data.nonce || '') !== expectedNonce) return;
     const issuedAt = Number(data.issuedAt || 0);
     if(!issuedAt || Math.abs(Date.now() - issuedAt) > 30000) return;
     if(!persistTrendosSso(data)) return;
+    ssoMessageConsumed = true;
     try{
       event.source && event.source.postMessage({
         type:EASYSTORE_SSO_ACK_V1,
@@ -135,7 +139,8 @@
     ]);
     return !!user.token;
   }
-  const roleKey = () => nkey([user.name,user.username,user.mode,user.department].join(' '));
+  // UI navigation hints only; financial authority must be verified by the server.
+  const roleKey = () => user.token ? nkey([user.name,user.username,user.mode,user.department].join(' ')) : '';
   const isAdmin = () => /ضياء|diaa|admin|full|kitchen|اداره|إدارة/.test(roleKey());
   const isLaser = () => /جابر|gaber|jaber|laser|ليزر/.test(roleKey());
   const isPrint = () => !isLaser() && /وائل|wael|print|طباع/.test(roleKey());
