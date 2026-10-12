@@ -60,6 +60,12 @@ The following requirements remain **UNDECIDED** and require separate decisions b
 
 The actual backend still has no authorized customer cash-return or store-credit posting handler, no real management authorization chain, no production cutover, and no execution permission. These test results are not an ACC187 close.
 
+## Customer debt adjustment is NOT spendable store credit — source audit
+
+The checked-in Worker has a generic customer-party ledger action `savePartyLedgerTransaction` / `saveCustomerAccountMovementV1915` supporting `adjustment_decrease`. In the reviewed source, this **reduces an existing customer debt balance**, is restricted to the `full` accounting role for adjustment operations, and **does not itself generate a customer cash refund or an independently spendable store-credit liability**. It therefore **MUST NOT** be relabeled or re-used as an approved ACC187 refund/credit settlement.
+
+A distinct future real store-credit design, with owner-approved liability/accounting treatment, case/amount/method/manager binding, idempotency, reconciliation and financial authority guards, remains **UNDECIDED** and **NOT IMPLEMENTED**. The source-audit regression is **not** a proof that all other possible financial actions are safe or that a real refund cannot be miscategorized.
+
 ## Proposed fail-closed engineering acceptance (not authorization)
 Before refund handling can be marked ACC187 complete, source-only tests should exercise real native Worker logic against invented SQLite for full/partial/zero/overpaid refunds, denied unauthorized roles, duplicate IDempotency keys, concurrent refund caps, negative stock refusal, account/cash/stock/ledger atomicity, and reversal after day close. Tests must show compensated transactions rather than destructive invoice deletion, original lineage and immutable audit proof. A separate owner-approved acceptance is still required for real funds.
 
