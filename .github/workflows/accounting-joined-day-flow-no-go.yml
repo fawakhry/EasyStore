@@ -1,0 +1,37 @@
+name: EasyStore Joined Purchase-Sale-Collection-Close Diagnostic (NO_GO)
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  joined-accounting-offline:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Run actual old EasyStore handler integrations only against fake in-memory data
+        shell: bash
+        env:
+          CLOUDFLARE_API_TOKEN: ''
+          CLOUDFLARE_ACCOUNT_ID: ''
+          GOOGLE_APPLICATION_CREDENTIALS: ''
+        run: |
+          set -euo pipefail
+          test -z "$CLOUDFLARE_API_TOKEN"
+          test -z "$CLOUDFLARE_ACCOUNT_ID"
+          test -z "$GOOGLE_APPLICATION_CREDENTIALS"
+          node --check tests/accounting_joined_day_flow_offline.test.cjs
+          node --test tests/accounting_joined_day_flow_offline.test.cjs
+          echo 'JOINED_ACCOUNTING_OLD_HANDLERS_FAKE_VM_TESTED=YES'
+          echo 'JOINED_ACCOUNTING_D1_WORKER_ACCEPTANCE=NOT_TESTED'
+          echo 'JOINED_ACCOUNTING_CUSTOMER_CREDIT_SNAPSHOT_RECONCILIATION=OPEN'
+          echo 'JOINED_ACCOUNTING_ACTUAL_PRODUCTION_JOB_COST=UNVERIFIED'
+          echo 'JOINED_ACCOUNTING_FINANCE_RELEASE=NO_GO'
