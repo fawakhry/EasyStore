@@ -52,6 +52,14 @@ The following requirements remain **UNDECIDED** and require separate decisions b
 5. **Post-close and disputes:** treatment of already-closed invoices/days, replacement invoices, held payments, chargebacks, duplicate or concurrent claims and dispute expiry. **OWNER_DECISION=UNDECIDED**
 6. **Operational signoff:** the owner has authorized **method selection only**, not individual transactions. Specific real management approval chain, effective policy version, source-review signoff and independent production GO remain **OWNER_DECISION=UNDECIDED**.
 
+## ACC-187/198 follow-up — anti-double-settlement rehearsal, NOT owner amount policy
+
+[TrendOS Draft PR #113](https://github.com/fawakhry/TrendOs/pull/113) adds two **test-only** protections. First, the checked-in original Worker under fake single-database SQLite refuses six unsupported cash/customer-credit action names without changing any accounting table row. Second, a completely separate fake SQLite ledger demonstrates a conservative **hypothetical** combined cash-and-credit ceiling, unique-request idempotency, and denial of attempted extra or recycled settlements. This does NOT assert that the ceiling or refund entitlement formula has been approved by the owner.
+
+**Strict pending decision:** how much money or customer credit can be issued for paid-in-full, partially paid, discounted, overpaid, previously refunded and post-day-close invoices, including split cash-plus-credit settlement. No live finance handler may use the rehearsal's illustrative ceiling as policy.
+
+The actual backend still has no authorized customer cash-return or store-credit posting handler, no real management authorization chain, no production cutover, and no execution permission. These test results are not an ACC187 close.
+
 ## Proposed fail-closed engineering acceptance (not authorization)
 Before refund handling can be marked ACC187 complete, source-only tests should exercise real native Worker logic against invented SQLite for full/partial/zero/overpaid refunds, denied unauthorized roles, duplicate IDempotency keys, concurrent refund caps, negative stock refusal, account/cash/stock/ledger atomicity, and reversal after day close. Tests must show compensated transactions rather than destructive invoice deletion, original lineage and immutable audit proof. A separate owner-approved acceptance is still required for real funds.
 
