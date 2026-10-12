@@ -25,7 +25,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           repository: fawakhry/TrendOs
-          ref: 95f5a4ff4c75059c6ae0b577340e58800c0926ea
+          ref: 2128e79d5920163733602304b142674838bab96b
           path: trendos-archive
           persist-credentials: false
       - uses: actions/setup-python@v5
