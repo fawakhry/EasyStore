@@ -91,13 +91,26 @@ The owner agreed to the proposal that **actual manufacturing cost of a damaged r
 
 **DECIDED BUSINESS COST COMPONENTS:** `grossManufacturingCostCents = verifiedMaterialsCents + verifiedDirectLaborCents + verifiedAllocatedProductionOverheadCents` for the **same damaged returned item(s) and quantities**. All amounts must be documented in nonnegative integer minor units, independently traced back to production-job / batch evidence and assigned once to the correct item return. Verified zero-valued components are possible as a cost fact, but a missing labor or overhead record cannot silently default to zero. The selling price, customer refund/credit and estimated supplier recovery do NOT supply or reduce manufacturing cost.
 
-**NOT YET CHOSEN BY OWNER OR IMPLEMENTED:** exact direct-labor source/time attribution, allocation driver for shared overhead (machine time, direct labor hours, produced units, etc.), which overhead categories are eligible, job/batch unit cost derivation, historical evidence retention, rounding of fractional minor units, under/over absorption, rework costs, and posted/closed-day accounting. An isolated fake production overhead pool used for negative tests is NOT an approved cost-allocation formula. The code must NOT invent these details as live accounting rules.
+**NOT YET CHOSEN BY OWNER OR IMPLEMENTED:** exact direct-labor source/time attribution, **actual management-selected/documented driver for each department or work class (principle agreed, specific driver still unchosen)**, which overhead categories are eligible, job/batch unit cost derivation, historical evidence retention, rounding of fractional minor units, under/over absorption, rework costs, and posted/closed-day accounting. An isolated fake production overhead pool used for negative tests is NOT an approved cost-allocation formula. The code must NOT invent these details as live accounting rules.
 
 Any future real third-party supplier/responsible-party recovery still needs a **separate management approval and separate recording**; it cannot be netted into original gross manufacturing waste. Actual return inspection/physical custody, real product cost source, manager verification, waste posting and production access remain NOT IMPLEMENTED.
 
 **Source-only evidence:** [TrendOS Draft PR #117](https://github.com/fawakhry/TrendOs/pull/117) contains a non-executing manufacturing-component review contract and fake SQLite negative checks. [Exact-head CI #38271542131](https://github.com/fawakhry/TrendOs/actions/runs/38271542131) **SUCCESS**, including 51/51 component proof checks and 10/10 isolated fake cost-allocation checks. No D1/Worker financial posting, real stock or printshop operation is executed.
 
-## Remaining decisions not yet covered by the seven owner approvals
+## Eighth owner decision — department-specific, documented and consistently applied production overhead methods (2026-10-12)
+
+The owner explicitly answered **"agree"** to the management choosing an appropriate method of allocating common production overhead **separately for each department** (e.g. printing, laser, others), while **documenting that method and applying it consistently and fairly to comparable production jobs**.
+
+**DECIDED POLICY PRINCIPLE:**
+- Management is responsible for selecting and recording each department's or comparable production work-class's specific allocation driver and effective policy version. Different departments can appropriately use different drivers where their operations differ.
+- Like-for-like jobs under the same approved department/work-class/period policy must use the **same documented driver, evidence basis and active version**, without opportunistic job-by-job method changes. Changes need a separate documented approval and prospective effective date, together with auditable rationale.
+- This does NOT give staff or a UI field authority to change accounting methodology. Authentic identity/roles, source of cost-pool amounts, period closing, rates, fairness review, comparisons, rounding and technical allocation implementation are still **NOT IMPLEMENTED/NOT SELECTED**.
+- **No specific driver** (machine minutes, direct labor hours, units, etc.) was chosen by this agreement. Any such values in source tests are FAKE examples only, not actual production rates or accounting elections. Cross-department pool allocation and job/batch mappings must be established and validated before any real transactions.
+- Statutory accounting/consumer rights and existing production locks remain in force. Actual Worker, D1, inventory, expenses, printshop and financial ledgers remain unchanged; `FINANCE_RELEASE=NO_GO`.
+
+**Source/code status:** Source-only reviewer and synthetic adversarial tests are saved in TrendOS on branch `test/acc187-owner-department-overhead-fair-policy-no-go-20261012`, commit `f8f28bdc0def29403a626d9001ed3aee70cb078b`. An optional additional fake SQLite file could not be saved, and **creation of a new TrendOS Draft PR was blocked by tool safety checks**. The branch is therefore **NOT a qualified PR, tests have NOT run through its exact-head CI, and no success is claimed**. Follow-up requires a permitted review route and independently observed CI; owner gates remain OPEN.
+
+## Remaining decisions not yet covered by the eight owner approvals
 The following requirements remain **UNDECIDED** and require separate decisions before implementation/acceptance.
 
 1. **Eligibility & proof — PARTIALLY DECIDED:** customer-name/photo customized products are ineligible except where a manufacturing defect or Trend Mall error is independently verified. Other product categories, invoice/payment evidence requirements, proof format, partial-item returns and detailed acceptance workflow still require **OWNER_DECISION=UNDECIDED**. The **timing rule itself is DECIDED**: per-case management review without an internal fixed-day cutoff.
@@ -139,6 +152,11 @@ ACC187_DAMAGED_RETURN=WASTE_NOT_SALEABLE_STOCK
 ACC187_FINISHED_GOODS_RETURN_RESTOCK_WASTE_HANDLERS=NOT_IMPLEMENTED
 ACC187_OWNER_WASTE_GROSS_VALUATION=VERIFIED_ACTUAL_MANUFACTURING_COST_NOT_SALE_PRICE
 ACC187_OWNER_COST_COMPONENTS=RAW_MATERIALS_PLUS_DIRECT_LABOR_PLUS_ALLOCATED_PRODUCTION_OVERHEAD
+ACC187_DEPARTMENT_OVERHEAD_DRIVER_SELECTION_PRINCIPLE=MANAGEMENT_CHOOSES_AND_DOCUMENTS_BY_DEPARTMENT
+ACC187_SIMILAR_PRODUCTION_JOBS=CONSISTENT_DOCUMENTED_METHOD_ACTIVE_VERSION
+ACC187_ALLOCATION_METHOD_CHANGE=DOCUMENTED_PROSPECTIVE_MANAGEMENT_APPROVAL
+ACC187_SPECIFIC_LIVE_DEPARTMENT_DRIVERS_AND_RATES=PENDING
+ACC187_OVERHEAD_SOURCE_ONLY_BRANCH_CI=UNVERIFIED_PR_CREATION_BLOCKED
 ACC187_OVERHEAD_ALLOCATION_METHOD=OWNER_DECISION_PENDING
 ACC187_DIRECT_LABOR_ALLOCATION_METHOD=OWNER_DECISION_PENDING
 ACC187_REAL_COST_COMPONENT_SOURCE_AND_POSTING=NOT_IMPLEMENTED
