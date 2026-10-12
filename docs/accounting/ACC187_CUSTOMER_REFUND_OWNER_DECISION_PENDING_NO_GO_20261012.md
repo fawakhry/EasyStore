@@ -1,6 +1,6 @@
 # ACC-187 — Customer refund method decided; remaining conditions pending (2026-10-12)
 
-**Status: OWNER_METHOD_PERSONALIZED_ELIGIBILITY_TIMING_AND_AMOUNT_CAP_DECIDED — IMPLEMENTATION_AND_OTHER_POLICY_PENDING — NO_FINANCE_EXECUTION_AUTHORIZED.**
+**Status: EIGHT_BOUNDED_OWNER_RULES_RECORDED — SPECIFIC_ALLOCATION_METHODS_AND_RUNTIME_IMPLEMENTATION_PENDING — NO_FINANCE_EXECUTION_AUTHORIZED.**
 This is a decision-preparation checklist only. It does not approve real or fake refund execution, ledger migration, production finance writes, publication, or employee access. Accounting execution history is recorded exclusively in the original `EASYSTORE_ACCOUNTING_MASTER_BOOK.md` in this same EasyStore repository.
 
 ## Existing verified behavior and gap
@@ -160,7 +160,7 @@ ACC187_DEPARTMENT_OVERHEAD_DRIVER_SELECTION_PRINCIPLE=MANAGEMENT_CHOOSES_AND_DOC
 ACC187_SIMILAR_PRODUCTION_JOBS=CONSISTENT_DOCUMENTED_METHOD_ACTIVE_VERSION
 ACC187_ALLOCATION_METHOD_CHANGE=DOCUMENTED_PROSPECTIVE_MANAGEMENT_APPROVAL
 ACC187_SPECIFIC_LIVE_DEPARTMENT_DRIVERS_AND_RATES=PENDING
-ACC187_OVERHEAD_SOURCE_ONLY_BRANCH_CI=UNVERIFIED_PR_CREATION_BLOCKED
+ACC187_OVERHEAD_SOURCE_ONLY_BRANCH_CI=EXACT_HEAD_PR118_SUCCESS_UNMERGED
 ACC187_OVERHEAD_ALLOCATION_METHOD=OWNER_DECISION_PENDING
 ACC187_DIRECT_LABOR_ALLOCATION_METHOD=OWNER_DECISION_PENDING
 ACC187_REAL_COST_COMPONENT_SOURCE_AND_POSTING=NOT_IMPLEMENTED
@@ -188,3 +188,8 @@ G5=OPEN
 ```
 
 **Never** treat an automated green CI or this decision sheet as payment approval, a live canary permit, or authority to touch production D1, Cloudflare or Autonomous Printshop.
+
+
+## ACC-200 current source-status reconciliation (2026-10-12; Draft, no live finance)
+
+This is a correction to the **current status summary**, not a change to any historical accounting decision or PR record. The earlier transient PR-creation blocker for the eighth owner rule was resolved by source-only Draft PR #118 and exact-head CI #38277189477 (51/51 Node and 9/9 disposable SQLite checks successful); that PR remains **unmerged**. Previous historical paragraphs documenting the blocker remain historical evidence. No authentic department overhead driver/rate, management signature, production accounting allocation, refund handler, store credit, finished-goods adjustment, or release is authorized. The separate department register remains wholly **PENDING / NO_GO**. This correction and the ACC-200 guard itself require independent source review and its own EasyStore CI; green source tests are not owner approval.
