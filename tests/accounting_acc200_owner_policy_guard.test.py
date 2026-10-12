@@ -33,9 +33,10 @@ class ACC200FailClosedTests(unittest.TestCase):
             policy=POLICY.replace("## Eighth owner decision —", "## Removed owner decision —", 1))
 
     def test_03_duplicated_business_decision_heading(self):
+        full_heading = next(line for line in POLICY.splitlines()
+                            if line.startswith("## Eighth owner decision —"))
         self.assert_stops("duplicated decision",
-            policy=POLICY.replace("## Eighth owner decision —",
-                "## Eighth owner decision —\n## Eighth owner decision —", 1))
+            policy=POLICY.replace(full_heading, full_heading + "\n" + full_heading, 1))
 
     def test_04_cash_credit_conflation(self):
         self.assert_stops("cash credit option drift",
