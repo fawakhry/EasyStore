@@ -250,3 +250,16 @@ test('52 module is unconnected to production backend or browser IO',()=>{
   assert.doesNotMatch(source,/\bfetch\s*\(|\bXMLHttpRequest\b|\.prepare\s*\(|\.run\s*\(|\.execute\s*\(|\bD1Database\b/);
   assert.match(source,/evaluateReturnReview/);
 });
+
+test('53 an unrelated positive parent event is not accepted without an item allocation',()=>{
+  fault(patch(x=>x.transactions.push({transactionRef:'FAKE_ORPHAN',invoiceRef:'FAKE_INV_A',kind:'CASH_REFUND',amountCents:1,currency:'EGP'})),'UNREFERENCED_PARENT_TRANSACTION');
+});
+test('54 an unreferenced zero-valued parent event must also be investigated',()=>{
+  fault(patch(x=>x.transactions.push({transactionRef:'FAKE_ZERO_ORPHAN',invoiceRef:'FAKE_INV_A',kind:'CUSTOMER_CREDIT_ISSUED',amountCents:0,currency:'EGP'})),'UNREFERENCED_PARENT_TRANSACTION');
+});
+test('55 an unrelated fake compensation not tied to a returned item must not be quietly ignored',()=>{
+  fault(patch(x=>{
+    x.transactions.push({transactionRef:'FAKE_UNRELATED_CREDIT',invoiceRef:'FAKE_INV_A',kind:'CUSTOMER_CREDIT_ISSUED',amountCents:75,currency:'EGP'});
+    x.allocations.push({allocationRef:'OTHER1',transactionRef:'FAKE_UNRELATED_CREDIT',invoiceRef:'FAKE_INV_A',itemRef:'FAKE_NON_RETURNED',amountCents:75,currency:'EGP'});
+  }),'ALLOCATION_FOR_NON_RETURNED_ITEM');
+});
