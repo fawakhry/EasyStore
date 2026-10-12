@@ -56,13 +56,27 @@ The owner answered **"agree"** to the explicit proposal that the **TOTAL** compe
 
 **Source proof:** [TrendOS Draft PR #114](https://github.com/fawakhry/TrendOs/pull/114) contains a review-only amount contract and negative tests. The tests use strictly invented item payments and previous refunds/credits; they DO NOT compute any real customer entitlement or post finance data.
 
-## Remaining decisions not yet covered by the four owner approvals
+## Owner's returned-goods stock and waste handling decision — 2026-10-12
+
+The owner explicitly agreed on 2026-10-12 that **a product returned for manufacturing defect or Trend Mall error MUST NOT go back into saleable stock until it has been physically inspected and confirmed suitable for resale; a damaged product MUST be recorded as WASTE, not as available inventory**.
+
+**FIFTH BOUNDED OWNER BUSINESS DECISION:**
+- A physically received returned item is **held outside saleable stock** (quarantine/inspection-pending) until a verified independent quality inspection for that exact item and returned quantity exists. Mere approval of a refund, credit or return timing never implies a stock addition.
+- **If verified fit for resale:** it becomes a **candidate for restocking after the appropriate inventory controls**, not an automatic stock increase. A distinct actual return/restock accounting workflow and authorization are still NOT IMPLEMENTED.
+- **If verified damaged:** it must be **classified and logged as waste (هالك)** and must not re-enter saleable stock. Waste proof must reference the same return case, physical receipt, item, quantity and inspection decision. No actual finished-goods stock write or waste expense may be inferred from this policy document.
+- **If inspection missing, unverified or ambiguous:** no restock or waste booking may occur; the item remains isolated pending further review. Duplicate returns or repeat inspections cannot double-count stock or waste.
+- The checked-in Worker already has `saveAccountingWaste` for department/material waste, but this is **NOT a verified finished-product customer-return / physical receipt / quality-inspection / restock handler**. It cannot be used as proof that real returns or post-return inventory valuation are implemented.
+- Outstanding details: damaged-item cost/valuation, expenses, partial-unit returns, proof evidence custody, finished goods vs raw material SKU mapping, disposal authorization, collection/transport/storage, and post-close reversals remain **UNDECIDED**; statutory consumer rights are unchanged.
+
+**Source-only proof:** [TrendOS Draft PR #115](https://github.com/fawakhry/TrendOs/pull/115) adds purely synthetic inspection and `:memory:` SQLite stock/waste tests. No real inventory, D1, customer payment or printshop job is touched.
+
+## Remaining decisions not yet covered by the five owner approvals
 The following requirements remain **UNDECIDED** and require separate decisions before implementation/acceptance.
 
 1. **Eligibility & proof — PARTIALLY DECIDED:** customer-name/photo customized products are ineligible except where a manufacturing defect or Trend Mall error is independently verified. Other product categories, invoice/payment evidence requirements, proof format, partial-item returns and detailed acceptance workflow still require **OWNER_DECISION=UNDECIDED**. The **timing rule itself is DECIDED**: per-case management review without an internal fixed-day cutoff.
 2. **Refund amount — CEILING DECIDED, CALCULATION IMPLEMENTATION PENDING:** ordinary total cash plus credit plus prior compensation cannot exceed **verified actual amount paid for the returned items**. Exact payment allocation for discounts, part-payment, deposits, unpaid balances, multiple items and payment methods; historical compensation evidence; and exceptional amount documentation remain **IMPLEMENTATION/DETAILS=UNDECIDED**.
 3. **Remaining payment detail and authority:** cash refund, customer credit and a mixed settlement are now approved conditionally; whether cash reimbursement is paid from cashbox vs InstaPay/bank/original tender, daily/per-employee limits, specific manager identity and role verification, any dual approval, custody/handover and signed receipt requirements are **OWNER_DECISION=UNDECIDED**.
-4. **Inventory treatment:** physical receipt and inspection required? eligible restock quantity, damaged/customized work, cost/waste accounting, quantity conservation, supplier impact, delayed return without stock credit. **OWNER_DECISION=UNDECIDED**
+4. **Inventory treatment — INSPECTION AND WASTE PRINCIPLE DECIDED:** returned goods must stay outside saleable stock until independently inspected and verified fit for resale. Damaged returns must be logged as waste, never restocked. Actual proof format, product/raw-material mapping, waste cost/valuation, stock transactions, authorized disposal, stock quantity guards, supplier effects and closed-day compensation remain **DETAILS/IMPLEMENTATION=UNDECIDED**.
 5. **Post-close and disputes:** treatment of already-closed invoices/days, replacement invoices, held payments, chargebacks, duplicate or concurrent claims and dispute expiry. **OWNER_DECISION=UNDECIDED**
 6. **Operational signoff:** the owner has authorized **bounded business rules for settlement method, named/photo exception, case timing and amount ceiling**, not individual financial transactions. Specific real management approval chain, effective policy version, source-review signoff and independent production GO remain **OWNER_DECISION=UNDECIDED**.
 
@@ -92,6 +106,10 @@ ACC187_METHOD_REQUIRES_CASE_MANAGEMENT_APPROVAL=YES
 ACC187_TOTAL_NORMAL_COMPENSATION=ACTUAL_PAID_FOR_RETURNED_ITEMS_MINUS_ALL_PREVIOUS_CASH_AND_STORE_CREDIT
 ACC187_AMOUNT_ABOVE_NORMAL_CAP=SEPARATE_MANAGER_EXCEPTION_APPROVAL_REQUIRED
 ACC187_ITEM_PAYMENT_ALLOCATION_AND_REAL_LIABILITY=NOT_IMPLEMENTED
+ACC187_RETURNED_GOODS_BEFORE_INSPECTION=NOT_SALEABLE_QUARANTINED
+ACC187_RESTOCK_ONLY_AFTER_VERIFIED_FIT_FOR_RESALE=YES
+ACC187_DAMAGED_RETURN=WASTE_NOT_SALEABLE_STOCK
+ACC187_FINISHED_GOODS_RETURN_RESTOCK_WASTE_HANDLERS=NOT_IMPLEMENTED
 ACC187_REMAINING_POLICY=PENDING
 ACC187_CUSTOMER_CREDIT_POSTING=UNSUPPORTED_FAIL_CLOSED
 ACC187_PERSONALIZED_NAME_PHOTO_RETURN=ONLY_VERIFIED_MANUFACTURING_DEFECT_OR_TREND_MALL_ERROR
