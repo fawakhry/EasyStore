@@ -23,8 +23,14 @@ fails(book.replace("### Entry ACC-069 —","### Missing Entry ACC-069 —",1),"N
 fails(book.replace("NO_ASSIGNMENT_OR_EXECUTION_PROOF_FOUND","VERIFIED_COMPLETE",1),"UNKNOWN_SLOT_PRETEND_COMPLETION_004")
 fails(book.replace("### Entry ACC-176 —","### Missing Entry ACC-176 —",1),"NUMBERED_STAGE_GAPS_176")
 fails(book.replace("### Entry ACC-177 —","### Missing Entry ACC-177 —",1),"NUMBERED_STAGE_GAPS_177")
-fails(book.replace("38073710691","INVALID_RUN",1),"HISTORIC_G5_STAGE_EVIDENCE_WEAK_176")
-fails(book.replace("38074706828","INVALID_RUN",1),"HISTORIC_G5_STAGE_EVIDENCE_WEAK_177")
-fails(book.replace("PR #60","UNVERIFIED_SOURCE",1),"HISTORIC_G5_STAGE_EVIDENCE_WEAK_176")
+def modify_appended_stage(n,old,new):
+    needle="### Entry ACC-"+str(n)+" —"
+    head,tail=book.split(needle,1)
+    assert old in tail
+    return head+needle+tail.replace(old,new,1)
+
+fails(modify_appended_stage(176,"38073710691","INVALID_RUN"),"HISTORIC_G5_STAGE_EVIDENCE_WEAK_176")
+fails(modify_appended_stage(177,"38074706828","INVALID_RUN"),"HISTORIC_G5_STAGE_EVIDENCE_WEAK_177")
+fails(modify_appended_stage(176,"PR #60","UNVERIFIED_SOURCE"),"HISTORIC_G5_STAGE_EVIDENCE_WEAK_176")
 print("ACC001_193_NINE_ADVERSARIAL_NUMBERING_AUDITS=PASS")
 print("ACC001_193_UNKNOWN_SLOTS_NEVER_MARKED_FINISHED=PASS")
