@@ -47,9 +47,11 @@ Independent review / manager authentication: **NOT PERFORMED**
 Actual unit/job cost acceptance: **NOT PERFORMED**  
 Real Cloudflare Worker / D1 or printshop execution: **NOT AUTHORIZED**
 
-## Source-only evidence and current blocker
+## Source-only evidence and remaining owner/implementation blocker
 
-On TrendOS branch `test/acc187-owner-department-overhead-fair-policy-no-go-20261012`, source-only tests exercise synthetic departmental policy records, consistent per-class method revisions, prospective change and rejection of overlapping conflicting fake registers. The GitHub PR creation action was blocked, so that branch **has not been qualified by exact-head GitHub Actions PR CI**. Local in-memory V8 checks are not a substitute for Node/GitHub CI and do not authenticate managers or calculate real production overhead. The source branch is **not deployed, merged or accepted**.
+[TrendOS Draft PR #118](https://github.com/fawakhry/TrendOs/pull/118) now provides an exact-head independently CI-tested source-only implementation for the OWNER GOVERNANCE PRINCIPLE, head `c97f85f3f4aa2b69c1750aff9f9ee49144827999`. [GitHub Actions #38277189477](https://github.com/fawakhry/TrendOs/actions/runs/38277189477) **SUCCESS**, with 51/51 fake independent management/departmental work-class/overlap controls and 9/9 disposable `:memory:` fake SQLite anti-duplicate cost-pool/allocation tests. Old PR-creation and test-file-write blockers were resolved; earlier status records are historical.
+
+**Still blocked:** this Draft PR is UNMERGED and not a valid staff identity, accounting driver/rate approval or actual production cost allocation. The invented print/laser examples and synthetic methods are explicitly *not live selections*. Authentic manager signoff, approved department/work-class choices, real period cost pools, driver evidence, labor/overhead allocation formula, statutory accounting review, rounding policy, production integration and independently qualified merged SHA remain required. The register below stays empty for real accounting decisions, and no Cloudflare/Worker/D1 or printshop work was touched.
 
 `ACC187_REAL_DRIVER_CHOSEN=NO`  
 `ACC187_REAL_MANAGER_REGISTER=NOT_IMPLEMENTED`  
