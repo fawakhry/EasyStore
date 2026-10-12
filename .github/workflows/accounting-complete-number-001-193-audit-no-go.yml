@@ -1,0 +1,59 @@
+name: Original Accounting ACC001–193 Historical Numbering Coverage (NO DEPLOY)
+on:
+  push:
+    branches:
+      - docs/accounting-complete-numbering-001-193-audit-20261012
+      - candidate/easystore-zero-google-audit-20261004
+    paths:
+      - 'EASYSTORE_ACCOUNTING_MASTER_BOOK.md'
+      - 'scripts/accounting_complete_number_001_193_audit.py'
+      - 'tests/accounting_complete_number_001_193_audit.test.py'
+      - '.github/workflows/accounting-complete-number-001-193-audit-no-go.yml'
+  pull_request:
+    branches:
+      - candidate/easystore-zero-google-audit-20261004
+
+permissions:
+  contents: read
+
+jobs:
+  all-stage-numbers-mapped:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Assert no unindexed stage number 001 to 193 and no fabricated completion
+        shell: bash
+        env:
+          CLOUDFLARE_API_TOKEN: ''
+          CLOUDFLARE_ACCOUNT_ID: ''
+        run: |
+          set -euo pipefail
+          test -z "$CLOUDFLARE_API_TOKEN"
+          test -z "$CLOUDFLARE_ACCOUNT_ID"
+          python3 -m py_compile scripts/accounting_complete_number_001_193_audit.py
+          python3 scripts/accounting_complete_number_001_193_audit.py \
+            --out artifacts/acc001-193-numbering-no-go.json
+          python3 tests/accounting_complete_number_001_193_audit.test.py
+          python3 - <<'PY'
+          import json
+          r=json.load(open('artifacts/acc001-193-numbering-no-go.json'))
+          assert r['numbered_slots_covered']==193
+          assert r['historic_unknown_or_unassigned']==[4,7,13,14,25,27,69]
+          assert r['historic_g5_tested_source_only']==[176,177]
+          assert r['real_finance_release']=='NO_GO'
+          assert r['production_mutations']==0
+          print('ACCOUNTING_ALL_193_NUMBERED_SLOTS_AUDITED_WITH_NO_FAKE_GO=PASS')
+          PY
+      - name: Preserve redacted offline audit summary, never customer data
+        uses: actions/upload-artifact@v4
+        with:
+          name: easy-accounting-original-history-numbering-no-go
+          path: artifacts/acc001-193-numbering-no-go.json
+          retention-days: 14
