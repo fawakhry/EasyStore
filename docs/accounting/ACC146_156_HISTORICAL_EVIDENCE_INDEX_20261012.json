@@ -1,0 +1,205 @@
+{
+  "schema": "ACC146_156_CANONICAL_GAP_HISTORIC_EVIDENCE_V1",
+  "as_of": "2026-10-12",
+  "target": {
+    "repo": "fawakhry/EasyStore",
+    "path": "EASYSTORE_ACCOUNTING_MASTER_BOOK.md",
+    "branch": "candidate/easystore-zero-google-audit-20261004",
+    "previous_book_commit": "456389d9a55fc546d23cc4d37855bfa440278a49",
+    "prior_original_001_145_blob": "c84a86e386ab4b9e5ac37dbebf1e7e4745f4c1cc",
+    "previous_history_archive_commit": "7857b61274d934a40fb90d6c9e8f46c22b8725e2"
+  },
+  "source": {
+    "repo": "fawakhry/TrendOs",
+    "audit_branch": "audit/easystore-d1-readonly-resume-20261010",
+    "audit_commit": "a6e88dcf4675bfd6ce83952e6b5362cee2f69170",
+    "audit_pull_request": "https://github.com/fawakhry/TrendOs/pull/39",
+    "audit_pr_state_at_recovery": "OPEN_DRAFT_UNMERGED_DO_NOT_MERGE",
+    "source_file": "docs/trendos/staging/ACC145_D1_READONLY_RESUME_PREPARE_20261010.md"
+  },
+  "related_merged_pr": {
+    "repo": "fawakhry/EasyStore",
+    "number": 23,
+    "merge_sha": "d075694ba9d5",
+    "scope": "SSO_SOURCE_ONLY_NOT_LIVE_LOGIN"
+  },
+  "entries": [
+    {
+      "n": 146,
+      "title": "A2.11/A2.12 guard qualification, historical baselines kept distinct",
+      "status": "HISTORIC_CI_SUCCESS_SCOPE_LIMITED",
+      "owner_blocked": false,
+      "run": {
+        "repo": "TrendOs",
+        "id": 38047096908,
+        "sha": "a7594e8a1489a9b927f35ce62cae25a409a5b39c"
+      },
+      "commit": "637fe9cfa4256b08ad46ef112722aa58bf16ac77",
+      "description": "Pinned earlier A2.11 four-command and A2.12 five-command canary baseline evidence; original current six-command READONLY qualification preserved without replay.",
+      "limitation": "Not a new canary, production finance authorization or evidence of live financial writes.",
+      "source_git_commit_url": "https://github.com/fawakhry/TrendOs/commit/637fe9cfa4256b08ad46ef112722aa58bf16ac77",
+      "run_url": "https://github.com/fawakhry/TrendOs/actions/runs/38047096908"
+    },
+    {
+      "n": 147,
+      "title": "Deployed public SSO sender/receiver source and health GET",
+      "status": "HISTORIC_CI_SUCCESS_SCOPE_LIMITED",
+      "owner_blocked": false,
+      "run": {
+        "repo": "TrendOs",
+        "id": 38047282560,
+        "sha": "b9dc13f1e3a389ab1c2b44415bca05be2f7308fc"
+      },
+      "commit": "2cc9a10dae99692cdb49b33773443a5f7e4cddfb",
+      "description": "Verified public-source TrendOS sender, EasyStore receiver, origin/source/nonce/ACK contract, and GET-only accounting READONLY at historical checkpoint.",
+      "limitation": "No real user token, real authenticated employee browser login or live SSO acceptance.",
+      "source_git_commit_url": "https://github.com/fawakhry/TrendOs/commit/2cc9a10dae99692cdb49b33773443a5f7e4cddfb",
+      "run_url": "https://github.com/fawakhry/TrendOs/actions/runs/38047282560"
+    },
+    {
+      "n": 148,
+      "title": "Prevent stale popup-session reuse on fresh SSO handoff",
+      "status": "HISTORIC_CI_SUCCESS_AND_LATER_SOURCE_MERGED",
+      "owner_blocked": false,
+      "run": {
+        "repo": "EasyStore",
+        "id": 38047615198,
+        "sha": "c80a5b786474a49f5fe28a23967a7336f46aae70"
+      },
+      "commit": "a9048e45f145403db32fddad0d533d4b6d1b3c5d",
+      "description": "Fresh nonce invalidates an old popup session before trusting a new verified TrendOS cross-origin handoff; offline Cloud Safety checks succeeded; shipped in source later as PR #23 merged to main.",
+      "limitation": "At original audit time PR #23 was draft; it was later merged in Git, but real deployed Pages SHA and authenticated browser acceptance are not proven.",
+      "source_git_commit_url": "https://github.com/fawakhry/EasyStore/commit/a9048e45f145403db32fddad0d533d4b6d1b3c5d",
+      "run_url": "https://github.com/fawakhry/EasyStore/actions/runs/38047615198"
+    },
+    {
+      "n": 149,
+      "title": "Published EasyStore frontend accounting routing inventory",
+      "status": "HISTORIC_CI_SUCCESS_AFTER_EARLIER_FAILURE",
+      "owner_blocked": false,
+      "run": {
+        "repo": "TrendOs",
+        "id": 38047828371,
+        "sha": "55c40d6df3014f958e9bdea6b748b74c4f96170c"
+      },
+      "commit": "5ed8a419921577176854fd582363b547b983a020",
+      "description": "GET-only downloaded published source and classified 33 distinct API action literals: 11 read routes and 24 closed finance-write set entries (sets may overlap), no unclassified call.",
+      "limitation": "First run #38047798607 FAILED on the source classifier regex; corrected later; source routing is not a real financial workflow/Pages current version guarantee.",
+      "source_git_commit_url": "https://github.com/fawakhry/TrendOs/commit/5ed8a419921577176854fd582363b547b983a020",
+      "run_url": "https://github.com/fawakhry/TrendOs/actions/runs/38047828371"
+    },
+    {
+      "n": 150,
+      "title": "Audit branch accounting checkpoint index",
+      "status": "HISTORIC_DOC_COMMITTED_UNMERGED_AUDIT_BRANCH",
+      "owner_blocked": false,
+      "run": null,
+      "commit": "fba1b0b92bd7bad61316960ab6d48a43c4819ca2",
+      "description": "ACC145–149 factual checkpoint and source-run links added append-only to TrendOS old isolated audit-branch master book.",
+      "limitation": "Documentation action only on DRAFT PR #39's unmerged branch, not evidence of production action or main/finance branch release.",
+      "source_git_commit_url": "https://github.com/fawakhry/TrendOs/commit/fba1b0b92bd7bad61316960ab6d48a43c4819ca2",
+      "run_url": null
+    },
+    {
+      "n": 151,
+      "title": "Bounded source Sheets accounting and Operations inventory",
+      "status": "HISTORIC_BOUNDED_READ_ONLY_EVIDENCE",
+      "owner_blocked": false,
+      "run": null,
+      "commit": "ba2c48e0b4210e8b7f0b00b1710c14e4c2046e6c",
+      "description": "Historical read-only inventory counted 91 workbook tabs, 21 accounting-prefixed tabs; none had rows beyond header within checked A1:H60. Operations bounded A1:D300 reads found 247 customer, 222 order, 250 order-line nonempty rows.",
+      "limitation": "Ranges only; not entire workbook emptiness, unique entities, financial source authority, balances, live parity or approval to delete/import anything. No raw records copied.",
+      "source_git_commit_url": "https://github.com/fawakhry/TrendOs/commit/ba2c48e0b4210e8b7f0b00b1710c14e4c2046e6c",
+      "run_url": null
+    },
+    {
+      "n": 152,
+      "title": "Schema-only legacy source to D1 finance mapping",
+      "status": "HISTORIC_CI_SUCCESS_SCHEMA_ONLY",
+      "owner_blocked": false,
+      "run": {
+        "repo": "TrendOs",
+        "id": 38048340853,
+        "sha": "7fe2c065066ae93a985c186844b2540475321655"
+      },
+      "commit": "4ce1a0e31fe1ed32147247e85b0ad2e748e5e7f1",
+      "description": "Five candidate legacy source-to-D1 schema/primary-key mappings tested against checked-in migrations 0015 and 0022; one cashbox key with conflicting legacy id/ID headers explicitly BLOCKED.",
+      "limitation": "No stable ID parity or historical financial migration; all IDs unverified; real financial opening and source authority still owner-blocked.",
+      "source_git_commit_url": "https://github.com/fawakhry/TrendOs/commit/4ce1a0e31fe1ed32147247e85b0ad2e748e5e7f1",
+      "run_url": "https://github.com/fawakhry/TrendOs/actions/runs/38048340853"
+    },
+    {
+      "n": 153,
+      "title": "Audit book source inventory handoff checkpoint",
+      "status": "HISTORIC_DOC_COMMITTED_UNMERGED_AUDIT_BRANCH",
+      "owner_blocked": false,
+      "run": null,
+      "commit": "155357bbb0ad924bb54ca2789c2e74512186166b",
+      "description": "APPEND-ONLY historical evidence link from ACC151–152 to old isolated audit branch book, with re-read blob and prior schema CI evidence.",
+      "limitation": "A document checkpoint in unmerged PR #39 only; no real production/finance parity acceptance.",
+      "source_git_commit_url": "https://github.com/fawakhry/TrendOs/commit/155357bbb0ad924bb54ca2789c2e74512186166b",
+      "run_url": null
+    },
+    {
+      "n": 154,
+      "title": "SSO opener binding, single-use nonce and role shell rebuild",
+      "status": "HISTORIC_CI_SUCCESS_AND_LATER_SOURCE_MERGED",
+      "owner_blocked": false,
+      "run": {
+        "repo": "EasyStore",
+        "id": 38048937400,
+        "sha": "ce332dfec4a084ae89b4527ff19cc1a26d0b566f"
+      },
+      "commit": "988a74efdddb8843761e8646ab47cb5ca5d574cd",
+      "description": "Synthetic SSO tests reject wrong/missing opener, origin, nonce and stale/future timestamps, prevent nonce replay, rebuild authenticated role tabs after fresh handoff; later PR #23 merged to main.",
+      "limitation": "No live Diaa SSO browser signoff and no asserted production Pages SHA.",
+      "source_git_commit_url": "https://github.com/fawakhry/EasyStore/commit/988a74efdddb8843761e8646ab47cb5ca5d574cd",
+      "run_url": "https://github.com/fawakhry/EasyStore/actions/runs/38048937400"
+    },
+    {
+      "n": 155,
+      "title": "Synthetic native backend fail-closed authorization",
+      "status": "HISTORIC_CI_SUCCESS_MOCK_ONLY",
+      "owner_blocked": false,
+      "run": {
+        "repo": "TrendOs",
+        "id": 38049092622,
+        "sha": "062ece5c12fb2646e3414c92cd6a3012b4f7f53d"
+      },
+      "commit": "519d212596d0956ccbd9b3e5b60ca77ad967b9d2",
+      "description": "Real native handler with mocked DB; READONLY rejects financial POST 503, unauthenticated accounting reads 401, forbidden origin 403, inappropriate method 405, DB mutations 0.",
+      "limitation": "A mock test, not live authenticated employee login or financial transfer acceptance.",
+      "source_git_commit_url": "https://github.com/fawakhry/TrendOs/commit/519d212596d0956ccbd9b3e5b60ca77ad967b9d2",
+      "run_url": "https://github.com/fawakhry/TrendOs/actions/runs/38049092622"
+    },
+    {
+      "n": 156,
+      "title": "Owner-only employee-role authorization release gate",
+      "status": "OWNER_SIGNOFF_OPEN_TRACKED",
+      "owner_blocked": true,
+      "run": null,
+      "commit": "06da64b4c84bb3de146514140ba1f6e98e68e0a7",
+      "description": "Issue #40 tracks canonical employee/role matrix validation, negative access checks, private security review and finance owner acceptance.",
+      "limitation": "Approval remains OPEN. No staff grant, real permissions, token, login, Cloudflare finance mode or financial data change occurred.",
+      "source_git_commit_url": "https://github.com/fawakhry/TrendOs/commit/06da64b4c84bb3de146514140ba1f6e98e68e0a7",
+      "run_url": null
+    }
+  ],
+  "production": {
+    "finance_release": "NO_GO",
+    "gates": {
+      "G1": "OPEN",
+      "G2": "OPEN",
+      "G3": "OPEN",
+      "G4": "OPEN",
+      "G5": "OPEN"
+    },
+    "cash_or_d1_business_writes_this_recovery": 0,
+    "cloudflare_deployed": false,
+    "employee_grants_changed": false,
+    "cutover_date_local": null,
+    "historical_canary_replayed": false
+  },
+  "status_semantics": "Closes historic missing documentation and confirms only historic stage-specific test/docs evidence. Does not close launch approval, real source/target data parity, or G1–G5.",
+  "notes": "Historical proof had been on an UNMERGED audit branch; no old PR39 source or workflow should be merged or run as part of this records repair. Existing ACC157–193 imported history preserved unmodified."
+}

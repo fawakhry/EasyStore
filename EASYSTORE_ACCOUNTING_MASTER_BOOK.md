@@ -5104,3 +5104,116 @@ This aligns with Autonomous Printshop Build Matrix module:
 - Independent merged-SHA [ACC192 #38189774364](https://github.com/fawakhry/TrendOs/actions/runs/38189774364) **SUCCESS** and [ACC186 backlog guard #38189774366](https://github.com/fawakhry/TrendOs/actions/runs/38189774366) **SUCCESS**. The prior failed run [#38189639344](https://github.com/fawakhry/TrendOs/actions/runs/38189639344) is retained as a first-run test expectation error and was NOT renamed successful.
 - The native, unmodified Worker plus true SQL migrations in discarded SQLite demonstrates **offline**: category-correct daily sales, purchase, profit, credit, cash vs reversal receipts; pending purchase, open line and unclassified invoice STOP close without extra finance posting; laser + printing must both close before overall aggregate; sum reconciliation, stored report hashes, same-day repeated close with zero duplicate financial rows; fake role rejected, finance READONLY regression separately preserved.
 - **ACC192 synthetic source qualification VERIFIED** by exact-head and postmerge GitHub CI. **No real G4 operating-day signoff** and no production book cutover. Finance live `NO_GO`; owner-only G1–G5 still OPEN. The TrendOS machine queue update to `VERIFIED_COMPLETE` must still independently pass guard CI and preserve this canonical EasyStore book pointer. Next stages safe ACC-194/195 only after reviewed prerequisites; ACC-187 customer sale refunds and ACC-191 real browser/SSO remain incomplete.
+
+---
+
+## ACC-146–156 — Original historic accounting gap independently recovered (2026-10-12)
+
+**Purpose:** Recover ALL eleven missing accounting stage numbers in THIS original canonical EasyStore Accounting Master Book. This section **supersedes the older ACC-146–ACC-156 UNKNOWN/REQUIRES_GIT_HISTORY_RECONCILIATION note as a documentation-gap finding**, while retaining the original note verbatim as audit history. The stages were located on the 2026-10-10 **DRAFT, UNMERGED** [TrendOS audit PR #39](https://github.com/fawakhry/TrendOs/pull/39), audit branch \`audit/easystore-d1-readonly-resume-20261010\`, exact source head \`a6e88dcf4675bfd6ce83952e6b5362cee2f69170\`.
+
+The recovery is based on the original [ACC145–156 append-only audit](https://github.com/fawakhry/TrendOs/blob/a6e88dcf4675bfd6ce83952e6b5362cee2f69170/docs/trendos/staging/ACC145_D1_READONLY_RESUME_PREPARE_20261010.md), [audit branch historical master-book excerpt](https://github.com/fawakhry/TrendOs/blob/a6e88dcf4675bfd6ce83952e6b5362cee2f69170/TrendOS_MASTER_BOOK.md), exact cited successful GitHub Actions, original commit SHAs, [EasyStore frontend PR #23](https://github.com/fawakhry/EasyStore/pull/23), and [role approval Issue #40](https://github.com/fawakhry/TrendOs/issues/40). The complete 11-stage [machine-readable historic evidence index](docs/accounting/ACC146_156_HISTORICAL_EVIDENCE_INDEX_20261012.json) contains stage status, source commit, CI head SHA and limits for each stage.
+
+**Interpretation:** “historical test success” means only that its particular offline/public-GET test completed successfully on its exact old SHA. “documentation committed” means source-only writing on the old unmerged audit branch. These are not retroactive permission to merge old PR #39, run historical canaries, accept physical stocks, establish financial parity or grant real staff permissions. At the time of the original PR #39, EasyStore PR #23 was still draft; it was subsequently MERGED to EasyStore main on 2026-10-10, but that does NOT prove actual deployed Pages/SO credential acceptance.
+
+### Concurrent ACC-192 preservation
+
+During this correction, EasyStore [PR #29](https://github.com/fawakhry/EasyStore/pull/29) independently recorded successful ACC-192 synthetic closing tests and merged into the canonical branch as `456389d9a55fc546d23cc4d37855bfa440278a49`. That **existing new accounting entry is retained byte-for-byte** ahead of this backfill. The first ACC146–156 PR #30 could not merge due to this harmless append-only concurrency and remains an unmerged draft of the exact 11 recovered entries; this rebased records-only PR supersedes it. ACC-192 test success does not mean G4 live acceptance.
+
+### Exact recovered stage entries (11 of 11)
+
+### Entry ACC-146 — A2.11/A2.12 guard qualification, historical baselines kept distinct (historic 2026-10-10; recovered 2026-10-12)
+
+- **Evidence class:** `HISTORIC_CI_SUCCESS_SCOPE_LIMITED`. This does not certify production finance acceptance.
+- **What is actually grounded:** Pinned earlier A2.11 four-command and A2.12 five-command canary baseline evidence; original current six-command READONLY qualification preserved without replay.
+- **Original source commit:** [`637fe9cfa4256b08ad46ef112722aa58bf16ac77`](https://github.com/fawakhry/TrendOs/commit/637fe9cfa4256b08ad46ef112722aa58bf16ac77) on TrendOS isolated accounting audit (not a finance release authorization).
+- **Verified CI:** [GitHub Actions 38047096908](https://github.com/fawakhry/TrendOs/actions/runs/38047096908) — **SUCCESS**, exact test head `a7594e8a1489a9b927f35ce62cae25a409a5b39c`, original `TrendOs` repository. This is scoped to the historical run, not a fresh test.
+- **Limits / not completed by this record:** Not a new canary, production finance authorization or evidence of live financial writes.
+
+### Entry ACC-147 — Deployed public SSO sender/receiver source and health GET (historic 2026-10-10; recovered 2026-10-12)
+
+- **Evidence class:** `HISTORIC_CI_SUCCESS_SCOPE_LIMITED`. This does not certify production finance acceptance.
+- **What is actually grounded:** Verified public-source TrendOS sender, EasyStore receiver, origin/source/nonce/ACK contract, and GET-only accounting READONLY at historical checkpoint.
+- **Original source commit:** [`2cc9a10dae99692cdb49b33773443a5f7e4cddfb`](https://github.com/fawakhry/TrendOs/commit/2cc9a10dae99692cdb49b33773443a5f7e4cddfb) on TrendOS isolated accounting audit (not a finance release authorization).
+- **Verified CI:** [GitHub Actions 38047282560](https://github.com/fawakhry/TrendOs/actions/runs/38047282560) — **SUCCESS**, exact test head `b9dc13f1e3a389ab1c2b44415bca05be2f7308fc`, original `TrendOs` repository. This is scoped to the historical run, not a fresh test.
+- **Limits / not completed by this record:** No real user token, real authenticated employee browser login or live SSO acceptance.
+
+### Entry ACC-148 — Prevent stale popup-session reuse on fresh SSO handoff (historic 2026-10-10; recovered 2026-10-12)
+
+- **Evidence class:** `HISTORIC_CI_SUCCESS_AND_LATER_SOURCE_MERGED`. This does not certify production finance acceptance.
+- **What is actually grounded:** Fresh nonce invalidates an old popup session before trusting a new verified TrendOS cross-origin handoff; offline Cloud Safety checks succeeded; shipped in source later as PR #23 merged to main.
+- **Original source commit:** [`a9048e45f145403db32fddad0d533d4b6d1b3c5d`](https://github.com/fawakhry/EasyStore/commit/a9048e45f145403db32fddad0d533d4b6d1b3c5d) on EasyStore SSO candidate (not a finance release authorization).
+- **Verified CI:** [GitHub Actions 38047615198](https://github.com/fawakhry/EasyStore/actions/runs/38047615198) — **SUCCESS**, exact test head `c80a5b786474a49f5fe28a23967a7336f46aae70`, original `EasyStore` repository. This is scoped to the historical run, not a fresh test.
+- **Limits / not completed by this record:** At original audit time PR #23 was draft; it was later merged in Git, but real deployed Pages SHA and authenticated browser acceptance are not proven.
+
+### Entry ACC-149 — Published EasyStore frontend accounting routing inventory (historic 2026-10-10; recovered 2026-10-12)
+
+- **Evidence class:** `HISTORIC_CI_SUCCESS_AFTER_EARLIER_FAILURE`. This does not certify production finance acceptance.
+- **What is actually grounded:** GET-only downloaded published source and classified 33 distinct API action literals: 11 read routes and 24 closed finance-write set entries (sets may overlap), no unclassified call.
+- **Original source commit:** [`5ed8a419921577176854fd582363b547b983a020`](https://github.com/fawakhry/TrendOs/commit/5ed8a419921577176854fd582363b547b983a020) on TrendOS isolated accounting audit (not a finance release authorization).
+- **Verified CI:** [GitHub Actions 38047828371](https://github.com/fawakhry/TrendOs/actions/runs/38047828371) — **SUCCESS**, exact test head `55c40d6df3014f958e9bdea6b748b74c4f96170c`, original `TrendOs` repository. This is scoped to the historical run, not a fresh test.
+- **Limits / not completed by this record:** First run #38047798607 FAILED on the source classifier regex; corrected later; source routing is not a real financial workflow/Pages current version guarantee.
+
+### Entry ACC-150 — Audit branch accounting checkpoint index (historic 2026-10-10; recovered 2026-10-12)
+
+- **Evidence class:** `HISTORIC_DOC_COMMITTED_UNMERGED_AUDIT_BRANCH`. This does not certify production finance acceptance.
+- **What is actually grounded:** ACC145–149 factual checkpoint and source-run links added append-only to TrendOS old isolated audit-branch master book.
+- **Original source commit:** [`fba1b0b92bd7bad61316960ab6d48a43c4819ca2`](https://github.com/fawakhry/TrendOs/commit/fba1b0b92bd7bad61316960ab6d48a43c4819ca2) on TrendOS isolated accounting audit (not a finance release authorization).
+- **Verified CI:** No independent stage-specific Actions run was claimed; this step was historically a documented source inventory, handoff, or approval gate, as indicated below.
+- **Limits / not completed by this record:** Documentation action only on DRAFT PR #39's unmerged branch, not evidence of production action or main/finance branch release.
+
+### Entry ACC-151 — Bounded source Sheets accounting and Operations inventory (historic 2026-10-10; recovered 2026-10-12)
+
+- **Evidence class:** `HISTORIC_BOUNDED_READ_ONLY_EVIDENCE`. This does not certify production finance acceptance.
+- **What is actually grounded:** Historical read-only inventory counted 91 workbook tabs, 21 accounting-prefixed tabs; none had rows beyond header within checked A1:H60. Operations bounded A1:D300 reads found 247 customer, 222 order, 250 order-line nonempty rows.
+- **Original source commit:** [`ba2c48e0b4210e8b7f0b00b1710c14e4c2046e6c`](https://github.com/fawakhry/TrendOs/commit/ba2c48e0b4210e8b7f0b00b1710c14e4c2046e6c) on TrendOS isolated accounting audit (not a finance release authorization).
+- **Verified CI:** No independent stage-specific Actions run was claimed; this step was historically a documented source inventory, handoff, or approval gate, as indicated below.
+- **Limits / not completed by this record:** Ranges only; not entire workbook emptiness, unique entities, financial source authority, balances, live parity or approval to delete/import anything. No raw records copied.
+
+### Entry ACC-152 — Schema-only legacy source to D1 finance mapping (historic 2026-10-10; recovered 2026-10-12)
+
+- **Evidence class:** `HISTORIC_CI_SUCCESS_SCHEMA_ONLY`. This does not certify production finance acceptance.
+- **What is actually grounded:** Five candidate legacy source-to-D1 schema/primary-key mappings tested against checked-in migrations 0015 and 0022; one cashbox key with conflicting legacy id/ID headers explicitly BLOCKED.
+- **Original source commit:** [`4ce1a0e31fe1ed32147247e85b0ad2e748e5e7f1`](https://github.com/fawakhry/TrendOs/commit/4ce1a0e31fe1ed32147247e85b0ad2e748e5e7f1) on TrendOS isolated accounting audit (not a finance release authorization).
+- **Verified CI:** [GitHub Actions 38048340853](https://github.com/fawakhry/TrendOs/actions/runs/38048340853) — **SUCCESS**, exact test head `7fe2c065066ae93a985c186844b2540475321655`, original `TrendOs` repository. This is scoped to the historical run, not a fresh test.
+- **Limits / not completed by this record:** No stable ID parity or historical financial migration; all IDs unverified; real financial opening and source authority still owner-blocked.
+
+### Entry ACC-153 — Audit book source inventory handoff checkpoint (historic 2026-10-10; recovered 2026-10-12)
+
+- **Evidence class:** `HISTORIC_DOC_COMMITTED_UNMERGED_AUDIT_BRANCH`. This does not certify production finance acceptance.
+- **What is actually grounded:** APPEND-ONLY historical evidence link from ACC151–152 to old isolated audit branch book, with re-read blob and prior schema CI evidence.
+- **Original source commit:** [`155357bbb0ad924bb54ca2789c2e74512186166b`](https://github.com/fawakhry/TrendOs/commit/155357bbb0ad924bb54ca2789c2e74512186166b) on TrendOS isolated accounting audit (not a finance release authorization).
+- **Verified CI:** No independent stage-specific Actions run was claimed; this step was historically a documented source inventory, handoff, or approval gate, as indicated below.
+- **Limits / not completed by this record:** A document checkpoint in unmerged PR #39 only; no real production/finance parity acceptance.
+
+### Entry ACC-154 — SSO opener binding, single-use nonce and role shell rebuild (historic 2026-10-10; recovered 2026-10-12)
+
+- **Evidence class:** `HISTORIC_CI_SUCCESS_AND_LATER_SOURCE_MERGED`. This does not certify production finance acceptance.
+- **What is actually grounded:** Synthetic SSO tests reject wrong/missing opener, origin, nonce and stale/future timestamps, prevent nonce replay, rebuild authenticated role tabs after fresh handoff; later PR #23 merged to main.
+- **Original source commit:** [`988a74efdddb8843761e8646ab47cb5ca5d574cd`](https://github.com/fawakhry/EasyStore/commit/988a74efdddb8843761e8646ab47cb5ca5d574cd) on EasyStore SSO candidate (not a finance release authorization).
+- **Verified CI:** [GitHub Actions 38048937400](https://github.com/fawakhry/EasyStore/actions/runs/38048937400) — **SUCCESS**, exact test head `ce332dfec4a084ae89b4527ff19cc1a26d0b566f`, original `EasyStore` repository. This is scoped to the historical run, not a fresh test.
+- **Limits / not completed by this record:** No live Diaa SSO browser signoff and no asserted production Pages SHA.
+
+### Entry ACC-155 — Synthetic native backend fail-closed authorization (historic 2026-10-10; recovered 2026-10-12)
+
+- **Evidence class:** `HISTORIC_CI_SUCCESS_MOCK_ONLY`. This does not certify production finance acceptance.
+- **What is actually grounded:** Real native handler with mocked DB; READONLY rejects financial POST 503, unauthenticated accounting reads 401, forbidden origin 403, inappropriate method 405, DB mutations 0.
+- **Original source commit:** [`519d212596d0956ccbd9b3e5b60ca77ad967b9d2`](https://github.com/fawakhry/TrendOs/commit/519d212596d0956ccbd9b3e5b60ca77ad967b9d2) on TrendOS isolated accounting audit (not a finance release authorization).
+- **Verified CI:** [GitHub Actions 38049092622](https://github.com/fawakhry/TrendOs/actions/runs/38049092622) — **SUCCESS**, exact test head `062ece5c12fb2646e3414c92cd6a3012b4f7f53d`, original `TrendOs` repository. This is scoped to the historical run, not a fresh test.
+- **Limits / not completed by this record:** A mock test, not live authenticated employee login or financial transfer acceptance.
+
+### Entry ACC-156 — Owner-only employee-role authorization release gate (historic 2026-10-10; recovered 2026-10-12)
+
+- **Evidence class:** `OWNER_SIGNOFF_OPEN_TRACKED`. **OWNER APPROVAL STILL OPEN.**
+- **What is actually grounded:** Issue #40 tracks canonical employee/role matrix validation, negative access checks, private security review and finance owner acceptance.
+- **Original source commit:** [`06da64b4c84bb3de146514140ba1f6e98e68e0a7`](https://github.com/fawakhry/TrendOs/commit/06da64b4c84bb3de146514140ba1f6e98e68e0a7) on TrendOS isolated accounting audit (not a finance release authorization).
+- **Verified CI:** No independent stage-specific Actions run was claimed; this step was historically a documented source inventory, handoff, or approval gate, as indicated below.
+- **Limits / not completed by this record:** Approval remains OPEN. No staff grant, real permissions, token, login, Cloudflare finance mode or financial data change occurred.
+
+
+### Reconciliation, outstanding approvals and audit integrity (2026-10-12)
+
+- **Archive stage completeness:** numbered entries ACC-146 through ACC-156 are each recorded **once** above with explicit source commit, evidence class, test link if present and remaining gaps. Their historical source PR #39 remains DRAFT/UNMERGED, and **must not be merged solely to fill this documentation gap**.
+- **Original history preserved:** ACC-001–145 text and all previously restored ACC-157–193 source excerpts have not been edited, deleted, silently reordered or retroactively relabeled. Original failed ACC-149 classification CI [#38047798607](https://github.com/fawakhry/TrendOs/actions/runs/38047798607) remains documented; successful corrected [#38047828371](https://github.com/fawakhry/TrendOs/actions/runs/38047828371) is the qualifying run.
+- **Still unapproved:** ACC-156 remains an actual real-employee G2 approval gate [Issue #40](https://github.com/fawakhry/TrendOs/issues/40); ACC-151/152 do **not** prove complete spreadsheet emptiness, authoritative historic opening balances or parity; ACC-147/148/154/155 do not prove live employee SSO. No new human approval is inferred. ACC-187 cash refunds remain unimplemented; ACC-191 browser qualification remains incomplete.
+- **Operating conditions:** finance release **NO_GO**; real G1, G2, G3, G4, G5 **OPEN**. The historical production mode READONLY and EasyStore finance frontend OFF are old observations only, not rechecked production state today. Real financial data writes, Google Sheet edits, Cloudflare deployment, production backup/restore, real employee grants, canary replay, cutover date and history deletion **NOT PERFORMED** by this documentation-only recovery.
+- **Next stage dependency:** no further ACC-192/194 implementation is required to fill an **archival numbering gap**; proceed to those separately only after this canonical book correction's exact PR-head and postmerge CI pass. Any unresolved genuine G2/G3/SSO or payment-refund acceptance is a documented **functional/owner gate**, not a missing numbered book entry.

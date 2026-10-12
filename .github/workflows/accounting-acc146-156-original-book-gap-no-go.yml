@@ -1,0 +1,66 @@
+name: ACC-146–156 Original Accounting Book Historical Gap Proof (NO DEPLOY)
+on:
+  push:
+    branches:
+      - docs/acc146-156-canonical-book-rebase-after-acc192-20261012
+      - candidate/easystore-zero-google-audit-20261004
+    paths:
+      - 'EASYSTORE_ACCOUNTING_MASTER_BOOK.md'
+      - 'docs/accounting/ACC146_156_HISTORICAL_EVIDENCE_INDEX_20261012.json'
+      - 'scripts/accounting_acc146_156_historical_gap_audit.py'
+      - 'tests/accounting_acc146_156_history_gap.test.py'
+      - '.github/workflows/accounting-acc146-156-original-book-gap-no-go.yml'
+  pull_request:
+    branches:
+      - candidate/easystore-zero-google-audit-20261004
+
+permissions:
+  contents: read
+
+jobs:
+  exact-historical-no-go:
+    runs-on: ubuntu-latest
+    timeout-minutes: 9
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/checkout@v4
+        with:
+          repository: fawakhry/TrendOs
+          ref: a6e88dcf4675bfd6ce83952e6b5362cee2f69170
+          path: trendos-historical-audit
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Prove exact original book unchanged and all 11 missing stage numbers recovered
+        env:
+          CLOUDFLARE_API_TOKEN: ''
+          CLOUDFLARE_ACCOUNT_ID: ''
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -z "$CLOUDFLARE_API_TOKEN"
+          test -z "$CLOUDFLARE_ACCOUNT_ID"
+          python3 -m py_compile scripts/accounting_acc146_156_historical_gap_audit.py
+          python3 scripts/accounting_acc146_156_historical_gap_audit.py \
+            --audit-path trendos-historical-audit \
+            --out artifacts/acc146-156-gap-NO_GO.json
+          python3 tests/accounting_acc146_156_history_gap.test.py
+          python3 - <<'PY'
+          import json
+          a=json.load(open('artifacts/acc146-156-gap-NO_GO.json'))
+          assert a['numbered_stages']==list(range(146,157))
+          assert a['original_canonical_book_prefix']=='BYTE_FOR_BYTE_PRESERVED'
+          assert a['historical_source_pr39']=='DRAFT_UNMERGED_DO_NOT_EXECUTE'
+          assert a['release_decision']=='NO_GO' and a['production_mutations']==0
+          print('ACC146_156_HISTORICAL_STAGE_BOOK_GAP_CLOSED_WITHOUT_RELEASE=PASS')
+          PY
+      - name: Export sanitized historical-stage list only
+        uses: actions/upload-artifact@v4
+        with:
+          name: acc146-156-original-book-only-no-go
+          path: artifacts/acc146-156-gap-NO_GO.json
+          retention-days: 14
