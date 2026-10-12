@@ -1,0 +1,31 @@
+name: EasyStore Receivables Snapshot Reconciliation (SOURCE NO_GO)
+on:
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  reconciler:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Offline reconciliation and full source regressions only
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check scripts/easystore_receivable_reconciliation_review_no_go.cjs
+          node --check tests/easystore_receivable_reconciliation_review_no_go.test.cjs
+          node --test tests/easystore_receivable_reconciliation_review_no_go.test.cjs
+          node --test tests/accounting_joined_day_flow_offline.test.cjs
+          node --test tests/accounting_acc201_sso_opener_role_no_go.test.cjs
+          node --test tests/accounting_acc202_d1_action_failclosed_no_go.test.cjs
+          for testfile in tests/*.test.js; do node "$testfile"; done
+          echo 'CUSTOMER_RECEIVABLES_SOURCE_ONLY=REVIEW_NOT_PRODUCTION'
+          echo 'NO_D1_OR_GOOGLE_OR_CLOUDFLARE_WRITES=YES'
+          echo 'FINANCE_RELEASE=NO_GO'
