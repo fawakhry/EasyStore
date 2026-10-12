@@ -70,13 +70,27 @@ The owner explicitly agreed on 2026-10-12 that **a product returned for manufact
 
 **Source-only proof:** [TrendOS Draft PR #115](https://github.com/fawakhry/TrendOs/pull/115) adds purely synthetic inspection and `:memory:` SQLite stock/waste tests. No real inventory, D1, customer payment or printshop job is touched.
 
-## Remaining decisions not yet covered by the five owner approvals
+## Owner's gross waste cost and separate third-party recovery decision — 2026-10-12
+
+The owner explicitly answered **"agree"** to recording damaged returns as waste at their **actual manufacturing cost, NOT at customer selling price**, while any compensation received from the supplier or responsible party must be **recorded as a separate recovery after management approves that recovery**.
+
+**SIXTH BOUNDED OWNER BUSINESS RULE:**
+- An independently inspected damaged returned item is booked as **GROSS WASTE at the actual verifiable manufacturing cost for the relevant returned quantity**, not its selling price, its paid invoice total, its refund value, or the expected third-party recovery.
+- The original cost must be traceable to **independent production-cost evidence** for the exact invoice, return, item, inspected units, physical receipt and inspection. Real cost-component sourcing and allocation (materials, direct labor, properly allocated overhead, rework and batch-level unit cost) still require an agreed technical methodology before live execution. Never invent a cost or infer it from selling price.
+- Any supplier or responsible-party recovery is **SEPARATE FROM THE GROSS WASTE**. Record the recoverable/received amount, original return and waste evidence, counterparty, management approval and cash/bank/payment proof using distinct ledger entries and independent transaction identifiers. **Do not automatically net a recovery into the original waste valuation**, or treat expected recovery as money already received.
+- **Separate management approval is mandatory for each recovery**. It does not follow automatically from approving the defect, waste posting, customer refund or item return. A manager-approved recovery still needs actual counterparty payment/receivable validation, audit lineage and transaction idempotency.
+- The owner has **not** specified a maximum recovery-to-cost ratio, precise timing of receivable vs cash recognition, exact disposal and cost allocation, debt/credit accounts, post-close adjustments, or reversal procedures. Those remain DESIGN/ACCOUNTING-DETAILS=UNDECIDED. This bounded cost/recording rule is not permission for a payment, staff access, D1, inventory or Cloudflare deployment.
+- Existing Worker `saveAccountingWaste` handles departmental/material waste, including an `amount` and `recovered_amount` field, but has **not** been qualified as the real finished-goods customer-return cost-evidence, manager-approved supplier-recovery and separate-transaction workflow. No actual posted waste or reimbursement handler is activated by this decision.
+
+**Source-only evidence:** [TrendOS Draft PR #116](https://github.com/fawakhry/TrendOs/pull/116), head `91f2ac017d4f649a56244c098807a3751bd4826c`, adds synthetic independent manufacturing-cost proof review, separate counterparty-recovery manager gates, and disposable SQLite ledger non-netting tests. This **does not perform any real waste write-off or receipt**.
+
+## Remaining decisions not yet covered by the six owner approvals
 The following requirements remain **UNDECIDED** and require separate decisions before implementation/acceptance.
 
 1. **Eligibility & proof — PARTIALLY DECIDED:** customer-name/photo customized products are ineligible except where a manufacturing defect or Trend Mall error is independently verified. Other product categories, invoice/payment evidence requirements, proof format, partial-item returns and detailed acceptance workflow still require **OWNER_DECISION=UNDECIDED**. The **timing rule itself is DECIDED**: per-case management review without an internal fixed-day cutoff.
 2. **Refund amount — CEILING DECIDED, CALCULATION IMPLEMENTATION PENDING:** ordinary total cash plus credit plus prior compensation cannot exceed **verified actual amount paid for the returned items**. Exact payment allocation for discounts, part-payment, deposits, unpaid balances, multiple items and payment methods; historical compensation evidence; and exceptional amount documentation remain **IMPLEMENTATION/DETAILS=UNDECIDED**.
 3. **Remaining payment detail and authority:** cash refund, customer credit and a mixed settlement are now approved conditionally; whether cash reimbursement is paid from cashbox vs InstaPay/bank/original tender, daily/per-employee limits, specific manager identity and role verification, any dual approval, custody/handover and signed receipt requirements are **OWNER_DECISION=UNDECIDED**.
-4. **Inventory treatment — INSPECTION AND WASTE PRINCIPLE DECIDED:** returned goods must stay outside saleable stock until independently inspected and verified fit for resale. Damaged returns must be logged as waste, never restocked. Actual proof format, product/raw-material mapping, waste cost/valuation, stock transactions, authorized disposal, stock quantity guards, supplier effects and closed-day compensation remain **DETAILS/IMPLEMENTATION=UNDECIDED**.
+4. **Inventory/waste treatment — INSPECTION, GROSS ACTUAL MANUFACTURING COST AND SEPARATE RECOVERY RULES DECIDED:** returned goods remain outside saleable inventory until independently inspected; damaged goods are waste at verified actual manufacturing cost, not selling price. Supplier/responsible-party recovery requires distinct management approval and a separate record, with no automatic netting. Real production cost-component proof/allocation, receipt/waste valuation posting, finished-item/raw-material mapping, actual recovery/receivable/receipt recognition, disposal, inventory transaction guards and closed-day treatment remain **DETAILS/IMPLEMENTATION=UNDECIDED**.
 5. **Post-close and disputes:** treatment of already-closed invoices/days, replacement invoices, held payments, chargebacks, duplicate or concurrent claims and dispute expiry. **OWNER_DECISION=UNDECIDED**
 6. **Operational signoff:** the owner has authorized **bounded business rules for settlement method, named/photo exception, case timing and amount ceiling**, not individual financial transactions. Specific real management approval chain, effective policy version, source-review signoff and independent production GO remain **OWNER_DECISION=UNDECIDED**.
 
@@ -110,6 +124,11 @@ ACC187_RETURNED_GOODS_BEFORE_INSPECTION=NOT_SALEABLE_QUARANTINED
 ACC187_RESTOCK_ONLY_AFTER_VERIFIED_FIT_FOR_RESALE=YES
 ACC187_DAMAGED_RETURN=WASTE_NOT_SALEABLE_STOCK
 ACC187_FINISHED_GOODS_RETURN_RESTOCK_WASTE_HANDLERS=NOT_IMPLEMENTED
+ACC187_OWNER_WASTE_GROSS_VALUATION=VERIFIED_ACTUAL_MANUFACTURING_COST_NOT_SALE_PRICE
+ACC187_RECOVERY_SOURCE=SUPPLIER_OR_RESPONSIBLE_PARTY
+ACC187_RECOVERY_REQUIRES_SEPARATE_CASE_MANAGER_APPROVAL=YES
+ACC187_GROSS_WASTE_AND_RECOVERY=SEPARATE_RECORDS_NO_AUTOMATIC_NETTING
+ACC187_REAL_MANUFACTURING_COST_ALLOCATION_AND_RECOVERY_HANDLER=NOT_IMPLEMENTED
 ACC187_REMAINING_POLICY=PENDING
 ACC187_CUSTOMER_CREDIT_POSTING=UNSUPPORTED_FAIL_CLOSED
 ACC187_PERSONALIZED_NAME_PHOTO_RETURN=ONLY_VERIFIED_MANUFACTURING_DEFECT_OR_TREND_MALL_ERROR
