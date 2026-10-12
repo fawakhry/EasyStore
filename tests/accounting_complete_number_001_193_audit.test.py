@@ -27,7 +27,7 @@ def modify_appended_stage(n,old,new):
     needle="### Entry ACC-"+str(n)+" —"
     head,tail=book.split(needle,1)
     assert old in tail
-    return head+needle+tail.replace(old,new,1)
+    return head+needle+tail.replace(old,new)
 
 fails(modify_appended_stage(176,"38073710691","INVALID_RUN"),"HISTORIC_G5_STAGE_EVIDENCE_WEAK_176")
 fails(modify_appended_stage(177,"38074706828","INVALID_RUN"),"HISTORIC_G5_STAGE_EVIDENCE_WEAK_177")
