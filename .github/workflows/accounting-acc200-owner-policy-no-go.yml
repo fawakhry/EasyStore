@@ -14,10 +14,28 @@ jobs:
         uses: actions/checkout@v4
         with:
           persist-credentials: false
+          fetch-depth: 0
       - name: Prepare isolated Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.12'
+      - name: Verify original canonical accounting book is append-only against exact PR base
+        shell: bash
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import os, re, subprocess
+          from pathlib import Path
+          sha=os.environ["BASE_SHA"]
+          assert re.fullmatch(r"[a-fA-F0-9]{40}",sha), "INVALID_BASE_SHA"
+          path="EASYSTORE_ACCOUNTING_MASTER_BOOK.md"
+          original=subprocess.check_output(["git","show",f"{sha}:{path}"])
+          candidate=Path(path).read_bytes()
+          assert candidate.startswith(original) and len(candidate)>len(original), "ORIGINAL_EASYSTORE_ACCOUNTING_HISTORY_CHANGED_OR_NOT_APPENDED"
+          print("ACC200_ORIGINAL_ACCOUNTING_BOOK_BYTE_PREFIX_PRESERVED=PASS")
+          PY
       - name: Verify the original EasyStore owner policy and EMPTY department register
         shell: bash
         env:
