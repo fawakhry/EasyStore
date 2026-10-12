@@ -22,7 +22,16 @@ assert.match(app, /entry619SchedulePostSsoRead/);
 assert.match(app, /D1 READONLY/);
 assert.match(app, /SSO OK/);
 
-assert.match(app, /D1_ACCOUNTING_READ_ACTIONS\s*=\s*new Set\(\['getAccounting','getDeptInvoiceDraftV1887','getPartyAccountV1858'\]\)/);
+const inventoryStart=app.indexOf('const D1_ACCOUNTING_READ_ACTIONS = new Set([');
+assert.ok(inventoryStart>=0, 'Accounting D1 read inventory must exist');
+const inventoryEnd=app.indexOf(']);',inventoryStart);
+assert.ok(inventoryEnd>inventoryStart,'Read inventory must close');
+const inventory=app.slice(inventoryStart,inventoryEnd);
+const readActions=[...inventory.matchAll(/'([^']+)'/g)].map(x=>x[1]);
+for(const action of ['getAccounting','getDeptInvoiceDraftV1887','getPartyAccountV1858','getCustomerAccountV1915','getEasyStoreCustomers','searchCustomers','getEasyStoreSuppliers','easyStoreSystemHealth','calculateAccountingLaserQuoteV1913','getDailyDepartmentReportV1920','previewAccountingAutomationV1921']) {
+  assert.ok(readActions.includes(action), 'Missing D1-only read: '+action);
+}
+assert.strictEqual(new Set(readActions).size,11,'D1 read inventory must remain exact with no unreviewed extras');
 assert.match(app, /EASYSTORE_ACCOUNTING_D1_READONLY\s*===\s*true/);
 assert.match(app, /'Authorization':'Bearer '\+user\.token/);
 assert.match(app, /'Content-Type':'application\/json'/);

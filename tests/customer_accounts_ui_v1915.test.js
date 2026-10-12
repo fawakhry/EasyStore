@@ -54,9 +54,14 @@ function createApp(role) {
     setTimeout: () => 1,
     clearTimeout() {},
     addEventListener() {},
-    TREND_API_URL: 'https://example.test/exec',
+    TREND_API_URL: 'https://fake-legacy.example.invalid/exec',
+    EASYSTORE_ACCOUNTING_D1_URL: 'https://fake-d1.example.invalid/accounting',
+    EASYSTORE_ACCOUNTING_D1_READONLY: true,
+    EASYSTORE_ACCOUNTING_D1_WRITE_MODE: 'OFF',
+    EASYSTORE_ACCOUNTING_D1_WRITES: false,
     AbortController,
     fetch: async (_url, options) => {
+      assert.strictEqual(_url, 'https://fake-d1.example.invalid/accounting', 'customer account reads must remain D1-only');
       const payload=JSON.parse(options.body);
       assert.strictEqual(payload.action,'getCustomerAccountV1915');
       return {ok:true,status:200,text:async()=>JSON.stringify({success:true,customer,balance:30,permissions:{canCollect:true,canAdjust:role==='admin'},transactions:[{createdAt:'2026-08-10T10:00:00.000Z',operation:'invoice',amount:30,balanceBefore:0,balanceAfter:30,createdBy:'ضياء'}]})};

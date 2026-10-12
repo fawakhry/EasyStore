@@ -1,0 +1,53 @@
+name: EasyStore ACC200 Owner Policy Boundary (SOURCE ONLY NO_GO)
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  offline-owner-policy-guard:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - name: Checkout PR candidate without persisted credentials
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - name: Prepare isolated Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Verify original canonical accounting book is append-only against exact PR base
+        shell: bash
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import os, re, subprocess
+          from pathlib import Path
+          sha=os.environ["BASE_SHA"]
+          assert re.fullmatch(r"[a-fA-F0-9]{40}",sha), "INVALID_BASE_SHA"
+          path="EASYSTORE_ACCOUNTING_MASTER_BOOK.md"
+          original=subprocess.check_output(["git","show",f"{sha}:{path}"])
+          candidate=Path(path).read_bytes()
+          assert candidate.startswith(original), "ORIGINAL_EASYSTORE_ACCOUNTING_HISTORY_CHANGED"
+          print("ACC200_BOOK_DELTA=" + ("UNCHANGED" if candidate == original else "APPENDED_ONLY"))
+          print("ACC200_ORIGINAL_ACCOUNTING_BOOK_BYTE_PREFIX_PRESERVED=PASS")
+          PY
+      - name: Verify the original EasyStore owner policy and EMPTY department register
+        shell: bash
+        env:
+          CLOUDFLARE_API_TOKEN: ''
+          CLOUDFLARE_ACCOUNT_ID: ''
+        run: |
+          set -euo pipefail
+          test -z "$CLOUDFLARE_API_TOKEN"
+          test -z "$CLOUDFLARE_ACCOUNT_ID"
+          python3 -m py_compile scripts/accounting_acc200_owner_policy_guard.py
+          python3 tests/accounting_acc200_owner_policy_guard.test.py
+          python3 scripts/accounting_acc200_owner_policy_guard.py
+          echo 'ACC200_SOURCE_ONLY_OWNER_POLICY_GUARD=PASS'
+          echo 'ACC200_FINANCE_RELEASE=NO_GO'

@@ -1,0 +1,42 @@
+name: EasyStore ACC203 Returns Review-Only Cash/Credit Ceiling (NO_GO)
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  offline-policy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Simulate owner-approved return policy without financial authority
+        shell: bash
+        env:
+          CLOUDFLARE_API_TOKEN: ''
+          CLOUDFLARE_ACCOUNT_ID: ''
+        run: |
+          set -euo pipefail
+          test -z "$CLOUDFLARE_API_TOKEN"
+          test -z "$CLOUDFLARE_ACCOUNT_ID"
+          node --check scripts/accounting_acc203_return_review_preview.cjs
+          node --check tests/accounting_acc203_return_review_preview_no_go.test.cjs
+          node --test tests/accounting_acc203_return_review_preview_no_go.test.cjs
+          node --test tests/accounting_acc202_d1_action_failclosed_no_go.test.cjs
+          node --test tests/accounting_acc201_sso_opener_role_no_go.test.cjs
+          node tests/easystore_a2_no_legacy_accounting_fallback.test.js
+          node tests/easystore_a2_write_router.test.js
+          node tests/easystore_a1_all_reads_d1_only.test.js
+          node tests/easystore_a1_core_read_router.test.js
+          node tests/accounting_agent_policy_v1.test.js
+          echo "ACC203_RETURN_REVIEW_CEILING_SOURCE_ONLY=PASS"
+          echo "ACC203_TRUE_PAYMENTS_AND_CUSTOMER_CREDIT_POSTINGS=0"
+          echo "ACC203_REAL_MANAGER_APPROVALS_VERIFIED=0"
+          echo "ACC203_FINANCE_RELEASE=NO_GO"
