@@ -22,9 +22,12 @@ assert.match(app, /entry619SchedulePostSsoRead/);
 assert.match(app, /D1 READONLY/);
 assert.match(app, /SSO OK/);
 
-const inventory=app.match(/D1_ACCOUNTING_READ_ACTIONS\\s*=\\s*new Set\\(\\[([^\\]]+)\\]\\)/);
-assert.ok(inventory, 'Accounting D1 read inventory must exist');
-const readActions=[...inventory[1].matchAll(/'([^']+)'/g)].map(x=>x[1]);
+const inventoryStart=app.indexOf('const D1_ACCOUNTING_READ_ACTIONS = new Set([');
+assert.ok(inventoryStart>=0, 'Accounting D1 read inventory must exist');
+const inventoryEnd=app.indexOf(']);',inventoryStart);
+assert.ok(inventoryEnd>inventoryStart,'Read inventory must close');
+const inventory=app.slice(inventoryStart,inventoryEnd);
+const readActions=[...inventory.matchAll(/'([^']+)'/g)].map(x=>x[1]);
 for(const action of ['getAccounting','getDeptInvoiceDraftV1887','getPartyAccountV1858','getCustomerAccountV1915','getEasyStoreCustomers','searchCustomers','getEasyStoreSuppliers','easyStoreSystemHealth','calculateAccountingLaserQuoteV1913','getDailyDepartmentReportV1920','previewAccountingAutomationV1921']) {
   assert.ok(readActions.includes(action), 'Missing D1-only read: '+action);
 }
