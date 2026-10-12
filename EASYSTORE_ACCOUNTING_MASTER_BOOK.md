@@ -5226,3 +5226,90 @@ During this correction, EasyStore [PR #29](https://github.com/fawakhry/EasyStore
 - **Append-only concurrency reconciliation:** [EasyStore PR #29](https://github.com/fawakhry/EasyStore/pull/29) merged its independently verified synthetic ACC192 closing checkpoint at `456389d9a55fc546d23cc4d37855bfa440278a49` during first [PR #30](https://github.com/fawakhry/EasyStore/pull/30). GitHub rejected PR30 with a merge conflict **despite 2/2 green premerge CI**, as the canonical book was concurrently extended. PR30 is now **CLOSED UNMERGED / SUPERSEDED**; its contents were safely rebased and merged via PR31 after 2/2 green head plus 2/2 green postmerge checks. **ACC192 entry is preserved unchanged** in the canonical book; no forced merge, deletion or history overwrite.
 - **Exactly what is closed:** the **historical documentation/numbering gap ACC146–156 only**. This is not human signing real financial roles (ACC156 [Issue #40](https://github.com/fawakhry/TrendOs/issues/40) **OPEN**), not authenticated live employee SSO, not complete historical source/target financial parity and not real shop financial G4 acceptance. Existing ACC187 refund functionality and ACC191 full real browser validation remain incomplete. Do not merge old [TrendOS PR #39](https://github.com/fawakhry/TrendOs/pull/39), which is still a separate unmerged draft. Do not replay old A2.13 canaries.
 - **Global operating status:** G1/G2/G3/G4/G5 **OPEN**, financial production decision **NO_GO**. No real customer money movement, D1 remote writes, Cloudflare Worker/Pages deployment, staff grants, finance CANARY, backup/restore/rollback, history import or removal, or cutover date was performed in this reconciliation. Subsequent ACC phases MUST be recorded here first, with their own exact PR/merge CI, before claiming verified completion.
+
+---
+
+## Historical ACC-001–193 number-coverage reconciliation (2026-10-12) — preserve facts, never invent work
+
+After restoring the original ACC-146–156 audit in merged [EasyStore PR #31](https://github.com/fawakhry/EasyStore/pull/31), a complete numbered-heading audit of the original canonical book found **seven earlier numbers not assigned documented entries** (004, 007, 013, 014, 025, 027, 069) and **two original tested, superseded G5 preparation stages** (176, 177) mentioned inside other entries but without standalone headings. These nine explicit audit slots are registered below so no number 001–193 goes unaccounted for.
+
+**Crucial distinction:** registering a number does **not** fabricate an action or claim a stage was completed. The seven early slots have **NO VERIFIED HISTORIC IMPLEMENTATION EVIDENCE** after checking the preserved book, its adjacent entries and GitHub searchable commit/issue titles for both EasyStore and TrendOS at this checkpoint. Absence of indexed evidence is not proof that no work ever happened; newly found proof must be reconciled append-only later. Do not claim tests, business data changes, employee approvals or production GO for these slots. Existing ACC-001–145 and ACC-146–193 entries remain untouched byte-for-byte; only this appendix adds coverage metadata.
+
+### Numbering-only audit slots with no confirmed historical work
+
+### Entry ACC-004 — HISTORICAL_NUMBER_UNASSIGNED_OR_UNVERIFIED (index-only, 2026-10-12)
+
+- **Status:** `NO_ASSIGNMENT_OR_EXECUTION_PROOF_FOUND` — **NOT VERIFIED_COMPLETE**, NOT a new implementation, NOT a claimed PR or CI success.
+- **Where the gap appears:** original canonical book proceeds from ACC-003 toward ACC-005, without a separately recorded original ACC-004 action. Original previous/next entries are preserved unchanged.
+- **Evidence searched:** current original EasyStore Accounting Master Book, previously restored TrendOS ACC157–193 archive, and GitHub commit-message/issue search for the exact identifier `ACC-004` in EasyStore + TrendOS. No stage-specific matching commit/issue was returned at the time of this audit; this is an indexed-search limitation, not a proof of never-existing work.
+- **Required to change status:** find authoritative source commit, historical test/Actions run and acceptance scope, then append grounded proof; otherwise leave it explicitly UNVERIFIED. No source code, migration, finance event, real staff role, or runtime was changed for this index-only slot.
+
+### Entry ACC-007 — HISTORICAL_NUMBER_UNASSIGNED_OR_UNVERIFIED (index-only, 2026-10-12)
+
+- **Status:** `NO_ASSIGNMENT_OR_EXECUTION_PROOF_FOUND` — **NOT VERIFIED_COMPLETE**, NOT a new implementation, NOT a claimed PR or CI success.
+- **Where the gap appears:** original canonical book proceeds from ACC-006 toward ACC-008, without a separately recorded original ACC-007 action. Original previous/next entries are preserved unchanged.
+- **Evidence searched:** current original EasyStore Accounting Master Book, previously restored TrendOS ACC157–193 archive, and GitHub commit-message/issue search for the exact identifier `ACC-007` in EasyStore + TrendOS. No stage-specific matching commit/issue was returned at the time of this audit; this is an indexed-search limitation, not a proof of never-existing work.
+- **Required to change status:** find authoritative source commit, historical test/Actions run and acceptance scope, then append grounded proof; otherwise leave it explicitly UNVERIFIED. No source code, migration, finance event, real staff role, or runtime was changed for this index-only slot.
+
+### Entry ACC-013 — HISTORICAL_NUMBER_UNASSIGNED_OR_UNVERIFIED (index-only, 2026-10-12)
+
+- **Status:** `NO_ASSIGNMENT_OR_EXECUTION_PROOF_FOUND` — **NOT VERIFIED_COMPLETE**, NOT a new implementation, NOT a claimed PR or CI success.
+- **Where the gap appears:** original canonical book proceeds from ACC-012 toward ACC-015, without a separately recorded original ACC-013 action. Original previous/next entries are preserved unchanged.
+- **Evidence searched:** current original EasyStore Accounting Master Book, previously restored TrendOS ACC157–193 archive, and GitHub commit-message/issue search for the exact identifier `ACC-013` in EasyStore + TrendOS. No stage-specific matching commit/issue was returned at the time of this audit; this is an indexed-search limitation, not a proof of never-existing work.
+- **Required to change status:** find authoritative source commit, historical test/Actions run and acceptance scope, then append grounded proof; otherwise leave it explicitly UNVERIFIED. No source code, migration, finance event, real staff role, or runtime was changed for this index-only slot.
+
+### Entry ACC-014 — HISTORICAL_NUMBER_UNASSIGNED_OR_UNVERIFIED (index-only, 2026-10-12)
+
+- **Status:** `NO_ASSIGNMENT_OR_EXECUTION_PROOF_FOUND` — **NOT VERIFIED_COMPLETE**, NOT a new implementation, NOT a claimed PR or CI success.
+- **Where the gap appears:** original canonical book proceeds from ACC-012 toward ACC-015, without a separately recorded original ACC-014 action. Original previous/next entries are preserved unchanged.
+- **Evidence searched:** current original EasyStore Accounting Master Book, previously restored TrendOS ACC157–193 archive, and GitHub commit-message/issue search for the exact identifier `ACC-014` in EasyStore + TrendOS. No stage-specific matching commit/issue was returned at the time of this audit; this is an indexed-search limitation, not a proof of never-existing work.
+- **Required to change status:** find authoritative source commit, historical test/Actions run and acceptance scope, then append grounded proof; otherwise leave it explicitly UNVERIFIED. No source code, migration, finance event, real staff role, or runtime was changed for this index-only slot.
+
+### Entry ACC-025 — HISTORICAL_NUMBER_UNASSIGNED_OR_UNVERIFIED (index-only, 2026-10-12)
+
+- **Status:** `NO_ASSIGNMENT_OR_EXECUTION_PROOF_FOUND` — **NOT VERIFIED_COMPLETE**, NOT a new implementation, NOT a claimed PR or CI success.
+- **Where the gap appears:** original canonical book proceeds from ACC-024 toward ACC-026, without a separately recorded original ACC-025 action. Original previous/next entries are preserved unchanged.
+- **Evidence searched:** current original EasyStore Accounting Master Book, previously restored TrendOS ACC157–193 archive, and GitHub commit-message/issue search for the exact identifier `ACC-025` in EasyStore + TrendOS. No stage-specific matching commit/issue was returned at the time of this audit; this is an indexed-search limitation, not a proof of never-existing work.
+- **Required to change status:** find authoritative source commit, historical test/Actions run and acceptance scope, then append grounded proof; otherwise leave it explicitly UNVERIFIED. No source code, migration, finance event, real staff role, or runtime was changed for this index-only slot.
+
+### Entry ACC-027 — HISTORICAL_NUMBER_UNASSIGNED_OR_UNVERIFIED (index-only, 2026-10-12)
+
+- **Status:** `NO_ASSIGNMENT_OR_EXECUTION_PROOF_FOUND` — **NOT VERIFIED_COMPLETE**, NOT a new implementation, NOT a claimed PR or CI success.
+- **Where the gap appears:** original canonical book proceeds from ACC-026 toward ACC-028, without a separately recorded original ACC-027 action. Original previous/next entries are preserved unchanged.
+- **Evidence searched:** current original EasyStore Accounting Master Book, previously restored TrendOS ACC157–193 archive, and GitHub commit-message/issue search for the exact identifier `ACC-027` in EasyStore + TrendOS. No stage-specific matching commit/issue was returned at the time of this audit; this is an indexed-search limitation, not a proof of never-existing work.
+- **Required to change status:** find authoritative source commit, historical test/Actions run and acceptance scope, then append grounded proof; otherwise leave it explicitly UNVERIFIED. No source code, migration, finance event, real staff role, or runtime was changed for this index-only slot.
+
+### Entry ACC-069 — HISTORICAL_NUMBER_UNASSIGNED_OR_UNVERIFIED (index-only, 2026-10-12)
+
+- **Status:** `NO_ASSIGNMENT_OR_EXECUTION_PROOF_FOUND` — **NOT VERIFIED_COMPLETE**, NOT a new implementation, NOT a claimed PR or CI success.
+- **Where the gap appears:** original canonical book proceeds from ACC-068 toward ACC-070, without a separately recorded original ACC-069 action. Original previous/next entries are preserved unchanged.
+- **Evidence searched:** current original EasyStore Accounting Master Book, previously restored TrendOS ACC157–193 archive, and GitHub commit-message/issue search for the exact identifier `ACC-069` in EasyStore + TrendOS. No stage-specific matching commit/issue was returned at the time of this audit; this is an indexed-search limitation, not a proof of never-existing work.
+- **Required to change status:** find authoritative source commit, historical test/Actions run and acceptance scope, then append grounded proof; otherwise leave it explicitly UNVERIFIED. No source code, migration, finance event, real staff role, or runtime was changed for this index-only slot.
+
+
+### Entry ACC-176 — Historical GET-only finance release NO_GO preflight, later ported (2026-10-10; indexed 2026-10-12)
+
+- **Status:** \`HISTORIC_SOURCE_CI_PASS_PORTED_NOT_DEPLOYED\`. Original [TrendOS PR #57](https://github.com/fawakhry/TrendOs/pull/57) source-only was **CLOSED UNMERGED, SUPERSEDED**, not because production was enabled.
+- **Verified original CI:** [GitHub run #38073710691](https://github.com/fawakhry/TrendOs/actions/runs/38073710691) **SUCCESS** on exact original test SHA \`4015c81c1e92fdc20754940f6c19f40bbbbb5804\`. At that historical checkpoint public GET-only EasyStore OFF and accounting Worker READONLY, zero allowed finance canary budget; deterministic source/binding guards produced **NO_GO**.
+- **History reconciled rather than overwritten:** after ACC178 source-only [PR #59](https://github.com/fawakhry/TrendOs/pull/59), the four original ACC176 non-master files were ported byte-for-byte along with ACC177 in **merged** [TrendOS PR #60](https://github.com/fawakhry/TrendOs/pull/60) SHA \`db07795515dc623a7c042f596f99f86ac5fc9694\`; see existing ACC179 narrative. Stale PR57 master-book copy was not force-merged.
+- **Not accepted:** old deploy workflow can change floating shared source; protected real D1 backup, independent restore, previous live Worker version and authorized rollback NOT proven. No production Worker release, D1 write, canary, staff grant or owner G5 acceptance.
+
+### Entry ACC-177 — Historical shared/book overlap fail-closed, later ported (2026-10-10; indexed 2026-10-12)
+
+- **Status:** \`HISTORIC_BLOCKED_SAFE_CI_PASS_PORTED_NOT_DEPLOYED\`. Original [TrendOS PR #58](https://github.com/fawakhry/TrendOs/pull/58) was **CLOSED UNMERGED, SUPERSEDED**.
+- **Verified original CI:** [GitHub run #38074706828](https://github.com/fawakhry/TrendOs/actions/runs/38074706828) **SUCCESS** on exact old test SHA \`ef6483da7124ea58ead0f6d8e099f76e6dc7e38a\`, specifically identifying \`BLOCKED_BY_TrendOS_MASTER_BOOK.md\`, with **NO merged Worker tree** produced and **NO production operation**.
+- **Preserved later resolution:** original four non-master ACC177 safety files were ported exactly under merged [TrendOS PR #60](https://github.com/fawakhry/TrendOs/pull/60), after PR59; existing ACC178/ACC179 document the later isolated merged-worker rehearsal and no permanent release. Source-only guard preserved, obsolete history not overwritten.
+- **Not accepted:** passing a safety STOP test is not a successful live Worker merge, deployment, rollback, backup or financial operating acceptance. Release **NO_GO**, G5 still OPEN.
+
+### Whole-book numbering coverage and owner boundary
+
+- **Book coverage:** historical ACC-001 through ACC-193 all have an explicit numbered heading in this same canonical book. Most correspond to real historical stage entries; ACC-004, 007, 013, 014, 025, 027 and 069 are **index-only unverified slots**. ACC-176/177 are **historical tested safeguards, superseded by newer merged source**. Numbers recorded do NOT mean 193 completed implementation milestones.
+- **Evidence hierarchy:** actual runtime > published > exact tested code > repo-only source > historic. No old PR with a stale independent master book should be merged to change this history. The original EasyStore book remains the *only* canonical accounting execution book.
+- **Unfinished decisions:** ACC-156 real staff permission owner signoff still [TrendOS Issue #40](https://github.com/fawakhry/TrendOs/issues/40) OPEN; financial data source/target parity and physical stock/cash/custody still require separate real acceptance; ACC-187 cash refunds and ACC-191 real browser acceptance incomplete. **G1–G5 all OPEN, finance release NO_GO**.
+- **This appendix:** purely documentary source/commit reconciliation. No Cloudflare deployment, Pages publish, production D1 statement, financial HTTP POST, old A2.13 canary, employee permission/login, historical data import/deletion, actual backup/restore/rollback or cutover date.
+
+
+### ACC-001–193 coverage CI test-fixture correction (2026-10-12)
+
+- Initial [GitHub Actions #38190468631](https://github.com/fawakhry/EasyStore/actions/runs/38190468631) **FAILURE** occurred in the source-only new adversarial test for ACC-176 original historic CI proof: its synthetic mutation changed only the *first* occurrence of the cited run ID within a single appended stage, while the same run ID remained in a second hyperlink/description. The runtime source/history verifier correctly still found unaltered valid evidence. This is a test-fixture false negative, not a financial policy or production failure.
+- Fixed **only** `tests/accounting_complete_number_001_193_audit.test.py` to replace every occurrence inside the targeted *appended* historical stage, while preserving the prior canonical book prefix byte-for-byte. Do not describe the failed Actions run as successful. Re-run exact-head offline CI and complete PR review before merging. Finance NO_GO and all G1–G5 OPEN; no real data, employee session or Cloudflare action.
