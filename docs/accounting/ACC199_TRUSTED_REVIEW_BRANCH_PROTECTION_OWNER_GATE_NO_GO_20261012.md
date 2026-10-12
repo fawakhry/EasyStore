@@ -54,6 +54,19 @@ Source-only merge approval: **NOT_GRANTED**
 Finance/cash/credit/stock/production release: **NOT_GRANTED**  
 Owner go-live/cutover date: **NOT_SET**
 
+
+## Owner clarification: no second GitHub reviewer is currently available (2026-10-12)
+
+**Direct user clarification:** the owner was asked whether they have another trusted GitHub account holder to provide an independent review and replied **"مفيش" (none)**. This is a statement that **no second trusted GitHub reviewer is currently available**; it is NOT an approval to bypass required reviews, merge the stacked accounting PRs, change repository protection settings, sign off as a different person, or release finance or printshop operations.
+
+**Decision and execution boundary:** there is no eligible independent reviewer to request at present. Accordingly, do NOT request a fabricated or self-approved review, do NOT mark Draft PRs ready or merge them under the guise of green CI, and do NOT count the owner's broad authorization for safe code/tests as an exception to the required controlled review. The eight ACC187 business policy approvals remain valid as bounded policy choices only, not production acceptance.
+
+**Continue autonomously WITHOUT merging or running production:** source-only PRs and tests on fictional inputs; test-only offline SQLite and mock Worker checks; source inspection of existing implementation gaps; bounded security test improvements; documentation and append-only accounting evidence in original EasyStore book; GitHub CI safe workflows with Cloudflare credentials absent. Keep all PRs OPEN/DRAFT/UNMERGED, no releases, no actual customer funds, store credit, cost ledger, stock updates, migrations, staff grants, Cloudflare/D1, Ubuntu remote execution or printshop actions.
+
+**Alternative future path, not silently authorized:** the owner can later nominate a genuinely different qualified reviewer, engage a trustworthy external developer/auditor, or explicitly select a separately evaluated engineering review/merge-governance process, including independently managed protected-branch checks. Any alternative must be approved separately and must not misrepresent automated CI, a code-owning bot, or the PR author as an independent human reviewer. Production/finance go-live is a **separate** owner-controlled decision even if source merge governance is eventually resolved.
+
+**Present blocker:** `ACC199_INDEPENDENT_REVIEWER_AVAILABLE=NO_PER_OWNER`; `ACC199_REVIEWER_BYPASS_APPROVED=NO`; `ACC199_SOURCE_ONLY_WORK=ALLOWED`; `ACC199_SOURCE_MERGE=BLOCKED`; `ACC199_PRODUCTION_ACTIONS=PROHIBITED`; `FINANCE_RELEASE=NO_GO`.
+
 ## Important ledger and operational status
 
 All accounting stages and dated evidence live in the original `fawakhry/EasyStore:EASYSTORE_ACCOUNTING_MASTER_BOOK.md` on still-unmerged Draft PR #34; this reviewer packet is a subordinate work document. It does NOT alter any TrendOS master book or live business data.
