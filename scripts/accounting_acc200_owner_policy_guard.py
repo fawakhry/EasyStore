@@ -110,7 +110,7 @@ def verify(policy: str, register: str, book: str) -> dict[str, object]:
     anchor = "## Register status — no live method selected"
     if register.count(anchor) != 1:
         raise PolicyStop("REGISTER_TABLE_MISSING")
-    table_text = register.split(anchor, 1)[1].split("\n\n", 1)[0]
+    table_text = register.split(anchor, 1)[1].lstrip("\n").split("\n\n", 1)[0]
     rows = [line.strip() for line in table_text.splitlines() if line.strip().startswith("|")]
     if len(rows) != 5:
         raise PolicyStop("REGISTER_ROW_COUNT_MISMATCH")
