@@ -1,0 +1,47 @@
+name: Canonical Accounting Book History Recovery Audit (NO DEPLOY)
+on:
+  push:
+    branches:
+      - docs/restore-canonical-accounting-journal-acc157-193-20261012
+      - candidate/easystore-zero-google-audit-20261004
+    paths:
+      - 'EASYSTORE_ACCOUNTING_MASTER_BOOK.md'
+      - 'scripts/accounting_canonical_book_recovery_audit.py'
+      - '.github/workflows/accounting-canonical-book-history-audit.yml'
+  pull_request:
+    branches:
+      - candidate/easystore-zero-google-audit-20261004
+permissions:
+  contents: read
+jobs:
+  preserve-true-original-book:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/checkout@v4
+        with:
+          repository: fawakhry/TrendOs
+          ref: 95f5a4ff4c75059c6ae0b577340e58800c0926ea
+          path: trendos-archive
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Prove original 145-entry book immutable and ACC157-193 migration lossless
+        shell: bash
+        env:
+          CLOUDFLARE_API_TOKEN: ''
+          CLOUDFLARE_ACCOUNT_ID: ''
+        run: |
+          set -euo pipefail
+          test -z "$CLOUDFLARE_API_TOKEN"
+          test -z "$CLOUDFLARE_ACCOUNT_ID"
+          python3 -m py_compile scripts/accounting_canonical_book_recovery_audit.py
+          python3 scripts/accounting_canonical_book_recovery_audit.py
+          echo 'EASYSTORE_ACCOUNTING_MASTER_BOOK=CANONICAL'
+          echo 'EASYSTORE_FINANCE_PRODUCTION_GO=NO_GO'
+          echo 'EASYSTORE_REAL_D1_WRITES=ZERO'
