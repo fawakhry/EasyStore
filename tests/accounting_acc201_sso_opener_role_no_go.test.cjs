@@ -169,3 +169,40 @@ test('19 SSO state is synthetic and never represents finance release', () => {
   assert.equal(h.acks.length,1);
   // Production D1 and backend authorization are never invoked in this VM.
 });
+
+test('20 forged legacy localStorage token cannot create an EasyStore accounting session', () => {
+  const local={'MATBAGY_EMPLOYEE_SSO':JSON.stringify({
+    at:Date.now(),params:{username:'FAKE_ROOT',token:'FORGED_TOKEN',mode:'admin'},
+    user:{name:'Fake Admin',username:'FAKE_ROOT',token:'FORGED_TOKEN',mode:'admin'}
+  })};
+  const h=harness(undefined,{local,noOpener:true});
+  assert.equal(h.user().token,'');
+  assert.equal(h.admin(),false);
+  assert.equal(h.localStorage.getItem('MATBAGY_EMPLOYEE_SSO'),null);
+});
+test('21 far-future legacy localStorage timestamp cannot spoof a fresh session', () => {
+  const h=harness(undefined,{local:{MATBAGY_EMPLOYEE_SSO:JSON.stringify({
+    at:Date.now()+24*60*60*1000,
+    user:{username:'FAKE_FUTURE',name:'Fake Admin',token:'FORGED_FUTURE',mode:'admin'},
+    params:{token:'FORGED_FUTURE',username:'FAKE_FUTURE',mode:'admin'}
+  })}});
+  assert.equal(h.user().token,'');
+  assert.equal(h.admin(),false);
+});
+test('22 stale legacy localStorage handoff cannot be promoted to a session', () => {
+  const h=harness(undefined,{local:{MATBAGY_EMPLOYEE_SSO:JSON.stringify({
+    createdAt:Date.now()-86400000,
+    user:{username:'FAKE_STALE',token:'FAKE_STALE_TOKEN'}
+  })}});
+  assert.equal(h.user().token,'');
+});
+test('23 legacy localStorage denial does not break verified opener postMessage path', () => {
+  const h=harness(undefined,{local:{MATBAGY_EMPLOYEE_SSO:JSON.stringify({
+    at:Date.now(),user:{username:'FAKE_EVIL',token:'FORGED_FAKE',mode:'admin'}
+  })}});
+  assert.equal(h.user().token,'');
+  h.send();
+  assert.equal(h.user().token,'FAKE_NONPRODUCTION');
+  assert.equal(h.admin(),false);
+  assert.equal(h.acks.length,1);
+});
