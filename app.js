@@ -19,14 +19,11 @@
   function readSso(){
     let handoff = {};
     try{ handoff = JSON.parse(sessionStorage.getItem('EASYSTORE_SESSION_V1922') || '{}'); }catch(e){}
-    if(!handoff || !handoff.user || !((handoff.params&&handoff.params.token)||(handoff.user&&handoff.user.token))){
-      try{
-        const pending=JSON.parse(localStorage.getItem('MATBAGY_EMPLOYEE_SSO')||'{}');
-        localStorage.removeItem('MATBAGY_EMPLOYEE_SSO');
-        const created=Number(pending.at||pending.createdAt||0);
-        if(created && Date.now()-created<=90000){ handoff=pending; sessionStorage.setItem('EASYSTORE_SESSION_V1922',JSON.stringify(pending)); }
-      }catch(e){}
-    }
+    // Unverified legacy localStorage handoffs have no trusted origin/source/nonce.
+    // Never promote them to the active session. Use the opener-verified SSO
+    // message or a previously persisted session; backend still verifies tokens.
+    // Drop stale legacy material to prevent accidental reuse, but do not read it.
+    try{ localStorage.removeItem('MATBAGY_EMPLOYEE_SSO'); }catch(e){}
     const hp = handoff.params || {};
     const hu = handoff.user || {};
     return {
@@ -260,7 +257,7 @@
             'Content-Type':'application/json',
             'Authorization':'Bearer '+user.token
           },
-          body:JSON.stringify(Object.assign({name:user.name,_ts:Date.now()},data||{},{action:actionName,username:user.username})),
+          body:JSON.stringify(Object.assign({name:user.name},data||{},{action:actionName,username:user.username,_ts:Date.now()})),
           signal:controller.signal,
           credentials:'omit',
           redirect:'follow'
@@ -274,7 +271,7 @@
 
       const endpoint=String(window.MATBAGY_SECURE_API_PROXY_URL||window.TREND_API_URL||'').trim();
       if(!endpoint) throw new Error('رابط API الآمن غير مضبوط في config.js');
-      const response=await fetch(endpoint,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(Object.assign({name:user.name,_ts:Date.now()},data||{},{action:actionName,username:user.username,token:user.token})),signal:controller.signal,credentials:'omit',redirect:'follow'});
+      const response=await fetch(endpoint,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(Object.assign({name:user.name},data||{},{action:actionName,username:user.username,token:user.token,_ts:Date.now()})),signal:controller.signal,credentials:'omit',redirect:'follow'});
       if(!response.ok) throw new Error('فشل الاتصال بالسيرفر ('+response.status+')');
       const text=await response.text();
       try{return JSON.parse(text||'{}');}catch(e){throw new Error('رد السيرفر غير صالح. اضبط MATBAGY_SECURE_API_PROXY_URL.');}
