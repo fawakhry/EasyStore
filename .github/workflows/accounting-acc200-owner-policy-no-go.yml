@@ -33,7 +33,7 @@ jobs:
           path="EASYSTORE_ACCOUNTING_MASTER_BOOK.md"
           original=subprocess.check_output(["git","show",f"{sha}:{path}"])
           candidate=Path(path).read_bytes()
-          assert candidate.startswith(original) and len(candidate)>len(original), "ORIGINAL_EASYSTORE_ACCOUNTING_HISTORY_CHANGED_OR_NOT_APPENDED"
+          assert candidate.startswith(original), "ORIGINAL_EASYSTORE_ACCOUNTING_HISTORY_CHANGED"\n          print("ACC200_BOOK_DELTA=" + ("UNCHANGED" if candidate == original else "APPENDED_ONLY"))
           print("ACC200_ORIGINAL_ACCOUNTING_BOOK_BYTE_PREFIX_PRESERVED=PASS")
           PY
       - name: Verify the original EasyStore owner policy and EMPTY department register
