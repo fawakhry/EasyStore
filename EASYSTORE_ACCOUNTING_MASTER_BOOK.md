@@ -5331,3 +5331,35 @@ After restoring the original ACC-146–156 audit in merged [EasyStore PR #31](ht
 - **Status:** `VERIFIED_COMPLETE` strictly for ACC-194's **synthetic source/CI test scope**. This is **NOT** evidence of a real Cloudflare D1 backup or restore, worker rollback, protected storage, actual previous live deployment version, customer refund, staff permissions, financial operating acceptance or real disaster recovery RPO/RTO. Owner-only G5 remains `OPEN`; G1–G5 all `OPEN`, frontend finance last known OFF, backend last known READONLY, owner cutover date null; financial release **NO_GO**. No production deploy, actual D1 operation, financial POST or canary action occurred.
 - **History/gap continuity:** original complete-number index ACC001–193 from canonical [EasyStore PR #32](https://github.com/fawakhry/EasyStore/pull/32) remains unchanged. ACC146–156 historical source/test descriptions were recovered in [EasyStore PR #31](https://github.com/fawakhry/EasyStore/pull/31) with verified original CIs but without G2/live signoff. Historical numbers ACC004/007/013/014/025/027/069 still lack stage-specific proof and remain explicitly unverified; filling their *index* did not prove completion. ACC187 refund behavior, ACC191 live browser handoff, and real finance acceptance remain open. Continue independent safe ACC195 after machine-ledger bookkeeping; DO NOT resurrect unmerged stale historical PRs to "fix" book history.
 
+
+---
+
+## ACC-195–199 source-only recovery / true CI status — 2026-10-12
+
+**Canonical location:** Original `fawakhry/EasyStore` `EASYSTORE_ACCOUNTING_MASTER_BOOK.md` on `candidate/easystore-zero-google-audit-20261004`; NEVER record accounting progress in TrendOS_MASTER_BOOK.md. This is source/CI and owner-blocker evidence, NOT permission to operate production.
+
+### ACC-195 — Worker / auth / D1 pin
+- TrendOS [Draft PR #106](https://github.com/fawakhry/TrendOs/pull/106) remains OPEN/UNMERGED. Initial head `3720a68d20b8f0d039c4966ba6de357c7dda94ce`: [CI #38251096268](https://github.com/fawakhry/TrendOs/actions/runs/38251096268) **SUCCESS**; job 114817296138 confirms pinned source/bindings/auth and seven original tests OK. They were **one positive + six negative tests**, not seven negative.
+- Corrected this count by adding source-drift denial for native `cloudflare-d1/src/index_v2.js`, commit `f13fac313261b5601b4c3c73db12db6d93fe5180`. [Updated CI #38251951924](https://github.com/fawakhry/TrendOs/actions/runs/38251951924) **SUCCESS**, job 114820241789; eight tests comprise **one clean baseline + seven fail-closed mutations**.
+- Guard covers checked-in Worker/config blobs, D1 binding, entrypoint, auth flag OFF and historical/manual deploy workflow pin. This is GitHub pull-request **synthetic merge-checkout** CI, NOT actual deployed Worker SHA or a direct production acceptance. Old manual floating-merge deployment has NOT been disabled, approved or invoked.
+- ACC195 status: `SOURCE_CI_PASS_CANONICAL_REVIEW_AND_MERGE_PENDING`. No claim of final VERIFIED_COMPLETE until reviewed canonical record, source PR and independent merged-SHA verification.
+
+### ACC-196 — simulated previous Worker selection and fail-closed stop
+- TrendOS dependent [Draft PR #107](https://github.com/fawakhry/TrendOs/pull/107), reviewed source checkpoint `4fcb86c5db3ad3be3cfe08cce89209aab7114d33`. [CI #38252619080](https://github.com/fawakhry/TrendOs/actions/runs/38252619080) gate-simulation job **114822524230 SUCCESS**.
+- In-memory mock: fake health FAIL selects `SYNTHETIC_PREVIOUS`, health PASS retains `SYNTHETIC_CANDIDATE`; hash of a standalone `:memory:` fake balanced SQLite ledger remains unchanged. Tampered fake ledger is rejected. **Real previous deployed Worker version unknown**; no real D1 rewind, real restore, backup, rollback or claimed RPO/RTO.
+- Status `SYNTHETIC_PASS_DEPENDENT_PR_UNMERGED`, ACC194+ACC195 required; real G5 OPEN.
+
+### ACC-197 — A2.13 acceptance protocol only
+- PR #107 includes source checklist: proposed public READONLY health GET, SELECT query review and STOP-on-mismatch, all explicitly **UNEXECUTED**. Real employee session absent, trial ID null, owner approval null, canary budget zero. No A2.13 historical canary replay.
+- CI #38252619080 validates forged GO/canary/G1 close/trial ID is rejected. Status `PROTOCOL_ONLY_TESTED_NO_REAL_TRIAL`; ACC190+ACC196 dependency, G1 OPEN.
+
+### ACC-198 — synthetic native Worker regression suite, partial only
+- CI #38252619080 native-regression job **114822524411 SUCCESS** on checked-in original Worker with throwaway SQLite for separate ACC170, ACC187 (refund unsupported), ACC188, ACC189, ACC190, ACC192 and ACC193 tests. No real money, network backend POST or Production D1.
+- Each test has an **independent** synthetic DB; these passing regressions DO NOT prove a unified end-to-end financial ledger lifecycle. Customer cash refund handler/policy ACC187 and actual browser SSO ACC191 remain incomplete, so ACC198 cannot close.
+- Status `PARTIAL_SYNTHETIC_PASS_FULL_ACC198_BLOCKED_ACC187_ACC191`; G4 OPEN.
+
+### ACC-199 — technical handoff draft
+- PR #107 includes [offline runbook](https://github.com/fawakhry/TrendOs/blob/test/acc196-199-offline-preflight-no-go-20261012/docs/trendos/staging/ACC196_199_OFFLINE_HANDOFF_RUNBOOK_NO_GO_20261012.md) and [machine-readable prerequisite/owner STOP map](https://github.com/fawakhry/TrendOs/blob/test/acc196-199-offline-preflight-no-go-20261012/docs/trendos/staging/ACC196_199_SAFE_PREPARATION_NO_GO_20261012.json). Negative gate suite passes at CI #38252619080.
+- Owner approvals still required for G1 bounded authentic A2.13 acceptance, G2 real staff permissions, G3 physical stocks/cash/custody and separately chosen cutover date, G4 real finance/refunds/browser cycle, G5 protected real backup/independent restore and actual previous Worker version. Status `HANDOFF_DRAFT_NO_GO`; source PRs #106 and #107 remain Draft.
+
+**Unchanged mandatory operating boundary:** `G1=OPEN G2=OPEN G3=OPEN G4=OPEN G5=OPEN FINANCE_RELEASE=NO_GO`. Prior backend READONLY and frontend OFF are **historical observations, NOT re-verified live runtime claims**. No Cloudflare deploy, D1 remote SQL, real financial transactions, Canary, employee grant, accounting history import/delete, cutover date, rollback, real production backup or autonomous printshop action occurred. The EasyStore docs PR carrying this entry must itself be tested/reviewed before the stages can be marked recorded on the canonical branch.
