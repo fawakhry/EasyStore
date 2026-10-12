@@ -238,7 +238,7 @@
     if(!readActionRequested && !writeActionRequested) throw new Error('عملية الحسابات غير معروفة؛ تم منع الطلب دون استخدام السيرفر القديم.');
     // Read-only flag is not permission to route accounting data to the legacy API.
     if(readActionRequested && window.EASYSTORE_ACCOUNTING_D1_READONLY !== true) throw new Error('قراءة الحسابات من D1 غير مفعلة؛ تم منع الرجوع للسيرفر القديم.');
-    const useD1Read = readActionRequested;
+    const useD1Read = window.EASYSTORE_ACCOUNTING_D1_READONLY === true && readActionRequested;
     // An obsolete boolean flag must never implicitly enable financial writes.
     const configuredWriteMode = String(window.EASYSTORE_ACCOUNTING_D1_WRITE_MODE || 'OFF').trim().toUpperCase();
     const configuredCanaryActions = new Set((Array.isArray(window.EASYSTORE_ACCOUNTING_D1_WRITE_CANARY_ACTIONS) ? window.EASYSTORE_ACCOUNTING_D1_WRITE_CANARY_ACTIONS : []).map(String));
