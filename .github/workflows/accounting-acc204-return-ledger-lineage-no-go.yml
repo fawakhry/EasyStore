@@ -39,6 +39,12 @@ jobs:
           node tests/easystore_a1_all_reads_d1_only.test.js
           node tests/easystore_a1_core_read_router.test.js
           node tests/accounting_agent_policy_v1.test.js
+          # Full checked-in JavaScript accounting regression set; synthetic source only.
+          for f in tests/*.test.js; do
+            echo "ACC204_FULL_JS_REGRESSION=$f"
+            node "$f"
+          done
+          echo 'ACC204_FULL_JS_REGRESSION=PASS'
           echo 'ACC204_FAKE_LEDGER_LINEAGE_REVIEW_ONLY=PASS'
           echo 'ACC204_REAL_LEDGER_RECORDS_VERIFIED=0'
           echo 'ACC204_REAL_FINANCIAL_POSTINGS=0'
