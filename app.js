@@ -232,9 +232,15 @@
   async function api(action, data){
     const actionName=String(action||'');
     if(RETIRED_ACCOUNTING_ACTIONS.has(actionName)) throw new Error('تم إيقاف أداة الترحيل القديمة بعد بدء الحسابات من قاعدة نظيفة.');
-    const useD1Read = window.EASYSTORE_ACCOUNTING_D1_READONLY === true && D1_ACCOUNTING_READ_ACTIONS.has(actionName);
+    const readActionRequested = D1_ACCOUNTING_READ_ACTIONS.has(actionName);
     const writeActionRequested = D1_ACCOUNTING_WRITE_ACTIONS.has(actionName);
-    const configuredWriteMode = String(window.EASYSTORE_ACCOUNTING_D1_WRITE_MODE || (window.EASYSTORE_ACCOUNTING_D1_WRITES === true ? 'GENERAL' : 'OFF')).trim().toUpperCase();
+    // Only explicitly inventoried accounting actions may leave this client.
+    if(!readActionRequested && !writeActionRequested) throw new Error('عملية الحسابات غير معروفة؛ تم منع الطلب دون استخدام السيرفر القديم.');
+    // Read-only flag is not permission to route accounting data to the legacy API.
+    if(readActionRequested && window.EASYSTORE_ACCOUNTING_D1_READONLY !== true) throw new Error('قراءة الحسابات من D1 غير مفعلة؛ تم منع الرجوع للسيرفر القديم.');
+    const useD1Read = readActionRequested;
+    // An obsolete boolean flag must never implicitly enable financial writes.
+    const configuredWriteMode = String(window.EASYSTORE_ACCOUNTING_D1_WRITE_MODE || 'OFF').trim().toUpperCase();
     const configuredCanaryActions = new Set((Array.isArray(window.EASYSTORE_ACCOUNTING_D1_WRITE_CANARY_ACTIONS) ? window.EASYSTORE_ACCOUNTING_D1_WRITE_CANARY_ACTIONS : []).map(String));
     if(writeActionRequested && !['OFF','CANARY','GENERAL'].includes(configuredWriteMode)) throw new Error('وضع كتابة D1 للحسابات غير صالح؛ تم منع الحركة.');
     if(writeActionRequested && configuredWriteMode === 'OFF') throw new Error('كتابة D1 للحسابات غير مفعلة.');
@@ -254,7 +260,7 @@
             'Content-Type':'application/json',
             'Authorization':'Bearer '+user.token
           },
-          body:JSON.stringify(Object.assign({action,username:user.username,name:user.name,_ts:Date.now()},data||{})),
+          body:JSON.stringify(Object.assign({name:user.name,_ts:Date.now()},data||{},{action:actionName,username:user.username})),
           signal:controller.signal,
           credentials:'omit',
           redirect:'follow'
@@ -268,7 +274,7 @@
 
       const endpoint=String(window.MATBAGY_SECURE_API_PROXY_URL||window.TREND_API_URL||'').trim();
       if(!endpoint) throw new Error('رابط API الآمن غير مضبوط في config.js');
-      const response=await fetch(endpoint,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(Object.assign({action,username:user.username,name:user.name,token:user.token,_ts:Date.now()},data||{})),signal:controller.signal,credentials:'omit',redirect:'follow'});
+      const response=await fetch(endpoint,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(Object.assign({name:user.name,_ts:Date.now()},data||{},{action:actionName,username:user.username,token:user.token})),signal:controller.signal,credentials:'omit',redirect:'follow'});
       if(!response.ok) throw new Error('فشل الاتصال بالسيرفر ('+response.status+')');
       const text=await response.text();
       try{return JSON.parse(text||'{}');}catch(e){throw new Error('رد السيرفر غير صالح. اضبط MATBAGY_SECURE_API_PROXY_URL.');}
