@@ -1,0 +1,41 @@
+name: EasyStore ACC202 D1 Action/Payload Fail-Closed (SOURCE ONLY NO_GO)
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  offline-accounting-router:
+    runs-on: ubuntu-latest
+    timeout-minutes: 9
+    steps:
+      - name: Checkout candidate with no persisted credentials
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Set up Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Exercise actual EasyStore accounting API router with fake network
+        shell: bash
+        env:
+          CLOUDFLARE_API_TOKEN: ''
+          CLOUDFLARE_ACCOUNT_ID: ''
+        run: |
+          set -euo pipefail
+          test -z "$CLOUDFLARE_API_TOKEN"
+          test -z "$CLOUDFLARE_ACCOUNT_ID"
+          node --check app.js
+          node --test tests/accounting_acc202_d1_action_failclosed_no_go.test.cjs
+          node --test tests/accounting_acc201_sso_opener_role_no_go.test.cjs
+          node tests/easystore_a2_no_legacy_accounting_fallback.test.js
+          node tests/easystore_a2_write_router.test.js
+          node tests/easystore_a1_all_reads_d1_only.test.js
+          node tests/easystore_a1_core_read_router.test.js
+          node tests/accounting_agent_policy_v1.test.js
+          echo "ACC202_REAL_ROUTER_SYNTHETIC_ONLY=PASS"
+          echo "ACC202_PRODUCTION_FINANCIAL_WRITES=0"
+          echo "ACC202_FINANCE_RELEASE=NO_GO"
