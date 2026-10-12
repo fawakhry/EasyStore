@@ -87,7 +87,7 @@ function inspectReturnLedgerLineage(raw) {
     if(row.invoiceRef!==invoiceRef)errors.push('PARENT_INVOICE_MISMATCH');
     if(transactionRef){
       if(parentById.has(transactionRef)) errors.push('DUPLICATE_PARENT_TRANSACTION_REF');
-      else parentById.set(transactionRef,{kind,amount,allocatedCents:0});
+      else parentById.set(transactionRef,{kind,amount,allocatedCents:0,allocationRows:0});
     }
   }
 
@@ -112,6 +112,7 @@ function inspectReturnLedgerLineage(raw) {
     if(!parent){errors.push('ALLOCATION_PARENT_TRANSACTION_MISSING');continue;}
     if(value===null || !itemRef || !totals.has(itemRef))continue;
     const entry=totals.get(itemRef);
+    parent.allocationRows++;
     const previousAllocated=parent.allocatedCents;
     parent.allocatedCents=sum(previousAllocated,value,'UNSAFE_PARENT_ALLOCATION_SUM',errors);
     let key;
@@ -125,7 +126,7 @@ function inspectReturnLedgerLineage(raw) {
   for(const [transactionRef,parent] of parentById) {
     if(parent.allocatedCents===null || parent.amount===null)continue;
     if(parent.allocatedCents>parent.amount)errors.push('ITEM_ALLOCATIONS_EXCEED_PARENT_TRANSACTION_AMOUNT');
-    if(parent.allocatedCents===0 && parent.amount>0)errors.push('UNREFERENCED_PARENT_TRANSACTION');
+    if(parent.allocationRows===0)errors.push('UNREFERENCED_PARENT_TRANSACTION');
   }
 
   let paid=0,cash=0,credit=0;
