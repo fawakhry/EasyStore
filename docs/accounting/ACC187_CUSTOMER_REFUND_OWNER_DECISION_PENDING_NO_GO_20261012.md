@@ -15,10 +15,23 @@ On 2026-10-12 the owner responded, verbatim: **«نسمح بالاختيارين
 
 The current Worker still lacks a handler for actually paying money or creating customer credit. Both remain **UNSUPPORTED_FAIL_CLOSED** in production; don't infer them from `reopenAccountingFinalInvoice` or from this document.
 
-## Remaining decisions that cannot be inferred from the owner's method choice
+## Owner's personalized-product eligibility decision — 2026-10-12
+
+The owner confirmed **"agree"** to this question: whether items customized with the customer's **name or photo** cannot be returned except for **a manufacturing defect** or **an error by Trend Mall**.
+
+**DECIDED BUSINESS RULE:**
+- Customer-name or customer-photo customized products are **not eligible** for ordinary return merely because the buyer changed their mind, dislikes the product, or supplied the wrong photo/text.
+- Only a **verified manufacturing defect** or **a verified Trend Mall error** creates **eligibility for return review** for these products. The reported reason alone is NOT proof; verification evidence must be independently checked.
+- Even a verified exception does NOT automatically approve a refund. The specific return and settlement method still require **management approval**. Either returning money or issuing a customer-account credit is permitted only after that approval, as decided previously.
+- No real return, payout, account credit, restocking, cashbox adjustment or D1 ledger update is authorized by this policy record.
+- Real proof verification standards, time limits, partial-item eligibility, other product categories, inventory inspection, compensation amount and final payment route remain **UNDECIDED**.
+
+This records **two bounded owner decisions** (method choice, personalized-item exception), not the entire ACC-187 procedure.
+
+## Remaining decisions not covered by the two owner approvals
 The following requirements remain **UNDECIDED** and require separate decisions before implementation/acceptance.
 
-1. **Eligibility & proof:** time limit, invoice and original-payment proof, acceptable reason codes, partial-item returns versus whole invoice, non-returnable personalized/consumed products. **OWNER_DECISION=UNDECIDED**
+1. **Eligibility & proof — PARTIALLY DECIDED:** customer-name/photo customized products are ineligible except where a manufacturing defect or Trend Mall error is independently verified. Other product categories, time limits, invoice/payment evidence requirements, proof format, partial-item returns and detailed acceptance workflow still require **OWNER_DECISION=UNDECIDED**.
 2. **Refund amount:** cap at previously captured and *not already refunded* money; how discounts, fees, deposits and unpaid balances affect entitlement; how multi-payment methods are allocated. **OWNER_DECISION=UNDECIDED**
 3. **Remaining payment detail and authority:** the two business routes are approved conditionally; whether cash reimbursement is paid from cashbox vs InstaPay/bank/original tender, daily/per-employee limits, specific manager identity and role verification, any dual approval, custody/handover and signed receipt requirements are **OWNER_DECISION=UNDECIDED**.
 4. **Inventory treatment:** physical receipt and inspection required? eligible restock quantity, damaged/customized work, cost/waste accounting, quantity conservation, supplier impact, delayed return without stock credit. **OWNER_DECISION=UNDECIDED**
@@ -36,6 +49,9 @@ ACC187_OWNER_SETTLEMENT_METHODS=CASH_REFUND_OR_CUSTOMER_CREDIT
 ACC187_METHOD_REQUIRES_CASE_MANAGEMENT_APPROVAL=YES
 ACC187_REMAINING_POLICY=PENDING
 ACC187_CUSTOMER_CREDIT_POSTING=UNSUPPORTED_FAIL_CLOSED
+ACC187_PERSONALIZED_NAME_PHOTO_RETURN=ONLY_VERIFIED_MANUFACTURING_DEFECT_OR_TREND_MALL_ERROR
+ACC187_PERSONALIZED_CHANGE_OF_MIND=INELIGIBLE
+ACC187_PERSONALIZED_EXCEPTION_STILL_REQUIRES_MANAGEMENT_APPROVAL=YES
 ACC198_FULL_ACCEPTANCE=BLOCKED
 ACC199_RELEASE_HANDOFF=DRAFT
 FINANCE_RELEASE=NO_GO
