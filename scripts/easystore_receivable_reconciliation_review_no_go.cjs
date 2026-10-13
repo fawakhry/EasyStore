@@ -42,7 +42,7 @@ function reconcileCustomerReceivables(packet){
     return base('INVALID_ROW_COUNTS');
 
   const seenInvoices=new Map(),seenEvents=new Set(),invoiced=new Map(),initialPayments=new Map();
-  const allocatedPayments=new Map(),laterCollections=new Set();
+  const allocatedPayments=new Map(),laterCollections=new Set(),seenAdjustmentProofs=new Set();
   let creditSnapshot=0;
   for(const row of invoiceSnapshots){
     if(!row||!nonempty(row.invoiceRef)||row.customerRef!==customerRef||
@@ -108,6 +108,13 @@ function reconcileCustomerReceivables(packet){
       // These are not allocated by invoice: separately evidenced adjustment
       // identities required before receipt-level proof can be asserted.
       if(!nonempty(event.adjustmentProofRef))return base('ADJUSTMENT_PROOF_MISSING');
+      // Distinct event IDs do not establish distinct supporting documents.
+      // A multi-line document requires a separate owner-approved lineage rule.
+      if(event.adjustmentProofRef!==event.adjustmentProofRef.trim()||
+         event.adjustmentProofRef!==event.adjustmentProofRef.normalize('NFC'))
+        return base('ADJUSTMENT_PROOF_NONCANONICAL');
+      if(seenAdjustmentProofs.has(event.adjustmentProofRef))return base('DUPLICATE_ADJUSTMENT_PROOF');
+      seenAdjustmentProofs.add(event.adjustmentProofRef);
       adjustments+=change;
     }
     if(!Number.isSafeInteger(invoiceDebits)||!Number.isSafeInteger(collections)||
