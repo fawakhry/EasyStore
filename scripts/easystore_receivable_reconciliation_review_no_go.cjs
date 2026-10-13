@@ -15,6 +15,12 @@ const OPS=Object.freeze({
 const MAX_ROWS=1000;
 function nonempty(value){return typeof value==='string'&&value.trim()!==''&&value.length<=180;}
 function cents(value){return Number.isSafeInteger(value)&&value>=0;}
+// Date.parse can normalize impossible calendar dates (e.g. February 30).
+// Reject these dates rather than silently changing accounting chronology.
+function validUtcCalendarTimestamp(value){
+  const ms=Date.parse(value);
+  return Number.isFinite(ms)&&new Date(ms).toISOString().slice(0,19)===value.slice(0,19);
+}
 function base(code,details={}){
   return {
     state:code==='STRUCTURALLY_COHERENT'?'REVIEW_REQUIRED':'STOP',
@@ -36,6 +42,7 @@ function reconcileCustomerReceivables(packet){
     return base('INVALID_ROW_COUNTS');
 
   const seenInvoices=new Map(),seenEvents=new Set(),invoiced=new Map(),initialPayments=new Map();
+  const allocatedPayments=new Map(),laterCollections=new Set(),seenAdjustmentProofs=new Set();
   let creditSnapshot=0;
   for(const row of invoiceSnapshots){
     if(!row||!nonempty(row.invoiceRef)||row.customerRef!==customerRef||
@@ -47,6 +54,7 @@ function reconcileCustomerReceivables(packet){
     if(!Number.isSafeInteger(creditSnapshot))return base('AMOUNT_OVERFLOW');
     seenInvoices.set(row.invoiceRef,row);
     initialPayments.set(row.invoiceRef,0);
+    allocatedPayments.set(row.invoiceRef,0);
   }
   let closing=openingBalanceCents,invoiceDebits=0,collections=0,adjustments=0;
   let previousTime='';
@@ -55,7 +63,7 @@ function reconcileCustomerReceivables(packet){
        event.customerRef!==customerRef||event.currency!==currency||
        !Object.hasOwn(OPS,event.operation)||!cents(event.amountCents)||
        !nonempty(event.occurredAt)||!/^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d(?:\.\d{1,3})?Z$/.test(event.occurredAt)||
-       !Number.isFinite(Date.parse(event.occurredAt)))
+       !validUtcCalendarTimestamp(event.occurredAt))
       return base('INVALID_OR_DUPLICATE_LEDGER_EVENT');
     // Caller order must be chronological; do not silently infer posting order.
     if(previousTime&&Date.parse(event.occurredAt)<Date.parse(previousTime))return base('OUT_OF_ORDER_EVENTS');
@@ -78,17 +86,35 @@ function reconcileCustomerReceivables(packet){
           !['invoice_initial','later_collection'].includes(event.paymentOrigin))
         return base('COLLECTION_ALLOCATION_UNPROVEN');
       if(!invoiced.has(event.invoiceRef))return base('PAYMENT_BEFORE_INVOICE');
+      if(event.paymentOrigin==='later_collection'&&event.amountCents===0)
+        return base('ZERO_AMOUNT_LATER_COLLECTION_NOT_EVIDENCE');
+      const invoice=seenInvoices.get(event.invoiceRef);
+      const allocated=allocatedPayments.get(event.invoiceRef)+event.amountCents;
+      if(!Number.isSafeInteger(allocated))return base('AMOUNT_OVERFLOW');
+      if(allocated>invoice.totalCents)return base('INVOICE_ALLOCATION_OVERPAYMENT');
       if(event.paymentOrigin==='invoice_initial'){
+        if(laterCollections.has(event.invoiceRef))return base('INITIAL_PAYMENT_AFTER_LATER_COLLECTION');
         const total=initialPayments.get(event.invoiceRef)+event.amountCents;
         if(!Number.isSafeInteger(total))return base('AMOUNT_OVERFLOW');
+        if(total>invoice.paidAtInvoiceCents)return base('INITIAL_INVOICE_PAYMENT_MISMATCH');
         initialPayments.set(event.invoiceRef,total);
+      }else{
+        laterCollections.add(event.invoiceRef);
       }
+      allocatedPayments.set(event.invoiceRef,allocated);
       collections+=event.amountCents;
     }else if(event.operation==='opening_debt'||event.operation==='adjustment_increase'||
              event.operation==='adjustment_decrease'){
       // These are not allocated by invoice: separately evidenced adjustment
       // identities required before receipt-level proof can be asserted.
       if(!nonempty(event.adjustmentProofRef))return base('ADJUSTMENT_PROOF_MISSING');
+      // Distinct event IDs do not establish distinct supporting documents.
+      // A multi-line document requires a separate owner-approved lineage rule.
+      if(event.adjustmentProofRef!==event.adjustmentProofRef.trim()||
+         event.adjustmentProofRef!==event.adjustmentProofRef.normalize('NFC'))
+        return base('ADJUSTMENT_PROOF_NONCANONICAL');
+      if(seenAdjustmentProofs.has(event.adjustmentProofRef))return base('DUPLICATE_ADJUSTMENT_PROOF');
+      seenAdjustmentProofs.add(event.adjustmentProofRef);
       adjustments+=change;
     }
     if(!Number.isSafeInteger(invoiceDebits)||!Number.isSafeInteger(collections)||
