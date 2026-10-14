@@ -69,6 +69,10 @@ function reconcileCustomerReceivables(packet){
     if(previousTime&&Date.parse(event.occurredAt)<Date.parse(previousTime))return base('OUT_OF_ORDER_EVENTS');
     previousTime=event.occurredAt;
     seenEvents.add(event.eventRef);
+    // A nonzero opening snapshot plus opening_debt can count the same pre-period
+    // liability twice. Distinct lineage requires an explicit owner policy.
+    if(event.operation==='opening_debt'&&openingBalanceCents!==0)
+      return base('OPENING_BALANCE_EVENT_DOUBLE_COUNT_RISK');
     const change=OPS[event.operation]*event.amountCents;
     closing+=change;
     if(!Number.isSafeInteger(closing))return base('AMOUNT_OVERFLOW');
