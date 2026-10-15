@@ -13,7 +13,9 @@ const OPS=Object.freeze({
   adjustment_decrease:-1
 });
 const MAX_ROWS=1000;
-function nonempty(value){return typeof value==='string'&&value.trim()!==''&&value.length<=180;}
+// Source-only fail-closed review: reject control and invisible formatting in evidence references.
+// Do not normalize or silently rewrite IDs; no payment or ledger authority is implied.
+function nonempty(value){return typeof value==='string'&&value.trim()!==''&&value.length<=180&&!/[\u0000-\u001f\u007f-\u009f\u200b-\u200f\u202a-\u202e\u2066-\u2069]/u.test(value);}
 function cents(value){return Number.isSafeInteger(value)&&value>=0;}
 // Date.parse can normalize impossible calendar dates (e.g. February 30).
 // Reject these dates rather than silently changing accounting chronology.
