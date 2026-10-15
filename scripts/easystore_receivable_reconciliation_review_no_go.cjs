@@ -66,7 +66,11 @@ function reconcileCustomerReceivables(packet){
        !validUtcCalendarTimestamp(event.occurredAt))
       return base('INVALID_OR_DUPLICATE_LEDGER_EVENT');
     // Caller order must be chronological; do not silently infer posting order.
-    if(previousTime&&Date.parse(event.occurredAt)<Date.parse(previousTime))return base('OUT_OF_ORDER_EVENTS');
+    if(previousTime){
+      const delta=Date.parse(event.occurredAt)-Date.parse(previousTime);
+      if(delta<0)return base('OUT_OF_ORDER_EVENTS');
+      if(delta===0)return base('AMBIGUOUS_EVENT_ORDER');
+    }
     previousTime=event.occurredAt;
     seenEvents.add(event.eventRef);
     const change=OPS[event.operation]*event.amountCents;
@@ -86,8 +90,8 @@ function reconcileCustomerReceivables(packet){
           !['invoice_initial','later_collection'].includes(event.paymentOrigin))
         return base('COLLECTION_ALLOCATION_UNPROVEN');
       if(!invoiced.has(event.invoiceRef))return base('PAYMENT_BEFORE_INVOICE');
-      if(event.paymentOrigin==='later_collection'&&event.amountCents===0)
-        return base('ZERO_AMOUNT_LATER_COLLECTION_NOT_EVIDENCE');
+      if(event.amountCents===0)
+        return base(event.paymentOrigin==='invoice_initial'?'ZERO_AMOUNT_INITIAL_PAYMENT_NOT_EVIDENCE':'ZERO_AMOUNT_LATER_COLLECTION_NOT_EVIDENCE');
       const invoice=seenInvoices.get(event.invoiceRef);
       const allocated=allocatedPayments.get(event.invoiceRef)+event.amountCents;
       if(!Number.isSafeInteger(allocated))return base('AMOUNT_OVERFLOW');
@@ -107,6 +111,8 @@ function reconcileCustomerReceivables(packet){
              event.operation==='adjustment_decrease'){
       // These are not allocated by invoice: separately evidenced adjustment
       // identities required before receipt-level proof can be asserted.
+      if(event.operation==='opening_debt'&&openingBalanceCents>0)
+        return base('AMBIGUOUS_OPENING_DEBT_PROVENANCE');
       if(!nonempty(event.adjustmentProofRef))return base('ADJUSTMENT_PROOF_MISSING');
       // Distinct event IDs do not establish distinct supporting documents.
       // A multi-line document requires a separate owner-approved lineage rule.
