@@ -32,6 +32,9 @@ function base(code,details={}){
 }
 function reconcileCustomerReceivables(packet){
   if(!packet||typeof packet!=='object'||Array.isArray(packet))return base('INVALID_PACKET');
+  // A caller-supplied cutoff cannot establish complete, authenticated as-of ledger coverage.
+  if(Object.hasOwn(packet,'asOf')||Object.hasOwn(packet,'reportPeriodEnd'))
+    return base('UNVERIFIED_AS_OF_SNAPSHOT');
   const {customerRef,currency,openingBalanceCents,reportedInvoiceCreditCents,
     reportedCustomerBalanceCents,coverageRef,invoiceSnapshots,ledgerEvents}=packet;
   if(!nonempty(customerRef)||!nonempty(coverageRef)||currency!=='EGP')return base('MISSING_SCOPE_OR_UNVERIFIED_COVERAGE');
