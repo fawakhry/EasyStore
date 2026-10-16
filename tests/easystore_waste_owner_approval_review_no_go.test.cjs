@@ -1,0 +1,12 @@
+'use strict';
+const {test}=require('node:test');const assert=require('node:assert/strict');
+const {reviewWasteRequest:r}=require('../scripts/easystore_waste_owner_approval_review_no_go.cjs');
+const req={requestRef:'FAKE_W1',department:'laser',materialRef:'FAKE_MDF',employeeRef:'FAKE_EMP',reason:'fake damaged panel',quantity:2};
+const dec={actorRef:'FAKE_OWNER',ownerRef:'FAKE_OWNER',requestRef:'FAKE_W1',action:'APPROVE',evidenceRef:'FAKE_APPROVAL'};
+test('pending waste never posts stock',()=>{let x=r(req);assert.equal(x.state,'PENDING');assert.equal(x.stockPosted,false)});
+test('employee self approval denied',()=>assert.equal(r(req,{...dec,actorRef:'FAKE_EMP',ownerRef:'FAKE_EMP'}).code,'OWNER_APPROVAL_REQUIRED'));
+test('non-owner approval denied',()=>assert.equal(r(req,{...dec,actorRef:'FAKE_MANAGER'}).code,'OWNER_APPROVAL_REQUIRED'));
+test('invalid quantity denied',()=>assert.equal(r({...req,quantity:-1},dec).code,'INVALID_WASTE_REQUEST'));
+test('mismatched request evidence denied',()=>assert.equal(r(req,{...dec,requestRef:'FAKE_OTHER'}).code,'INVALID_DECISION_EVIDENCE'));
+test('approved source review still cannot post',()=>{let x=r(req,dec);assert.equal(x.code,'OWNER_APPROVED_SOURCE_ONLY');assert.equal(x.stockPosted,false);assert.equal(x.financeRelease,'NO_GO')});
+test('rejection stays non-posting',()=>assert.equal(r(req,{...dec,action:'REJECT'}).ledgerPosted,false));
