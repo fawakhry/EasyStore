@@ -47,12 +47,33 @@ test('real native Worker: two fake invoices, one unallocated aggregate collectio
   db.prepare("INSERT INTO t12_customers(customer_id,customer_name,active,updated_at) VALUES(?,?,'نعم',CURRENT_TIMESTAMP)")
     .run('CUST_SYNTH_MULTI_1','FAKE_ACCOUNT_ONLY_CUSTOMER');
   const trace={batches:0,batchRollbacks:0,network:0};
+  let raceBarrier=null; // Active only for the intentional local two-receipt interleaving.
   const DB={
    prepare(sql){
     const stmt={sql:String(sql),args:[]};
     const wrapper={
      bind(...args){stmt.args=args;return wrapper;},
-     first(){return Promise.resolve(db.prepare(stmt.sql).get(...stmt.args)||null);},
+     first(){
+       const value=db.prepare(stmt.sql).get(...stmt.args)||null;
+       // Give both requests the same *real SQLite* account-version snapshot.
+       // Release only after both independently pass the read stage. This
+       // deterministically simulates overlapping Worker invocations while
+       // SQLite's transaction commits remain truly atomic.
+       const gate=raceBarrier;
+       if(gate && /SELECT balance,version FROM employee_accounting_party_balances_v1 WHERE party_type=\? AND party_id=\?/.test(stmt.sql)
+           && stmt.args[0]==='customer' && stmt.args[1]==='CUST_SYNTH_MULTI_1'){
+         gate.snapshots.push({balance:Number(value.balance),version:Number(value.version)});
+         return new Promise((resolve,reject)=>{
+           const timer=setTimeout(()=>reject(new Error('TWO_RECEIPT_SNAPSHOT_BARRIER_TIMEOUT')),5000);
+           gate.waiters.push(()=>{clearTimeout(timer);resolve(value)});
+           if(gate.waiters.length===2){
+             raceBarrier=null;
+             for(const release of gate.waiters)release();
+           }
+         });
+       }
+       return Promise.resolve(value);
+      },
      all(){return Promise.resolve({results:db.prepare(stmt.sql).all(...stmt.args)});},
      run(){return Promise.resolve(db.prepare(stmt.sql).run(...stmt.args));}
     };
@@ -229,12 +250,91 @@ test('real native Worker: two fake invoices, one unallocated aggregate collectio
     assert.equal((await send('saveCustomerAccountMovementV1915',{...payment,requestId:'FAKE_NO_AUTH_RECEIPT_0001'},{token:'FAKE_INVALID_TOKEN'})).status,401);
     assert.deepEqual(savedCounts(),baseline);
   });
+  // CONCURRENCY GAP: previous ACC188 covered one payment plus replay;
+  // this forces TWO DIFFERENT valid requests through the exact same stale
+  // account version and proves that only one can claim a matching CAS update.
+  const concurrentA={...payment,requestId:'FAKE_RACE_RECEIPT_A_0001',amount:140};
+  const concurrentB={...payment,requestId:'FAKE_RACE_RECEIPT_B_0001',amount:140};
+  let raceWinnerBody=null,raceLoserBody=null;
+  await t.test('two overlapping 140 receipts against 220 balance: exactly one atomic post, zero lost updates',async()=>{
+    const before=savedCounts();
+    const gate={waiters:[],snapshots:[]};
+    raceBarrier=gate;
+    let outcomes;
+    try{
+      outcomes=await Promise.all([
+        send('saveCustomerAccountMovementV1915',concurrentA),
+        send('saveCustomerAccountMovementV1915',concurrentB)
+      ]);
+    }finally{raceBarrier=null}
+    assert.equal(gate.snapshots.length,2,'both real handler calls must reach account snapshot read');
+    assert.deepEqual(gate.snapshots.map(x=>x.balance),[220,220],
+      'both requests must read the same stale balance before either updates');
+    assert.equal(gate.snapshots[0].version,gate.snapshots[1].version);
+    const winners=outcomes.filter(x=>x.success===true);
+    const losers=outcomes.filter(x=>x.success===false);
+    assert.equal(winners.length,1,JSON.stringify(outcomes));
+    assert.equal(losers.length,1,JSON.stringify(outcomes));
+    assert.equal(winners[0].balanceBefore,220);
+    assert.equal(winners[0].balance,80);
+    assert.equal(losers[0].code,'accounting-party-balance-guard-rejected');
+    assert.equal(losers[0].status,500,'failed optimistic CAS must fail closed');
+    raceWinnerBody=outcomes[0].success?concurrentA:concurrentB;
+    raceLoserBody=outcomes[0].success?concurrentB:concurrentA;
+    assert.equal(bal(),80);
+    assert.equal(count('employee_accounting_cashbox_v1'),before.cash+1,
+      'the rejected stale request must not create a second cashbox row');
+    assert.equal(count('employee_accounting_party_ledger_v1'),before.ledger+1,
+      'the rejected stale request must not post a second financial ledger entry');
+    assert.equal(count('employee_accounting_final_invoices_v1'),before.invoices);
+    assert.equal(count('employee_accounting_stock_moves_v1'),before.stockMoves);
+    assert.equal(cash().filter(x=>x.amount===140).length,1);
+    assert.deepEqual(invoices().map(x=>x.remaining),[120,150],
+      'concurrent account receipts must never invent invoice-level allocations');
+    const last=entries().at(-1);
+    assert.equal(last.amount,140);
+    assert.equal(last.before,220);
+    assert.equal(last.after,80);
+    assert.equal(count('employee_accounting_request_ledger_v1')>0,true);
+    assert.equal(Number(one("SELECT COUNT(*) AS n FROM employee_accounting_request_ledger_v1 WHERE status='PREPARED'").n),1,
+      'failed stale command remains PREPARED for human/recovery review; do not silently replay it');
+  });
+  await t.test('lost ACK of concurrent winner replays without a new cash or receivable entry',async()=>{
+    const before=savedCounts();
+    const replay=await send('saveCustomerAccountMovementV1915',raceWinnerBody);
+    assert.equal(replay.success,true,JSON.stringify(replay));
+    assert.equal(replay.duplicatePrevented,true);
+    assert.equal(replay.balance,80);
+    assert.deepEqual(savedCounts(),before);
+  });
+  await t.test('losing PREPARED request cannot be automatically retried into a second receipt',async()=>{
+    const before=savedCounts();
+    const pending=await send('saveCustomerAccountMovementV1915',raceLoserBody);
+    assert.equal(pending.success,false,'a PREPARED write must be held for review');
+    assert.deepEqual(savedCounts(),before);
+  });
+  await t.test('after concurrent winner, an additional receipt greater than 80 is denied and read model stays coherent',async()=>{
+    const before=savedCounts();
+    const over=await send('saveCustomerAccountMovementV1915',{
+      ...payment,requestId:'FAKE_AFTER_RACE_OVERPAY_0001',amount:81
+    });
+    assert.equal(over.success,false);
+    assert.equal(over.status,400);
+    assert.deepEqual(savedCounts(),before);
+    const statement=await send('getCustomerAccountV1915',{customerId:customer});
+    assert.equal(statement.success,true,JSON.stringify(statement));
+    assert.equal(statement.balance,80);
+    assert.equal(statement.transactions.length,5);
+    assert.equal(Number(one("SELECT SUM(CASE WHEN effect=1 THEN amount ELSE -amount END) AS net FROM employee_accounting_party_ledger_v1 WHERE party_type='customer' AND party_id=?",customer).net),80);
+    assert.deepEqual(invoices().map(x=>x.remaining),[120,150]);
+  });
+  const afterRace=savedCounts();
   await t.test('revert fake control to READONLY and verify existing snapshots remain unchanged',async()=>{
     db.exec("UPDATE employee_accounting_control_v1 SET mode='READONLY' WHERE singleton=1");
     assert.equal((await send('saveCustomerAccountMovementV1915',{
       ...payment,requestId:'FAKE_READONLY_RECEIPT_0001'
     })).status,503);
-    assert.deepEqual(savedCounts(),baseline);
+    assert.deepEqual(savedCounts(),afterRace);
     assert.equal(trace.network,0);
     assert.equal(count('employee_accounting_tx_guard_v1'),0);
     assert.equal(count('employee_accounting_request_ledger_v1')>0,true);
