@@ -31,3 +31,14 @@ G1–G5 OPEN. FINANCE_RELEASE=NO_GO. No source-only test grants real approval. N
 - Next read-only discovery: trace actual `employee-accounting-native-v1.mjs` route + `employee-auth-native-v1.mjs` trusted identity and compare candidate write routes with EasyStore front-end `config.js` and `app.js`. Verify staging-only, exact-head tests before any deployment decision.
 
 NO_GO unchanged. No finance writes, merge, workflow dispatch, deployment, or owner approval performed.
+
+## Critical source audit — waste approval mismatch (2026-10-16)
+
+Read-only inspection of `fawakhry/TrendOs@candidate/easystore-accounting-a2-20261005`, `cloudflare-d1/src/employee-accounting-native-v1.mjs` SHA `c72b1ec853437f8b55c9320d59efb34445869fe0`:
+
+- `authenticate` lines 287–295 verifies a cloud employee session, derives verified role/mode; the `approvedAccountingModeV1` roster is optional when grant mode is unset (lines 94–117). This is a real server-side authentication boundary but not proof that every financial action is owner-approved.
+- **CRITICAL OWNER POLICY GAP:** `saveAccountingWasteV1` lines 956–989 permits `full`, `print`, and `laser` actors and immediately decrements material stock (lines 972–974) and inserts waste and stock movements (975–982). There is **no separate pending waste request followed by verified owner approval** in this route. This conflicts with the owner's requirement: employee submits, only owner approves, pending never posts stock/ledger. Source-only PR #47 is not wired into this route. Treat as release-blocking; do not send production waste requests.
+- Route dispatcher lines 1769–1826 enforces mode OFF/READONLY/CANARY/GENERAL and session auth, and dispatches actual `saveEasyStoreSaleV2`, `saveCustomerAccountMovementV1915`, `saveAccountingWaste` handlers. `accounting-finance-api-v1.mjs` planning-only behavior is **separate** from this existing employee accounting D1 route; do not conflate them.
+- CANARY waste shape lines 227–245 limits synthetic waste to a 0.01 value, no material or stock, but this is **not** an owner approval workflow and does not make GENERAL safe.
+
+Required remediation before GENERAL: authenticated owner-only approve/reject endpoints, immutable pending request and audit evidence, server-derived actor/owner identity, idempotent atomic posting only after approval, stock race/duplicate/reversal tests. Until then keep waste write disabled outside bounded synthetic canary, and FINANCE_RELEASE=NO_GO. No code or production state changed by this audit.
