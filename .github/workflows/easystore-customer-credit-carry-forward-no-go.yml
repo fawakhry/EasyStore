@@ -1,0 +1,40 @@
+name: EasyStore Customer Positive Credit Carry Forward (SOURCE NO_GO)
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  customer-credit-offline:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - name: Checkout EasyStore source-only (no credentials persisted)
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Node.js 22 for synthetic customer-credit and sqlite tests
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Validate positive customer credit policy without financial authority
+        shell: bash
+        env:
+          CLOUDFLARE_API_TOKEN: ''
+          CLOUDFLARE_ACCOUNT_ID: ''
+          GOOGLE_APPLICATION_CREDENTIALS: ''
+        run: |
+          set -euo pipefail
+          test -z "$CLOUDFLARE_API_TOKEN"
+          test -z "$CLOUDFLARE_ACCOUNT_ID"
+          test -z "$GOOGLE_APPLICATION_CREDENTIALS"
+          node --check scripts/easystore_customer_credit_carry_forward_no_go.cjs
+          node --check tests/easystore_customer_credit_carry_forward_no_go.test.cjs
+          node --test tests/easystore_customer_credit_carry_forward_no_go.test.cjs
+          echo 'CUSTOMER_OVERPAYMENT_CREDIT_POLICY=OWNER_APPROVED'
+          echo 'CUSTOMER_CREDIT_AMOUNT_DISPLAY=POSITIVE_FOR_CUSTOMER'
+          echo 'CUSTOMER_CREDIT_NEXT_INVOICE=PREVIEW_ONLY'
+          echo 'CUSTOMER_REAL_LEDGER_POSTING=BLOCKED'
+          echo 'CUSTOMER_REAL_D1=NOT_TOUCHED'
+          echo 'FINANCE_RELEASE=NO_GO'
