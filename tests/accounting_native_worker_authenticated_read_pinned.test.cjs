@@ -48,7 +48,7 @@ function harness(opts={}){
       function scopeCheck(){
         if(cfg.role==='print'||cfg.role==='laser'){
           assert.match(sql,/WHERE department=\?/,'department scoping must be SQL-side');
-          assert.equal(bound[0],cfg.department,'department must derive from verified session');
+          assert.equal(bound[0],cfg.grantMode==='laser'?'ليزر':cfg.department,'department must derive from server roster and verified session');
         }
       }
       return {
