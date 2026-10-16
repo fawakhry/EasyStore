@@ -94,7 +94,7 @@ test('02 ON server capability: positive credit +3 displayed, prepayment allowed 
   const app=createFakeApp({enabled:true});
   await app.context.ES27.openCustomerAccount(encodeURIComponent('FAKE_CUSTOMER'));
   assert.match(app.screen.innerHTML,/رصيد لصالح العميل/);
-  assert.match(app.screen.innerHTML,/\+3/);
+  assert.match(app.screen.innerHTML,/\+(?:3|٣)/);
   assert.match(app.screen.innerHTML,/customerMovementForm/);
   assert.match(app.screen.innerHTML,/الفاتورة القادمة/);
   assert.match(app.screen.innerHTML,/تحصيل من العميل/);
@@ -104,7 +104,7 @@ test('03 owner UI keeps adjustment options but credit stays server-authoritative
   const app=createFakeApp({enabled:true,role:'admin'});
   await app.context.ES27.openCustomerAccount(encodeURIComponent('FAKE_CUSTOMER'));
   assert.match(app.screen.innerHTML,/value="opening_debt"/);
-  assert.match(app.screen.innerHTML,/\+3/);
+  assert.match(app.screen.innerHTML,/\+(?:3|٣)/);
 });
 test('04 when ON, UI permits fabricated 100 paid on 0 debt and renders +103 after verified mock response',async()=>{
   const app=createFakeApp({enabled:true});
@@ -114,8 +114,8 @@ test('04 when ON, UI permits fabricated 100 paid on 0 debt and renders +103 afte
   assert.equal(app.submitted[0].action,'saveCustomerAccountMovementV1915');
   assert.equal(app.submitted[0].amount,100);
   assert.ok(app.submitted[0].requestId.startsWith('CUST-'));
-  assert.match(app.confirmations[0],/\+103/);
-  assert.match(app.screen.innerHTML,/\+103/);
+  assert.match(app.confirmations[0],/\+(?:103|١٠٣)/);
+  assert.match(app.screen.innerHTML,/\+(?:103|١٠٣)/);
 });
 test('05 OFF fails closed at UI even if someone forces direct save on no-debt account',async()=>{
   const app=createFakeApp({enabled:false});
