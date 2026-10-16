@@ -1,0 +1,38 @@
+name: EasyStore Customer Credit RTL UI Offline (SOURCE NO_GO)
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  customer-credit-ui-offline:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - name: Checkout EasyStore source with no persisted credentials
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Use Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Native browser VM fake credit UI and existing V1922 regressions
+        shell: bash
+        env:
+          CLOUDFLARE_API_TOKEN: ''
+          CLOUDFLARE_ACCOUNT_ID: ''
+          GOOGLE_APPLICATION_CREDENTIALS: ''
+        run: |
+          set -euo pipefail
+          test -z "$CLOUDFLARE_API_TOKEN"
+          test -z "$CLOUDFLARE_ACCOUNT_ID"
+          test -z "$GOOGLE_APPLICATION_CREDENTIALS"
+          node --check app.js
+          node --test tests/easystore_customer_credit_rtl_ui_no_go.test.cjs
+          node tests/customer_accounts_ui_v1915.test.js
+          node tests/unified_safe_build_v1922.test.js
+          echo 'EASYSTORE_CREDIT_UI_SERVER_CAPABILITY_GATED=SOURCE_ONLY'
+          echo 'EASYSTORE_CREDIT_NATIVE_DEPLOY=NO_GO'
+          echo 'FINANCE_RELEASE=NO_GO'
