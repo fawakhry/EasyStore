@@ -14,6 +14,9 @@ const OPS=Object.freeze({
 });
 const MAX_ROWS=1000;
 function nonempty(value){return typeof value==='string'&&value.trim()!==''&&value.length<=180;}
+// Financial evidence IDs are opaque: reject noncanonical identifiers instead of
+// silently treating whitespace/Unicode variants as distinct invoice or event IDs.
+function canonicalRef(value){return nonempty(value)&&value===value.trim()&&value===value.normalize('NFC');}
 function cents(value){return Number.isSafeInteger(value)&&value>=0;}
 // Date.parse can normalize impossible calendar dates (e.g. February 30).
 // Reject these dates rather than silently changing accounting chronology.
@@ -34,7 +37,7 @@ function reconcileCustomerReceivables(packet){
   if(!packet||typeof packet!=='object'||Array.isArray(packet))return base('INVALID_PACKET');
   const {customerRef,currency,openingBalanceCents,reportedInvoiceCreditCents,
     reportedCustomerBalanceCents,coverageRef,invoiceSnapshots,ledgerEvents}=packet;
-  if(!nonempty(customerRef)||!nonempty(coverageRef)||currency!=='EGP')return base('MISSING_SCOPE_OR_UNVERIFIED_COVERAGE');
+  if(!canonicalRef(customerRef)||!canonicalRef(coverageRef)||currency!=='EGP')return base('MISSING_SCOPE_OR_UNVERIFIED_COVERAGE');
   if(!cents(openingBalanceCents)||!cents(reportedInvoiceCreditCents)||!cents(reportedCustomerBalanceCents))
     return base('INVALID_MONEY_FIELDS');
   if(!Array.isArray(invoiceSnapshots)||!invoiceSnapshots.length||invoiceSnapshots.length>MAX_ROWS||
@@ -45,7 +48,7 @@ function reconcileCustomerReceivables(packet){
   const allocatedPayments=new Map(),laterCollections=new Set(),seenAdjustmentProofs=new Set();
   let creditSnapshot=0;
   for(const row of invoiceSnapshots){
-    if(!row||!nonempty(row.invoiceRef)||row.customerRef!==customerRef||
+    if(!row||!canonicalRef(row.invoiceRef)||row.customerRef!==customerRef||
        row.currency!==currency||!cents(row.totalCents)||!cents(row.paidAtInvoiceCents)||
        row.paidAtInvoiceCents>row.totalCents||seenInvoices.has(row.invoiceRef))
       return base('INVALID_OR_DUPLICATE_INVOICE_SNAPSHOT');
@@ -59,7 +62,7 @@ function reconcileCustomerReceivables(packet){
   let closing=openingBalanceCents,invoiceDebits=0,collections=0,adjustments=0;
   let previousTime='';
   for(const event of ledgerEvents){
-    if(!event||!nonempty(event.eventRef)||seenEvents.has(event.eventRef)||
+    if(!event||!canonicalRef(event.eventRef)||seenEvents.has(event.eventRef)||
        event.customerRef!==customerRef||event.currency!==currency||
        !Object.hasOwn(OPS,event.operation)||!cents(event.amountCents)||
        !nonempty(event.occurredAt)||!/^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d(?:\.\d{1,3})?Z$/.test(event.occurredAt)||
@@ -74,7 +77,7 @@ function reconcileCustomerReceivables(packet){
     if(!Number.isSafeInteger(closing))return base('AMOUNT_OVERFLOW');
     if(closing<0)return base('OVER_COLLECTION_OR_MISSING_DEBIT');
     if(event.operation==='invoice'){
-      if(!nonempty(event.invoiceRef)||!seenInvoices.has(event.invoiceRef)||invoiced.has(event.invoiceRef)||
+      if(!canonicalRef(event.invoiceRef)||!seenInvoices.has(event.invoiceRef)||invoiced.has(event.invoiceRef)||
          seenInvoices.get(event.invoiceRef).totalCents!==event.amountCents)
         return base('MISSING_OR_MISMATCHED_INVOICE_DEBIT');
       invoiced.set(event.invoiceRef,event.amountCents);
@@ -82,7 +85,7 @@ function reconcileCustomerReceivables(packet){
     }else if(event.operation==='payment_received'){
       // Current legacy customer collection can omit refNo: reject that evidence
       // for invoice-level allocation until owner has chosen an allocation rule.
-      if(!nonempty(event.invoiceRef)||!seenInvoices.has(event.invoiceRef)||
+      if(!canonicalRef(event.invoiceRef)||!seenInvoices.has(event.invoiceRef)||
           !['invoice_initial','later_collection'].includes(event.paymentOrigin))
         return base('COLLECTION_ALLOCATION_UNPROVEN');
       if(!invoiced.has(event.invoiceRef))return base('PAYMENT_BEFORE_INVOICE');

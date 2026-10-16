@@ -104,3 +104,52 @@ test('25 no actual D1 persistence or permission implementation present in pure h
   assert.doesNotMatch(source,/\bfetch\s*\(|\bquery\s*\(|\bprepare\s*\(|\bexec\s*\(/);
   assert.doesNotMatch(source,/require\(['"](?:node:)?(?:http|https|sqlite3|child_process|fs)/);
 });
+
+test('26 scope customer ID with boundary whitespace is rejected, not trimmed silently',()=>{
+  assert.equal(check(p=>p.customerRef='FAKE_CUST_1 ').code,'MISSING_SCOPE_OR_UNVERIFIED_COVERAGE');
+});
+test('27 coverage ID with boundary whitespace is rejected',()=>{
+  assert.equal(check(p=>p.coverageRef=' UNVERIFIED_FAKE_COVERAGE_NOTE').code,'MISSING_SCOPE_OR_UNVERIFIED_COVERAGE');
+});
+test('28 invoice snapshot ID refuses whitespace and non-NFC Unicode variants',()=>{
+  for(const ref of [' FAKE_INV_1','FAKE_INV_1 ','FAKE_INVe\u0301']){
+    assert.equal(check(p=>p.invoiceSnapshots[0].invoiceRef=ref).code,'INVALID_OR_DUPLICATE_INVOICE_SNAPSHOT',ref);
+  }
+});
+test('29 event id refuses whitespace and non-NFC Unicode variants',()=>{
+  for(const ref of [' FAKE_PAYMENT_EVENT_2','FAKE_PAYMENT_EVENT_2 ','FAKE_EVENT_e\u0301']){
+    assert.equal(check(p=>p.ledgerEvents[2].eventRef=ref).code,'INVALID_OR_DUPLICATE_LEDGER_EVENT',ref);
+  }
+});
+test('30 invoice event lineage reference must match canonical invoice ID',()=>{
+  for(const ref of ['FAKE_INV_1 ','FAKE_INVe\u0301']){
+    assert.equal(check(p=>p.ledgerEvents[0].invoiceRef=ref).code,'MISSING_OR_MISMATCHED_INVOICE_DEBIT',ref);
+  }
+});
+test('31 later receipt invoice reference fails closed if noncanonical',()=>{
+  for(const ref of [' FAKE_INV_1','FAKE_INV_1 ','FAKE_INVe\u0301']){
+    assert.equal(check(p=>p.ledgerEvents[2].invoiceRef=ref).code,'COLLECTION_ALLOCATION_UNPROVEN',ref);
+  }
+});
+test('32 coherent NFC identifiers preserve the invoice credit vs closing debt distinction',()=>{
+  const r=check(p=>{
+    p.customerRef='FAKE_CUST_\u00c9';
+    p.invoiceSnapshots[0].customerRef=p.customerRef;
+    p.ledgerEvents.forEach(e=>e.customerRef=p.customerRef);
+    p.invoiceSnapshots[0].invoiceRef='FAKE_INV_\u00c9';
+    p.ledgerEvents.forEach(e=>e.invoiceRef='FAKE_INV_\u00c9');
+    p.ledgerEvents[2].eventRef='FAKE_EVENT_\u00c9';
+  });
+  assert.equal(r.code,'STRUCTURALLY_COHERENT');
+  assert.equal(r.invoiceTimeCreditCents,12000);
+  assert.equal(r.currentCustomerOutstandingCents,7000);
+  assert.equal(r.financeRelease,'NO_GO');
+});
+test('33 invalid IDs never grant finance, cash or stock authority',()=>{
+  const r=check(p=>p.ledgerEvents[2].eventRef=' FAKE_RECEIPT_ID');
+  assert.equal(r.state,'STOP');
+  assert.equal(r.financeRelease,'NO_GO');
+  assert.equal(r.authoritativeLedgerVerified,false);
+  assert.equal(r.allowsCashMovement,false);
+  assert.equal(r.allowsStockMovement,false);
+});
