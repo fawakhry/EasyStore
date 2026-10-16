@@ -43,8 +43,8 @@ test('real native Worker: two fake invoices, one unallocated aggregate collectio
  const db=new DatabaseSync(':memory:');
  try{
   for(const name of files)db.exec(fs.readFileSync(path.join(ROOT,'migrations',name),'utf8'));
-  db.exec("CREATE TABLE t12_customers(customer_id TEXT PRIMARY KEY,customer_name TEXT,active TEXT,updated_at TEXT);");
-  db.prepare("INSERT INTO t12_customers VALUES(?,?,'نعم',CURRENT_TIMESTAMP)")
+  db.exec("CREATE TABLE t12_customers(customer_id TEXT PRIMARY KEY,customer_name TEXT,manager TEXT NOT NULL DEFAULT '',phone TEXT NOT NULL DEFAULT '',extra_phone TEXT NOT NULL DEFAULT '',customer_type TEXT NOT NULL DEFAULT '',active TEXT,updated_at TEXT);");
+  db.prepare("INSERT INTO t12_customers(customer_id,customer_name,active,updated_at) VALUES(?,?,'نعم',CURRENT_TIMESTAMP)")
     .run('CUST_SYNTH_MULTI_1','FAKE_ACCOUNT_ONLY_CUSTOMER');
   const trace={batches:0,batchRollbacks:0,network:0};
   const DB={
