@@ -43,6 +43,8 @@ jobs:
           test -f "$EASYSTORE_PINNED_NATIVE_ROOT/cloud-session-bridge-v3.mjs"
           node --check tests/accounting_native_worker_readonly_gate_pinned.test.cjs
           node --test tests/accounting_native_worker_readonly_gate_pinned.test.cjs
+          node --check tests/accounting_native_worker_authenticated_read_pinned.test.cjs
+          node --test tests/accounting_native_worker_authenticated_read_pinned.test.cjs
           node --test tests/accounting_joined_day_flow_offline.test.cjs
           node --test tests/accounting_acc202_d1_action_failclosed_no_go.test.cjs
           node --test tests/accounting_acc201_sso_opener_role_no_go.test.cjs
