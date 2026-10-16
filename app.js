@@ -387,8 +387,8 @@
   }
   function supplierOptions(){ return (state.data.suppliers||[]).map(s=>`<option value="${esc(s.name||s.supplier||'')}"></option>`).join(''); }
   function customerDebt(c){ return num(c && (c.debtAmount ?? c.debt ?? c.currentBalance ?? c.remainingBalance ?? c.customerDebt ?? 0)); }
-  function customerDebtText(c){ const d=customerDebt(c); return d>0 ? 'مديونية: '+money(d) : (d<0 ? 'رصيد دائن: '+money(Math.abs(d)) : 'مديونية: 0 ج'); }
-  function customerDebtClass(c){ return customerDebt(c)>0 ? 'debtDue' : (customerDebt(c)<0 ? 'debtCredit' : 'debtClear'); }
+  function customerDebtText(c){ const credit=num(c&&c.creditBalance); if(credit>0) return 'رصيد لصالح العميل: +'+money(credit); const d=customerDebt(c); return d>0 ? 'مديونية: '+money(d) : (d<0 ? 'رصيد دائن: '+money(Math.abs(d)) : 'مديونية: 0 ج'); }
+  function customerDebtClass(c){ return num(c&&c.creditBalance)>0?'debtCredit':(customerDebt(c)>0 ? 'debtDue' : (customerDebt(c)<0 ? 'debtCredit' : 'debtClear')); }
   function customerOptions(){ return (state.data.customers||[]).map(c=>`<option value="${esc(c.name||c.customerName||c.phone||'')}">${esc((c.phone||c.mobile||'')+' - '+customerDebtText(c))}</option>`).join(''); }
   function matByName(name){ const k=nkey(name); return materials().find(r => nkey(materialName(r)) === k); }
   function itemByName(name){ const k=nkey(name); return productTemplates().find(r => nkey(templateName(r)) === k); }
@@ -533,11 +533,14 @@
     if(!account || !account.success) return '<div class="card customerAccountEmpty"><h3>اختر عميلًا لعرض حسابه.</h3></div>';
     const customer=account.customer||{};
     const balance=num(account.balance);
+    const creditFeature=account.creditFeatureEnabled===true;
+    const customerCredit=creditFeature?num(account.creditBalance):0;
+    const canCollectCredit=creditFeature&&(!account.permissions||account.permissions.canCollect!==false);
     const canAdjust=isAdmin() && (!account.permissions || account.permissions.canAdjust!==false);
     const transactions=Array.isArray(account.transactions)?account.transactions:[];
     const movementOptions=`<option value="payment_received">تحصيل من العميل</option>${canAdjust?'<option value="opening_debt">إضافة مديونية</option><option value="adjustment_increase">تسوية بالزيادة</option><option value="adjustment_decrease">تسوية بالنقص</option>':''}`;
-    const movementForm=(balance>0 || canAdjust) ? `<div class="customerMovementForm"><div class="field"><label>نوع الحركة</label><select id="caOperation" onchange="ES27.resetCustomerAccountRequest()">${movementOptions}</select></div><div class="field"><label>المبلغ</label><input id="caAmount" type="number" min="0.01" step="0.01" placeholder="0.00" oninput="ES27.resetCustomerAccountRequest()"></div><div class="field"><label>طريقة الدفع</label><select id="caMethod" onchange="ES27.resetCustomerAccountRequest()"><option>نقدي</option><option>إنستا باي</option><option>فودافون كاش</option><option>تحويل بنكي</option><option>فيزا</option><option>أخرى</option></select></div><div class="field"><label>رقم مرجع / إيصال</label><input id="caRef" placeholder="اختياري" oninput="ES27.resetCustomerAccountRequest()"></div><div class="field customerMovementNotes"><label>ملاحظات</label><input id="caNotes" placeholder="سبب الحركة أو أي تفاصيل" oninput="ES27.resetCustomerAccountRequest()"></div><div class="customerMovementAction"><button id="caSaveBtn" class="btn" onclick="ES27.saveCustomerAccountMovement()">حفظ الحركة</button></div></div>` : '<div class="customerAccountSettled">✓ لا توجد مديونية لتحصيلها من هذا العميل.</div>';
-    return `<section class="card customerAccountCard"><div class="customerAccountHead"><div><span class="customerAccountEyebrow">كشف حساب العميل</span><h2>${esc(customer.name||state.customerAccountSelected)}</h2><p>${customer.phone?esc(customer.phone):'لا يوجد رقم هاتف مسجل'}${customer.type?' · '+esc(customer.type):''}${customer.manager?' · المسؤول: '+esc(customer.manager):''}</p></div><div class="customerBalanceBox ${balance>0?'hasDebt':'isClear'}"><span>الرصيد المستحق</span><b>${money(balance)}</b><small>${balance>0?'مطلوب من العميل':'الحساب مسدد'}</small></div></div><div class="customerPermissionNote">${canAdjust?'يمكنك التحصيل وإضافة المديونية أو عمل تسوية إدارية.':'يمكنك تسجيل تحصيل من مديونية العميل فقط.'}</div>${movementForm}<div class="customerLedgerTitle"><h3>حركات الحساب</h3><span>${transactions.length} حركة</span></div>${table(transactions,['الوقت','الحركة','المبلغ','طريقة الدفع','المرجع','قبل','بعد','سجل بواسطة','ملاحظات'],t=>[esc(customerAccountDate(t.createdAt)),esc(customerAccountOperationLabel(t)),money(t.amount),esc(t.paymentMethod||'-'),esc(t.refNo||'-'),money(t.balanceBefore),money(t.balanceAfter),esc(t.createdBy||'-'),esc(t.notes||'-')])}</section>`;
+    const movementForm=(balance>0 || canAdjust || canCollectCredit) ? `<div class="customerMovementForm"><div class="field"><label>نوع الحركة</label><select id="caOperation" onchange="ES27.resetCustomerAccountRequest()">${movementOptions}</select></div><div class="field"><label>المبلغ</label><input id="caAmount" type="number" min="0.01" step="0.01" placeholder="0.00" oninput="ES27.resetCustomerAccountRequest()"></div><div class="field"><label>طريقة الدفع</label><select id="caMethod" onchange="ES27.resetCustomerAccountRequest()"><option>نقدي</option><option>إنستا باي</option><option>فودافون كاش</option><option>تحويل بنكي</option><option>فيزا</option><option>أخرى</option></select></div><div class="field"><label>رقم مرجع / إيصال</label><input id="caRef" placeholder="اختياري" oninput="ES27.resetCustomerAccountRequest()"></div><div class="field customerMovementNotes"><label>ملاحظات</label><input id="caNotes" placeholder="سبب الحركة أو أي تفاصيل" oninput="ES27.resetCustomerAccountRequest()"></div><div class="customerMovementAction"><button id="caSaveBtn" class="btn" onclick="ES27.saveCustomerAccountMovement()">حفظ الحركة</button></div></div>` : '<div class="customerAccountSettled">✓ لا توجد مديونية لتحصيلها من هذا العميل.</div>';
+    return `<section class="card customerAccountCard"><div class="customerAccountHead"><div><span class="customerAccountEyebrow">كشف حساب العميل</span><h2>${esc(customer.name||state.customerAccountSelected)}</h2><p>${customer.phone?esc(customer.phone):'لا يوجد رقم هاتف مسجل'}${customer.type?' · '+esc(customer.type):''}${customer.manager?' · المسؤول: '+esc(customer.manager):''}</p></div><div class="customerBalanceBox ${customerCredit>0?'debtCredit':(balance>0?'hasDebt':'isClear')}"><span>${customerCredit>0?'رصيد لصالح العميل':'الرصيد المستحق'}</span><b>${customerCredit>0?'+':''}${money(customerCredit>0?customerCredit:balance)}</b><small>${customerCredit>0?'رصيد دائن يُستخدم في الفاتورة القادمة':(balance>0?'مطلوب من العميل':'الحساب مسدد')}</small></div></div><div class="customerPermissionNote">${creditFeature?'التحصيل الزائد أو المقدم يتحول إلى رصيد دائن لصالح العميل، ويُستخدم في الفاتورة القادمة دون تسجيل نقدية ثانية.':(canAdjust?'يمكنك التحصيل وإضافة المديونية أو عمل تسوية إدارية.':'يمكنك تسجيل تحصيل من مديونية العميل فقط.')}</div>${movementForm}<div class="customerLedgerTitle"><h3>حركات الحساب</h3><span>${transactions.length} حركة</span></div>${table(transactions,['الوقت','الحركة','المبلغ','طريقة الدفع','المرجع','قبل','بعد','سجل بواسطة','ملاحظات'],t=>[esc(customerAccountDate(t.createdAt)),esc(customerAccountOperationLabel(t)),money(t.amount),esc(t.paymentMethod||'-'),esc(t.refNo||'-'),money(t.balanceBefore),money(t.balanceAfter),esc(t.createdBy||'-'),esc(t.notes||'-')])}</section>`;
   }
 
   function screenItems(){
@@ -1218,7 +1221,7 @@
         state.customerAccount=reply;
         state.customerAccountSelected=(reply.customer&&reply.customer.name)||reply.partyName||name;
         const local=customerByName(state.customerAccountSelected);
-        if(local){ local.debt=reply.balance; local.currentBalance=reply.balance; local.remainingBalance=reply.balance; }
+        if(local){ local.debt=reply.balance; local.currentBalance=reply.balance; local.remainingBalance=reply.balance; local.creditBalance=reply.creditFeatureEnabled===true?num(reply.creditBalance):0; }
         saveLocal(); render();
       }catch(e){ state.customerAccount={error:e.message||String(e)}; render(); }
     },
@@ -1236,9 +1239,11 @@
       const before=num(state.customerAccount&&state.customerAccount.balance);
       const decrease=operation==='payment_received'||operation==='adjustment_decrease';
       const after=before+(decrease?-amount:amount);
-      if(decrease && amount>before) return flash('المبلغ أكبر من مديونية العميل الحالية '+money(before)+'.',true);
+      const allowExcess=operation==='payment_received'&&state.customerAccount&&state.customerAccount.creditFeatureEnabled===true;
+      if(decrease && amount>before && !allowExcess) return flash('المبلغ أكبر من مديونية العميل الحالية '+money(before)+'.',true);
+      const nextDisplay=allowExcess && amount>before?('+'+money(num(state.customerAccount.creditBalance)+amount-before)+' لصالح العميل'):money(after);
       const label=customerAccountOperationLabel({operation});
-      if(!confirm(label+' بمبلغ '+money(amount)+' للعميل '+name+'؟\nالرصيد بعد الحركة: '+money(after))) return;
+      if(!confirm(label+' بمبلغ '+money(amount)+' للعميل '+name+'؟\nالرصيد بعد الحركة: '+nextDisplay)) return;
       if(!state.customerAccountRequestId) state.customerAccountRequestId='CUST-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,10);
       const button=$('caSaveBtn');
       if(button){button.disabled=true;button.textContent='جاري الحفظ...';}
@@ -1252,7 +1257,7 @@
         state.customerAccountRequestId='';
         const local=customerByName(name);
         const savedBalance=account&&account.success!==false?account.balance:reply.balance;
-        if(local){ local.debt=savedBalance; local.currentBalance=savedBalance; local.remainingBalance=savedBalance; }
+        if(local){ local.debt=savedBalance; local.currentBalance=savedBalance; local.remainingBalance=savedBalance; local.creditBalance=account&&account.creditFeatureEnabled===true?num(account.creditBalance):num(reply.customerCredit||0); }
         saveLocal(); render(); flash((reply.message||'تم حفظ الحركة وتحديث حساب العميل.')+(account&&account.success!==false?'':' حدّث كشف الحساب لعرض الحركة الجديدة.'));
       }catch(e){
         if(button){button.disabled=false;button.textContent='إعادة محاولة الحفظ';}
