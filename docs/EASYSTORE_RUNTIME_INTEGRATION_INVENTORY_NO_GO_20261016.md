@@ -21,3 +21,13 @@ Date: 2026-10-16. Scope: repository-only review; no deployment or finance writes
 ## Explicit blockers
 
 G1–G5 OPEN. FINANCE_RELEASE=NO_GO. No source-only test grants real approval. Never treat self-declared ownerRef or role as authentication. No automatic waste posting from discrepancies. No merge, production writes, or deployment authorized.
+
+## Verified cross-repository D1 source discovery (2026-10-16)
+
+- Actual candidate code lives in `fawakhry/TrendOs` branch `candidate/easystore-accounting-a2-20261005` (branch HEAD observed `90795b9d05b3cc72051be50683c7942b87d07452`), not in EasyStore repository root. `cloudflare-d1/src` has 75 files including `employee-accounting-native-v1.mjs`, `employee-auth-native-v1.mjs`, `accounting-finance-api-v1.mjs`, `accounting-finance-safe-v1.mjs`, `accounting-persistence-readiness-v1.mjs`. Migrations folder has 29 files through `0030_employee_accounting_write_canary_budget_v1.sql`.
+- `accounting-finance-api-v1.mjs` SHA `5bfbeff90263a2cb0bec39ea21b9741347c6b89b` exposes `/v1/accounting/finance` GET metadata and `/v1/accounting/finance/plan` POST **planning-only**, explicitly `persisted:false`, `authoritativeWrites:false`, `persistence:none`.
+- `accounting-persistence-readiness-v1.mjs` SHA `ba4b9e5f6863f357ce5a65c8328aefff45b14fe1` supports preview/test D1 preview-write opt-in only, explicitly blocks production and states `authoritativeWrites:false`.
+- TrendOS `main` contains GitHub workflow `.github/workflows/easystore-a211-waste-canary-execution.yml` that checks remote D1 and live frontend and may execute canary steps. **Do not dispatch**: workflow references remote `trendos-main` and Cloudflare credentials. Workflow existence is NOT proof of successful acceptance or production readiness.
+- Next read-only discovery: trace actual `employee-accounting-native-v1.mjs` route + `employee-auth-native-v1.mjs` trusted identity and compare candidate write routes with EasyStore front-end `config.js` and `app.js`. Verify staging-only, exact-head tests before any deployment decision.
+
+NO_GO unchanged. No finance writes, merge, workflow dispatch, deployment, or owner approval performed.
