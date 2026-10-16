@@ -1,0 +1,13 @@
+'use strict';
+const test=require('node:test'),assert=require('node:assert/strict');const {customerStatementPreview:r}=require('../scripts/easystore_customer_statement_preview_no_go.cjs');
+const ev=(eventRef,type,amountCents,minute)=>({eventRef,type,amountCents,customerRef:'FAKE_C',actorRef:'FAKE_EMP',documentRef:'FAKE_DOC_'+eventRef,occurredAt:'2026-10-16T09:'+String(minute).padStart(2,'0')+':00Z'});
+const packet=()=>({customerRef:'FAKE_C',currency:'EGP',openingDebtCents:50000,events:[ev('INV1','invoice',30000,1),ev('PAY1','payment_received',20000,2),ev('INV2','invoice',15000,3),ev('PAY2','payment_received',40000,4)]});
+test('owner example running negative balance -500,-800,-600,-750,-350',()=>{let x=r(packet());assert.equal(x.code,'SYNTHETIC_STATEMENT_PREVIEW');assert.deepEqual(x.rows.map(y=>y.runningCustomerBalanceCents),[-80000,-60000,-75000,-35000]);assert.equal(x.openingCustomerBalanceCents,-50000);assert.equal(x.closingCustomerBalanceCents,-35000)});
+test('unallocated collection does not require invoice id',()=>assert.equal(r(packet()).rows[1].type,'payment_received'));
+test('duplicate event fails closed',()=>{let p=packet();p.events[1].eventRef='INV1';assert.equal(r(p).code,'INVALID_EVENT')});
+test('unknown refund fails closed',()=>{let p=packet();p.events[1].type='refund';assert.equal(r(p).code,'INVALID_EVENT')});
+test('overpayment requires separate owner policy',()=>{let p=packet();p.events[1].amountCents=90000;assert.equal(r(p).code,'UNALLOCATED_OVERPAYMENT_POLICY_REQUIRED')});
+test('out of order events fail',()=>{let p=packet();p.events[1].occurredAt='2026-10-16T09:00:00Z';assert.equal(r(p).code,'OUT_OF_ORDER')});
+test('missing audit identity fails',()=>{let p=packet();delete p.events[1].actorRef;assert.equal(r(p).code,'INVALID_EVENT')});
+test('overflow fails',()=>{let p=packet();p.openingDebtCents=Number.MAX_SAFE_INTEGER;assert.equal(r(p).code,'AMOUNT_OVERFLOW')});
+test('preview never allows posting',()=>{let x=r(packet());assert.equal(x.financeRelease,'NO_GO');assert.equal(x.allowsPosting,false)});
