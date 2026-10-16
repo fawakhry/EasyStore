@@ -150,6 +150,7 @@ function reconcileCustomerReceivables(packet){
     invoiceCount:seenInvoices.size,eventCount:seenEvents.size,
     findings:[
       ...(creditSnapshot!==closing?['INVOICE_TIME_CREDIT_IS_NOT_CURRENT_RECEIVABLE']:[]),
+      ...(Array.from(initialPayments.values()).some(amount=>amount>0)?['INVOICE_INITIAL_PAYMENT_TIMING_UNVERIFIED']:[]),
       'CALLER_LEDGER_COMPLETENESS_NOT_INDEPENDENTLY_VERIFIED',
       'NATIVE_D1_BACKEND_AND_REAL_COSTING_NOT_TESTED'
     ],
