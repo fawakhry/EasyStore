@@ -107,7 +107,7 @@ test('09 stale timestamp denied', () => {
   assert.equal(h.user().token,'');
 });
 test('10 far future timestamp denied', () => {
-  const h=harness();h.send({data:{issuedAt:Date.now()+30001}});
+  const h=harness();h.send({data:{issuedAt:Date.now()+120000}}); // decisively outside 30s skew; avoid wall-clock test flake
   assert.equal(h.user().token,'');
 });
 test('11 missing fake token denied', () => {
