@@ -1,0 +1,14 @@
+'use strict';
+const test=require('node:test'),assert=require('node:assert/strict');const {previewInventoryVariance:r}=require('../scripts/easystore_inventory_variance_preview_no_go.cjs');
+const waste={requestRef:'FAKE_W1',department:'laser',materialRef:'FAKE_PANEL',quantity:10,employeeRef:'FAKE_EMP',ownerRef:'FAKE_OWNER',approvalRef:'FAKE_APPROVAL'};
+const p=()=>({materialRef:'FAKE_PANEL',department:'laser',coverageRef:'FAKE_PERIOD',openingQty:0,receivedQty:100,jobConsumptionQty:70,approvedWasteQty:10,pendingWasteQty:0,physicalCountQty:15,approvedWasteEvidence:[{...waste}]});
+test('owner 100-70-10 expected 20 physical 15 = unexplained shortage 5',()=>{let x=r(p());assert.equal(x.code,'DISCREPANCY_REQUIRES_INVESTIGATION');assert.equal(x.expectedQty,20);assert.equal(x.varianceQty,-5)});
+test('balanced physical 20',()=>{let x=p();x.physicalCountQty=20;assert.equal(r(x).code,'STRUCTURALLY_BALANCED')});
+test('pending waste does not reduce expected stock',()=>{let x=p();x.pendingWasteQty=5;assert.equal(r(x).expectedQty,20)});
+test('unapproved quantity mismatch stops',()=>{let x=p();x.approvedWasteEvidence=[];assert.equal(r(x).code,'APPROVED_WASTE_MISMATCH')});
+test('employee self approval stops',()=>{let x=p();x.approvedWasteEvidence[0].ownerRef='FAKE_EMP';assert.equal(r(x).code,'INVALID_OWNER_WASTE_APPROVAL')});
+test('duplicate waste reference stops',()=>{let x=p();x.approvedWasteEvidence.push({...waste});assert.equal(r(x).code,'INVALID_OWNER_WASTE_APPROVAL')});
+test('cross-department evidence stops',()=>{let x=p();x.approvedWasteEvidence[0].department='printing';assert.equal(r(x).code,'INVALID_OWNER_WASTE_APPROVAL')});
+test('negative or fractional quantities stop',()=>{for(const n of [-1,0.5]){let x=p();x.receivedQty=n;assert.equal(r(x).code,'INVALID_INPUT')}});
+test('impossible stock flow stops',()=>{let x=p();x.jobConsumptionQty=120;assert.equal(r(x).code,'IMPOSSIBLE_STOCK_FLOW')});
+test('no real posting or authoritative proof',()=>{let x=r(p());assert.equal(x.financeRelease,'NO_GO');assert.equal(x.allowsStockWrite,false);assert.equal(x.authoritativeEvidenceVerified,false)});
