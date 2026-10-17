@@ -14,6 +14,15 @@ function setFrom(name){
 const reads=setFrom('D1_ACCOUNTING_READ_ACTIONS');
 const writes=setFrom('D1_ACCOUNTING_WRITE_ACTIONS');
 const retired=setFrom('RETIRED_ACCOUNTING_ACTIONS');
+const optional=setFrom('ACC208_OPTIONAL_NATIVE_READ_ACTIONS');
+assert.deepEqual([...optional].sort(),[
+  'previewCustomerCreditLiabilityAuditV1',
+  'previewNativeInvoiceReturnExposureV1'
+].sort(),'only two explicitly controlled owner-only optional READ actions');
+assert.ok(![...optional].some(x=>reads.has(x)||writes.has(x)||retired.has(x)));
+assert.ok(app.includes("window.EASYSTORE_FINANCE_READONLY_REVIEW_V1 === true"));
+assert.ok(app.includes("const readActionRequested = D1_ACCOUNTING_READ_ACTIONS.has(actionName) || optionalOwnerRead;"));
+
 
 assert.deepEqual([...retired].sort(),[
   'applySuggestedLegacyClassificationsV1921',
@@ -21,7 +30,7 @@ assert.deepEqual([...retired].sort(),[
   'reconcileLegacyCustomerDebtsV1914'
 ].sort());
 
-const unrouted=all.filter(x=>!reads.has(x)&&!writes.has(x)&&!retired.has(x));
+const unrouted=all.filter(x=>!reads.has(x)&&!writes.has(x)&&!retired.has(x)&&!optional.has(x));
 assert.deepEqual(unrouted,[],'all literal accounting api actions must be D1 or retired');
 
 const apiStart=app.indexOf('async function api(');
@@ -36,4 +45,5 @@ console.log('ACCOUNTING_LITERAL_ACTIONS='+all.length);
 console.log('D1_READ_ACTIONS='+reads.size);
 console.log('D1_WRITE_ACTIONS='+writes.size);
 console.log('RETIRED_ACTIONS='+retired.size);
+console.log('GATED_OWNER_OPTIONAL_D1_READS='+optional.size);
 console.log('LEGACY_ACCOUNTING_FALLBACK_ACTIONS=0');
