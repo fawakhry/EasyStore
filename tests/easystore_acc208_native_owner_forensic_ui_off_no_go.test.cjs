@@ -8,7 +8,7 @@ const writeSetSrc=app.match(/const D1_ACCOUNTING_WRITE_ACTIONS\s*=\s*new Set\((\
 assert.ok(readSetSrc&&writeSetSrc,'actual read/write action dispatch sets required');
 const getActions=t=>[...t.matchAll(/['"]([^'"]+)['"]/g)].map(x=>x[1]);
 const reads=getActions(readSetSrc[1]),writes=getActions(writeSetSrc[1]);
-const optionalSet=app.match(/const ACC208_OPTIONAL_NATIVE_READ_ACTIONS\\s*=\\s*new Set\\((\\[[^\\]]*\\])\\)/);
+const optionalSet=app.match(/const ACC208_OPTIONAL_NATIVE_READ_ACTIONS\s*=\s*new Set\((\[[^\]]*\])\)/);
 assert.ok(optionalSet,'source-only optional native finance readers missing');
 const optional=getActions(optionalSet[1]);
 assert.equal(reads.length,11,'original PINNED native D1 READ inventory must remain unchanged');
@@ -19,8 +19,8 @@ for(const name of ['previewCustomerCreditLiabilityAuditV1','previewNativeInvoice
   assert.ok(!writes.includes(name),'never classify forensic preview as financial write: '+name);
 }
 assert.equal(new Set(optional).size,2,'exact two optional native D1 reviews');
-assert.match(app,/const optionalOwnerRead = window\\.EASYSTORE_FINANCE_READONLY_REVIEW_V1 === true/);
-assert.match(app,/D1_ACCOUNTING_READ_ACTIONS\\.has\\(actionName\\) \\|\\| optionalOwnerRead/);
+assert.match(app,/const optionalOwnerRead = window\.EASYSTORE_FINANCE_READONLY_REVIEW_V1 === true/);
+assert.match(app,/D1_ACCOUNTING_READ_ACTIONS\.has\(actionName\) \|\| optionalOwnerRead/);
 assert.match(cfg,/window\.EASYSTORE_FINANCE_READONLY_REVIEW_V1\s*=\s*false\s*;/,
   'independent owner review UI feature flag MUST default OFF');
 const functionIndex=app.indexOf('function screenHealth(){');
