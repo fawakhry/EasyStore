@@ -211,7 +211,7 @@
     ['materials','templates','suppliers','purchases','dailyPurchases','sales','customers','stockMoves','wasteLines','deptLines','finalInvoices','custodyEntries','custodySummary','departmentDayCloses','unclassifiedRows'].forEach(k=>{ if(!Array.isArray(state.data[k])) state.data[k] = []; });
   }
 
-  const D1_ACCOUNTING_READ_ACTIONS = new Set(['getAccounting','getDeptInvoiceDraftV1887','getPartyAccountV1858','getCustomerAccountV1915','getEasyStoreCustomers','searchCustomers','getEasyStoreSuppliers','easyStoreSystemHealth','calculateAccountingLaserQuoteV1913','getDailyDepartmentReportV1920','previewAccountingAutomationV1921']);
+  const D1_ACCOUNTING_READ_ACTIONS = new Set(['getAccounting','getDeptInvoiceDraftV1887','getPartyAccountV1858','getCustomerAccountV1915','getEasyStoreCustomers','searchCustomers','getEasyStoreSuppliers','easyStoreSystemHealth','calculateAccountingLaserQuoteV1913','getDailyDepartmentReportV1920','previewAccountingAutomationV1921','previewCustomerCreditLiabilityAuditV1','previewNativeInvoiceReturnExposureV1']);
   const D1_ACCOUNTING_WRITE_ACTIONS = new Set([
     'saveAccountingMaterial','saveAccountingTemplate','archiveAccountingTemplate','recalcAccountingMaterialsCascade',
     'saveAccountingDeptLine','approveAccountingDeptInvoice','saveAccountingFinalInvoice','reopenAccountingFinalInvoice',
@@ -1008,7 +1008,27 @@
     departmentDetails+=`<div class="card"><h3>${esc(accountingScopeTitle('مصروفات التشغيل المسجلة'))}</h3><p class="muted">تظهر للمراجعة، وتدخل الربح من خلال تكلفة بند الشغل الفعلية دون خصم مزدوج.</p>${table(operatingExpenseRows(),['البند','القسم','باند التشغيل','طريقة التوزيع','القيمة'],r=>[esc(materialName(r)),esc(matDept(r)),esc(r.operatingBand||r['بند التشغيل']||''),esc(r.operatingCalcMethod||r['طريقة توزيع التشغيل']||''),money(r.operatingUnitCost||r['قيمة التشغيل']||r.unitCost)])}</div>`;
     return `<div class="card"><div class="toolbar"><div><h2>${esc(accountingScopeTitle('التقارير والأرباح الفعلية'))}</h2><p class="muted">الربح محسوب من تكلفة الخامات والتشغيل المستهلكة فعلًا في بنود الشغل، وليس من إجمالي مشتريات اليوم.</p></div><button class="btn" onclick="ES27.go('dailyClose')">فتح التقرير اليومي والتقفيل</button></div><div class="grid four"><div class="kpi"><b>${money(sales)}</b><span>${salesLabel}</span></div><div class="kpi"><b>${money(actualCost)}</b><span>تكلفة الشغل الفعلية</span></div><div class="kpi"><b>${money(waste)}</b><span>هوالك</span></div><div class="kpi"><b>${money(sales-actualCost-waste)}</b><span>الربح الفعلي</span></div></div><div class="hint">مشتريات الفترة: ${money(purchases)} — تظهر للمتابعة ولا تُخصم مرة ثانية من الربح.</div></div>${departmentDetails}`;
   }
-  function screenHealth(){ return `<div class="card"><h2>فحص النظام المالي</h2><p class="muted">يفحص الاتصال، مفاتيح منع التكرار، حالة مهام اليوم، والصلاحيات بدون إنشاء أي حركة مالية.</p><button class="btn" onclick="ES27.health()">تشغيل الفحص الشامل</button><div id="healthBox" class="hint">اضغط تشغيل الفحص الشامل.</div></div>`; }
+  function screenHealth(){
+    // UI availability is NOT finance authority; native Worker must verify SSO.
+    const ownerReadonly = window.EASYSTORE_FINANCE_READONLY_REVIEW_V1 === true &&
+      window.EASYSTORE_ACCOUNTING_D1_READONLY === true && isAdmin();
+    const panel=ownerReadonly?
+      '<div class="card"><h2>مراجعة أرصدة العملاء والمرتجعات — قراءة فقط</h2>'+
+      '<p class="muted">الفحص يعرض الأدلة المحاسبية المسجلة فقط، ولا يسمح برد نقدية أو إصدار رصيد أو تعديل مخزون. التطابق لا يثبت هوية صاحب الأوردر.</p>'+
+      '<div class="field"><label for="acc208CustomerId">معرّف العميل الرسمي (ليس الاسم أو الهاتف)</label>'+
+      '<input id="acc208CustomerId" type="text" maxlength="180" autocomplete="off" placeholder="CUS-C000111"></div>'+
+      '<button id="acc208CustomerBtn" class="btn secondary" type="button" onclick="ES27.acc208ReviewCustomerCredit()">فحص الرصيد الدائن</button>'+
+      '<div id="acc208CustomerResult" class="hint" role="status" aria-live="polite">لم يُنفذ فحص بعد.</div>'+
+      '<div class="field"><label for="acc208InvoiceNo">رقم الفاتورة المسجل</label>'+
+      '<input id="acc208InvoiceNo" type="text" maxlength="180" autocomplete="off" placeholder="رقم الفاتورة الأصلي"></div>'+
+      '<button id="acc208InvoiceBtn" class="btn secondary" type="button" onclick="ES27.acc208ReviewInvoiceReturn()">فحص حالة التحصيل والمرتجع</button>'+
+      '<div id="acc208InvoiceResult" class="hint" role="status" aria-live="polite">لم يُنفذ فحص بعد.</div>'+
+      '<p class="warn"><strong>FINANCE_RELEASE=NO_GO</strong> — ممنوع تنفيذ أو اعتماد صرف أو تسوية من هذه الشاشة.</p></div>':'';
+    return '<div class="card"><h2>فحص النظام المالي</h2>'+
+      '<p class="muted">يفحص الاتصال، مفاتيح منع التكرار، حالة مهام اليوم، والصلاحيات بدون إنشاء أي حركة مالية.</p>'+
+      '<button class="btn" onclick="ES27.health()">تشغيل الفحص الشامل</button>'+
+      '<div id="healthBox" class="hint">اضغط تشغيل الفحص الشامل.</div></div>'+panel;
+  }
 
   function isSharedDeptName(dept){ return /مشترك|shared|عام/.test(nkey(dept)); }
   function selectedDeptTemplate(){ return visibleTemplates()[num(val('dlItemSel'))] || null; }
@@ -1562,6 +1582,52 @@
       }catch(e){ flash(e.message||'تعذر تقفيل الفاتورة على السيرفر.',true); }
     },
     refreshFinalDebt(){ const b=$('finalCustomerDebt'); if(b) b.innerHTML=deptCustomerDebtHtml(val('fiCustomer')); },
+    async acc208ReviewCustomerCredit(){
+      if(!(window.EASYSTORE_FINANCE_READONLY_REVIEW_V1 === true &&
+        window.EASYSTORE_ACCOUNTING_D1_READONLY === true && isAdmin()))
+        return deny('الفحص الإداري غير مفعّل؛ ولا يمنح فتح الشاشة أي صلاحية مالية.');
+      const customerId=String(val('acc208CustomerId')||'').trim();
+      if(!/^[\p{L}\p{N}_:.\-]{3,180}$/u.test(customerId))
+        return flash('اكتب معرّف العميل الرسمي دون اسم أو رقم هاتف.',true);
+      const box=$('acc208CustomerResult'),button=$('acc208CustomerBtn');
+      if(!box)return;
+      box.textContent='جارٍ فحص سجل العميل من D1 دون كتابة...';
+      if(button)button.disabled=true;
+      try{
+        const reply=await api('previewCustomerCreditLiabilityAuditV1',{customerId});
+        if(!reply||reply.success===false)throw new Error(reply&&reply.message||'تعذر فحص الرصيد الدائن.');
+        const amount=Number(reply.creditCents),valid=reply.creditCents!==null&&
+          Number.isSafeInteger(amount)&&amount>=0;
+        box.textContent='حالة المراجعة: '+String(reply.reviewState||'UNKNOWN')+
+          ' — الرصيد الدائن: '+(valid?(amount/100).toFixed(2)+' جنيه':'غير مثبت')+
+          ' — عدد الحركات: '+(Number.isSafeInteger(reply.eventCount)?reply.eventCount:'غير معروف')+
+          '. القراءة لا تسمح بصرف أو تعديل الرصيد. FINANCE_RELEASE=NO_GO';
+      }catch(e){box.textContent='فشل الفحص دون تسجيل حركة مالية: '+String(e.message||'UNKNOWN');}
+      finally{if(button)button.disabled=false}
+    },
+    async acc208ReviewInvoiceReturn(){
+      if(!(window.EASYSTORE_FINANCE_READONLY_REVIEW_V1 === true &&
+        window.EASYSTORE_ACCOUNTING_D1_READONLY === true && isAdmin()))
+        return deny('الفحص الإداري غير مفعّل؛ لا توجد صلاحية لإجراء مرتجع.');
+      const invoiceNo=String(val('acc208InvoiceNo')||'').trim();
+      if(!invoiceNo||invoiceNo.length>180||/[\u0000-\u001f]/u.test(invoiceNo))
+        return flash('اكتب رقم الفاتورة الرسمي.',true);
+      const box=$('acc208InvoiceResult'),button=$('acc208InvoiceBtn');
+      if(!box)return;
+      box.textContent='جارٍ فحص الفاتورة وحركة الخزنة من D1 دون كتابة...';
+      if(button)button.disabled=true;
+      try{
+        const reply=await api('previewNativeInvoiceReturnExposureV1',{invoiceNo});
+        if(!reply||reply.success===false)throw new Error(reply&&reply.message||'تعذر فحص الفاتورة.');
+        const amount=Number(reply.cashReceiptCents),valid=reply.cashReceiptCents!==null&&
+          Number.isSafeInteger(amount)&&amount>=0;
+        box.textContent='حالة مراجعة الفاتورة: '+String(reply.reviewState||'UNKNOWN')+
+          ' — حالة الفاتورة: '+String(reply.invoiceStatus||'UNKNOWN')+
+          ' — النقد المحصل المرصود: '+(valid?(amount/100).toFixed(2)+' جنيه':'غير مثبت')+
+          '. لا يوجد تصريح برد النقدية أو رصيد دائن أو إعادة خامات للمخزون. FINANCE_RELEASE=NO_GO';
+      }catch(e){box.textContent='فشل الفحص دون صرف أو تعديل خزنة: '+String(e.message||'UNKNOWN');}
+      finally{if(button)button.disabled=false}
+    },
     health(){ const h=$('healthBox'); if(h) h.innerHTML='جاري فحص الاتصال والحسابات ومنع التكرار...'; api('easyStoreSystemHealth').then(r=>{ if(!h)return;if(!r||r.success===false){h.innerHTML='⚠️ الرد غير ناجح: '+esc(r&&r.message);return;}const checks=r.checks||{},preview=checks.automationPreview||{},ledger=(checks.duplicateLedgerRequests||[]).length,cash=(checks.duplicateCashboxRequests||[]).length;h.innerHTML=`<div class="${r.healthy?'hint':'warn'}"><b>${r.healthy?'✅':'⚠️'} ${esc(r.message||'تم الفحص')}</b><br>الإصدار: ${esc(r.version||VERSION)}<br>تكرار قيود الحساب: ${ledger} · تكرار الخزنة: ${cash}<br>مشتريات معلقة: ${(preview.pendingPurchases||[]).length} · بنود لم تقفل: ${(preview.openDeptLines||[]).length} · عهد مفتوحة: ${(preview.openCustodies||[]).length} · غير مصنف: ${(preview.unclassified||[]).length}</div>`; }).catch(e=>{ if(h) h.innerHTML='❌ فشل الاتصال: '+esc(e.message); }); }
   };
 
