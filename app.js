@@ -211,7 +211,11 @@
     ['materials','templates','suppliers','purchases','dailyPurchases','sales','customers','stockMoves','wasteLines','deptLines','finalInvoices','custodyEntries','custodySummary','departmentDayCloses','unclassifiedRows'].forEach(k=>{ if(!Array.isArray(state.data[k])) state.data[k] = []; });
   }
 
-  const D1_ACCOUNTING_READ_ACTIONS = new Set(['getAccounting','getDeptInvoiceDraftV1887','getPartyAccountV1858','getCustomerAccountV1915','getEasyStoreCustomers','searchCustomers','getEasyStoreSuppliers','easyStoreSystemHealth','calculateAccountingLaserQuoteV1913','getDailyDepartmentReportV1920','previewAccountingAutomationV1921','previewCustomerCreditLiabilityAuditV1','previewNativeInvoiceReturnExposureV1']);
+  const D1_ACCOUNTING_READ_ACTIONS = new Set(['getAccounting','getDeptInvoiceDraftV1887','getPartyAccountV1858','getCustomerAccountV1915','getEasyStoreCustomers','searchCustomers','getEasyStoreSuppliers','easyStoreSystemHealth','calculateAccountingLaserQuoteV1913','getDailyDepartmentReportV1920','previewAccountingAutomationV1921']);
+  // Preserve the EXACT legacy pinned native Worker read inventory until a new
+  // Worker SHA is separately approved/deployed. Optional ACC205/206 queries
+  // are source-only, OFF by default and still routed through D1 SSO (no Google).
+  const ACC208_OPTIONAL_NATIVE_READ_ACTIONS = new Set(['previewCustomerCreditLiabilityAuditV1','previewNativeInvoiceReturnExposureV1']);
   const D1_ACCOUNTING_WRITE_ACTIONS = new Set([
     'saveAccountingMaterial','saveAccountingTemplate','archiveAccountingTemplate','recalcAccountingMaterialsCascade',
     'saveAccountingDeptLine','approveAccountingDeptInvoice','saveAccountingFinalInvoice','reopenAccountingFinalInvoice',
@@ -229,7 +233,9 @@
   async function api(action, data){
     const actionName=String(action||'');
     if(RETIRED_ACCOUNTING_ACTIONS.has(actionName)) throw new Error('تم إيقاف أداة الترحيل القديمة بعد بدء الحسابات من قاعدة نظيفة.');
-    const readActionRequested = D1_ACCOUNTING_READ_ACTIONS.has(actionName);
+    const optionalOwnerRead = window.EASYSTORE_FINANCE_READONLY_REVIEW_V1 === true &&
+      ACC208_OPTIONAL_NATIVE_READ_ACTIONS.has(actionName);
+    const readActionRequested = D1_ACCOUNTING_READ_ACTIONS.has(actionName) || optionalOwnerRead;
     const writeActionRequested = D1_ACCOUNTING_WRITE_ACTIONS.has(actionName);
     // Only explicitly inventoried accounting actions may leave this client.
     if(!readActionRequested && !writeActionRequested) throw new Error('عملية الحسابات غير معروفة؛ تم منع الطلب دون استخدام السيرفر القديم.');
