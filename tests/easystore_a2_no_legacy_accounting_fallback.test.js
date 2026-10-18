@@ -17,8 +17,9 @@ const retired=setFrom('RETIRED_ACCOUNTING_ACTIONS');
 const optional=setFrom('ACC208_OPTIONAL_NATIVE_READ_ACTIONS');
 assert.deepEqual([...optional].sort(),[
   'previewCustomerCreditLiabilityAuditV1',
-  'previewNativeInvoiceReturnExposureV1'
-].sort(),'only two explicitly controlled owner-only optional READ actions');
+  'previewNativeInvoiceReturnExposureV1',
+  'previewInvoiceItemPaymentReviewV1'
+].sort(),'only three explicitly controlled owner-only optional READ actions');
 assert.ok(![...optional].some(x=>reads.has(x)||writes.has(x)||retired.has(x)));
 assert.ok(app.includes("window.EASYSTORE_FINANCE_READONLY_REVIEW_V1 === true"));
 assert.ok(app.includes("const readActionRequested = D1_ACCOUNTING_READ_ACTIONS.has(actionName) || optionalOwnerRead;"));
