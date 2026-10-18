@@ -215,7 +215,7 @@
   // Preserve the EXACT legacy pinned native Worker read inventory until a new
   // Worker SHA is separately approved/deployed. Optional ACC205/206 queries
   // are source-only, OFF by default and still routed through D1 SSO (no Google).
-  const ACC208_OPTIONAL_NATIVE_READ_ACTIONS = new Set(['previewCustomerCreditLiabilityAuditV1','previewNativeInvoiceReturnExposureV1']);
+  const ACC208_OPTIONAL_NATIVE_READ_ACTIONS = new Set(['previewCustomerCreditLiabilityAuditV1','previewNativeInvoiceReturnExposureV1','previewInvoiceItemPaymentReviewV1']);
   const D1_ACCOUNTING_WRITE_ACTIONS = new Set([
     'saveAccountingMaterial','saveAccountingTemplate','archiveAccountingTemplate','recalcAccountingMaterialsCascade',
     'saveAccountingDeptLine','approveAccountingDeptInvoice','saveAccountingFinalInvoice','reopenAccountingFinalInvoice',
@@ -1029,6 +1029,8 @@
       '<input id="acc208InvoiceNo" type="text" maxlength="180" autocomplete="off" placeholder="رقم الفاتورة الأصلي"></div>'+
       '<button id="acc208InvoiceBtn" class="btn secondary" type="button" onclick="ES27.acc208ReviewInvoiceReturn()">فحص حالة التحصيل والمرتجع</button>'+
       '<div id="acc208InvoiceResult" class="hint" role="status" aria-live="polite">لم يُنفذ فحص بعد.</div>'+
+      '<button id="acc210ReviewBtn" class="btn secondary" type="button" onclick="ES27.acc210ReviewPaymentItems()">مراجعة مقترحات تخصيص التحصيل على البنود (غير معتمدة)</button>'+
+      '<div id="acc210ReviewResult" class="hint" role="status" aria-live="polite">لم تُجر مراجعة تخصيص البنود.</div>'+
       '<p class="warn"><strong>FINANCE_RELEASE=NO_GO</strong> — ممنوع تنفيذ أو اعتماد صرف أو تسوية من هذه الشاشة.</p></div>':'';
     return '<div class="card"><h2>فحص النظام المالي</h2>'+
       '<p class="muted">يفحص الاتصال، مفاتيح منع التكرار، حالة مهام اليوم، والصلاحيات بدون إنشاء أي حركة مالية.</p>'+
@@ -1647,6 +1649,37 @@
           ' لا يوجد تصريح برد النقدية أو رصيد دائن أو إعادة خامات للمخزون. FINANCE_RELEASE=NO_GO';
       }catch(e){box.textContent='فشل الفحص دون صرف أو تعديل خزنة: '+String(e.message||'UNKNOWN');}
       finally{if(button)button.disabled=false}
+    },
+    async acc210ReviewPaymentItems(){
+      // UI convenience only: the actual native worker independently checks
+      // verified SSO finance FULL before processing READONLY review requests.
+      // The old pinned deployed Worker will reject this unknown action; that
+      // is an unavailable review, never an implied 0 or paid allocation.
+      if(!(window.EASYSTORE_FINANCE_READONLY_REVIEW_V1 === true &&
+        window.EASYSTORE_ACCOUNTING_D1_READONLY === true && isAdmin()))
+        return deny('مراجعة تخصيصات التحصيل غير مفعّلة.');
+      const invoiceNo=String(val('acc208InvoiceNo')||'').trim();
+      if(!invoiceNo||invoiceNo.length>180||/[\u0000-\u001f]/u.test(invoiceNo))
+        return flash('اكتب رقم الفاتورة الرسمي أولًا.',true);
+      const box=$('acc210ReviewResult'),button=$('acc210ReviewBtn');
+      if(!box)return;
+      box.textContent='جارٍ قراءة مقترحات البنود غير المعتمدة دون تعديل حسابات...';
+      if(button)button.disabled=true;
+      try{
+        const result=await api('previewInvoiceItemPaymentReviewV1',{invoiceNo});
+        if(!result||result.success!==true)
+          throw new Error(result&&result.message||'غير متاح في نسخة السيرفر أو بيانات الفاتورة الحالية');
+        const count=Number.isSafeInteger(result.candidateCount)?result.candidateCount:null;
+        const cents=result.proposedTotalCents;
+        const valid=Number.isSafeInteger(cents)&&cents>=0;
+        box.textContent='حالة مراجعة البنود: '+String(result.reviewState||'UNKNOWN')+
+          ' — عدد المقترحات: '+(count===null?'غير معروف':String(count))+
+          ' — إجمالي مبالغ مقترحة: '+(valid?(cents/100).toFixed(2)+' جنيه':'غير موثوق')+
+          '. جميع المقترحات غير معتمدة. لا يوجد تخصيص مثبت للتحصيل أو صلاحية رد نقدية أو رصيد دائن أو تسليم أوردر. FINANCE_RELEASE=NO_GO';
+      }catch(e){
+        box.textContent='فحص توزيع التحصيل غير متاح أو مرفوض: '+String(e.message||'UNKNOWN')+
+          '. الحالة غير معروفة، ولا يجوز افتراض عدم وجود تحصيلات أو بنود.';
+      }finally{if(button)button.disabled=false}
     },
     health(){ const h=$('healthBox'); if(h) h.innerHTML='جاري فحص الاتصال والحسابات ومنع التكرار...'; api('easyStoreSystemHealth').then(r=>{ if(!h)return;if(!r||r.success===false){h.innerHTML='⚠️ الرد غير ناجح: '+esc(r&&r.message);return;}const checks=r.checks||{},preview=checks.automationPreview||{},ledger=(checks.duplicateLedgerRequests||[]).length,cash=(checks.duplicateCashboxRequests||[]).length;h.innerHTML=`<div class="${r.healthy?'hint':'warn'}"><b>${r.healthy?'✅':'⚠️'} ${esc(r.message||'تم الفحص')}</b><br>الإصدار: ${esc(r.version||VERSION)}<br>تكرار قيود الحساب: ${ledger} · تكرار الخزنة: ${cash}<br>مشتريات معلقة: ${(preview.pendingPurchases||[]).length} · بنود لم تقفل: ${(preview.openDeptLines||[]).length} · عهد مفتوحة: ${(preview.openCustodies||[]).length} · غير مصنف: ${(preview.unclassified||[]).length}</div>`; }).catch(e=>{ if(h) h.innerHTML='❌ فشل الاتصال: '+esc(e.message); }); }
   };
