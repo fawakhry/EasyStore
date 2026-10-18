@@ -13,12 +13,12 @@ assert.ok(optionalSet,'source-only optional native finance readers missing');
 const optional=getActions(optionalSet[1]);
 assert.equal(reads.length,11,'original PINNED native D1 READ inventory must remain unchanged');
 assert.equal(new Set(reads).size,reads.length,'no duplicate pinned D1 reader permissions');
-for(const name of ['previewCustomerCreditLiabilityAuditV1','previewNativeInvoiceReturnExposureV1']){
+for(const name of ['previewCustomerCreditLiabilityAuditV1','previewNativeInvoiceReturnExposureV1','previewInvoiceItemPaymentReviewV1']){
   assert.ok(optional.includes(name),'new preview requires separate OFF-by-default D1 action set: '+name);
   assert.ok(!reads.includes(name),'do not drift the pinned native Worker read inventory: '+name);
   assert.ok(!writes.includes(name),'never classify forensic preview as financial write: '+name);
 }
-assert.equal(new Set(optional).size,2,'exact two optional native D1 reviews');
+assert.equal(new Set(optional).size,3,'exact three optional native D1 reviews');
 assert.match(app,/const optionalOwnerRead = window\.EASYSTORE_FINANCE_READONLY_REVIEW_V1 === true/);
 assert.match(app,/D1_ACCOUNTING_READ_ACTIONS\.has\(actionName\) \|\| optionalOwnerRead/);
 assert.match(cfg,/window\.EASYSTORE_FINANCE_READONLY_REVIEW_V1\s*=\s*false\s*;/,
@@ -33,6 +33,8 @@ assert.match(healthBlock,/id="acc208CustomerId"/);
 assert.match(healthBlock,/id="acc208InvoiceNo"/);
 assert.match(healthBlock,/id="acc208CustomerResult"/);
 assert.match(healthBlock,/id="acc208InvoiceResult"/);
+assert.match(healthBlock,/id="acc210ReviewBtn"/);
+assert.match(healthBlock,/id="acc210ReviewResult"/);
 assert.doesNotMatch(healthBlock,/submit|payment_received|saveCustomerAccountMovement|refundEasyStoreSaleV2/);
 const obj=app.indexOf('window.ES27 =');
 assert.ok(obj>=0,'existing app actions required');
@@ -42,6 +44,10 @@ assert.ok(reviewStart>obj&&reviewEnd>reviewStart);
 const controller=app.slice(reviewStart,reviewEnd);
 assert.match(controller,/api\('previewCustomerCreditLiabilityAuditV1',\{customerId\}\)/);
 assert.match(controller,/api\('previewNativeInvoiceReturnExposureV1',\{invoiceNo\}\)/);
+assert.match(controller,/api\('previewInvoiceItemPaymentReviewV1',\{invoiceNo\}\)/);
+assert.match(controller,/result\.reviewState\|\|'UNKNOWN'/);
+assert.match(controller,/لا يوجد تخصيص مثبت للتحصيل/);
+assert.match(controller,/غير متاح أو مرفوض/);
 
 assert.match(controller,/subsequentInvoiceReferenceCount/,
   'ACC209 later receipt references should be visible on the optional owner screen');
