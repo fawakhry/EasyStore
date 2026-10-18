@@ -1627,10 +1627,24 @@
         if(!reply||reply.success===false)throw new Error(reply&&reply.message||'تعذر فحص الفاتورة.');
         const amount=Number(reply.cashReceiptCents),valid=reply.cashReceiptCents!==null&&
           Number.isSafeInteger(amount)&&amount>=0;
+        // ACC209 old deployed Worker does not report later receipts. UNKNOWN
+        // must not become a fabricated 0. A typed invoice reference is not
+        // an allocation even if the later payment command is COMMITTED.
+        const referenceCount=reply.subsequentInvoiceReferenceCount;
+        const referenceState=String(reply.subsequentInvoiceReferenceState||'NOT_AVAILABLE_ON_DEPLOYED_VERSION');
+        const refKnown=Number.isSafeInteger(referenceCount)&&referenceCount>=0;
+        const references=refKnown
+          ?(referenceState==='REFERENCE_HISTORY_TOO_LARGE_UNKNOWN'
+            ?String(referenceCount)+' أو أكثر — السجل أكبر من نطاق الفحص'
+            :String(referenceCount)+' مرجع تحصيل لاحق رُبط نصيًا برقم الفاتورة')
+          :'غير معروف — نسخة السيرفر لا توفر فحص التحصيلات اللاحقة';
         box.textContent='حالة مراجعة الفاتورة: '+String(reply.reviewState||'UNKNOWN')+
           ' — حالة الفاتورة: '+String(reply.invoiceStatus||'UNKNOWN')+
           ' — النقد المحصل المرصود: '+(valid?(amount/100).toFixed(2)+' جنيه':'غير مثبت')+
-          '. لا يوجد تصريح برد النقدية أو رصيد دائن أو إعادة خامات للمخزون. FINANCE_RELEASE=NO_GO';
+          ' — مراجع التحصيلات اللاحقة: '+references+
+          ' — حالة الدليل: '+referenceState+
+          '. المرجع النصي ليس تخصيص سداد للفاتورة؛ وحتى عدم ظهور مراجع لا يثبت عدم وجود تحصيل آخر.'+
+          ' لا يوجد تصريح برد النقدية أو رصيد دائن أو إعادة خامات للمخزون. FINANCE_RELEASE=NO_GO';
       }catch(e){box.textContent='فشل الفحص دون صرف أو تعديل خزنة: '+String(e.message||'UNKNOWN');}
       finally{if(button)button.disabled=false}
     },
