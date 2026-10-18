@@ -42,6 +42,16 @@ assert.ok(reviewStart>obj&&reviewEnd>reviewStart);
 const controller=app.slice(reviewStart,reviewEnd);
 assert.match(controller,/api\('previewCustomerCreditLiabilityAuditV1',\{customerId\}\)/);
 assert.match(controller,/api\('previewNativeInvoiceReturnExposureV1',\{invoiceNo\}\)/);
+
+assert.match(controller,/subsequentInvoiceReferenceCount/,
+  'ACC209 later receipt references should be visible on the optional owner screen');
+assert.match(controller,/NOT_AVAILABLE_ON_DEPLOYED_VERSION/,
+  'old pinned Worker must show UNKNOWN, not a fabricated zero');
+assert.match(controller,/referenceState==='REFERENCE_HISTORY_TOO_LARGE_UNKNOWN'/,
+  'unbounded history should show UNKNOWN and never claim fully inspected');
+assert.match(controller,/المرجع النصي ليس تخصيص سداد/,
+  'confirmed collection text reference is not a binding to an invoice');
+
 assert.match(controller,/\.textContent\s*=/,'safe text-only untrusted server response rendering required');
 assert.doesNotMatch(controller,/(?:api\('(?:save|refund|return|reverse))|(?:\.innerHTML\s*=)/,
   'diagnostic controls must never post finance or inject backend HTML');
