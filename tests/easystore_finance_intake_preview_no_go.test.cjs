@@ -69,3 +69,52 @@ test('no caller-provided approval bypass: arbitrarily green flags stay NO_GO',()
 test('null or incomplete packet denies without exception',()=>{
  for(const p of [null,[],{}, {envelope:{}}]){const r=previewInvoiceIntake(p);verifyLocked(r);assert.equal(r.status,'STOP')}
 });
+
+function t12Fixture(){
+ const p=fixture();
+ p.sourceOrder.source_system='TrendOS_T12';
+ p.t12OperationalCandidate={
+  success:true,source:'original-t12-at-create-source-only',
+  operationalSourceShapeVerified:true,sourceOnly:true,readOnly:true,
+  officialCustomerOwnershipAttested:false,financeAuthorized:false,
+  canRequestInvoice:false,departmentApprovalsVerified:false,
+  connectorEventPublished:false,posted:false,
+  orderId:'ORDER-1',officialCustomerId:'CUSTOMER-1',lineCount:2,
+  lines:[
+   {lineId:'L-PRINT',department:'طباعة',ordinal:1},
+   {lineId:'L-LASER',department:'ليزر',ordinal:2}
+  ]
+ };
+ return p;
+}
+test('ACC231 original T12 operational set matches both invoice candidate lanes, NEVER posts',()=>{
+ const r=previewInvoiceIntake(t12Fixture());verifyLocked(r);
+ assert.equal(r.status,'REVIEW_REQUIRED');assert.equal(r.lineCount,2);
+ assert.equal(r.code,'STRUCTURALLY_COHERENT_BUT_UNVERIFIED');
+});
+test('ACC231 T12 claim without original reader evidence stops instead of trusting browser financial lines',()=>{
+ const p=t12Fixture();delete p.t12OperationalCandidate;
+ const r=previewInvoiceIntake(p);verifyLocked(r);
+ assert.equal(r.status,'STOP');
+ assert.equal(r.code,'T12_OPERATIONAL_CANDIDATE_UNTRUSTED_OR_INCOMPLETE');
+});
+for(const [caseName,change,expected] of [
+ ['wrong canonical T12 customer',p=>p.t12OperationalCandidate.officialCustomerId='OTHER','T12_OPERATIONAL_CANDIDATE_UNTRUSTED_OR_INCOMPLETE'],
+ ['wrong original T12 order',p=>p.t12OperationalCandidate.orderId='OTHER','T12_OPERATIONAL_CANDIDATE_UNTRUSTED_OR_INCOMPLETE'],
+ ['partial original print+laser set',p=>p.t12OperationalCandidate.lines.pop(),'T12_OPERATIONAL_CANDIDATE_UNTRUSTED_OR_INCOMPLETE'],
+ ['fake source finance authorization',p=>p.t12OperationalCandidate.financeAuthorized=true,'T12_OPERATIONAL_CANDIDATE_UNTRUSTED_OR_INCOMPLETE'],
+ ['fake source customer ownership',p=>p.t12OperationalCandidate.officialCustomerOwnershipAttested=true,'T12_OPERATIONAL_CANDIDATE_UNTRUSTED_OR_INCOMPLETE'],
+ ['wrong source event publication claim',p=>p.t12OperationalCandidate.connectorEventPublished=true,'T12_OPERATIONAL_CANDIDATE_UNTRUSTED_OR_INCOMPLETE'],
+ ['fake one-line invoice authorization',p=>p.t12OperationalCandidate.canRequestInvoice=true,'T12_OPERATIONAL_CANDIDATE_UNTRUSTED_OR_INCOMPLETE'],
+ ['duplicate source line IDs',p=>p.t12OperationalCandidate.lines[1].lineId='L-PRINT','T12_OPERATIONAL_LINE_SET_CONFLICT'],
+ ['department substitution without changing original line ID',p=>p.t12OperationalCandidate.lines[1].department='طباعة','T12_OPERATIONAL_LINE_SET_CONFLICT'],
+ ['reordered ordinal',p=>p.t12OperationalCandidate.lines[0].ordinal=2,'T12_OPERATIONAL_LINE_SET_CONFLICT'],
+ ['missing finance line while claiming 2 original lanes',p=>{p.sourceOrder.lines.pop();p.sourceOrder.expected_line_count=1},'T12_OPERATIONAL_CANDIDATE_UNTRUSTED_OR_INCOMPLETE'],
+ ['unclaimed injected source evidence',p=>p.sourceOrder.source_system='Browser','T12_OPERATIONAL_CANDIDATE_UNTRUSTED_OR_INCOMPLETE']
+]){
+ test('ACC231 '+caseName,()=>{
+  const p=t12Fixture();change(p);
+  const r=previewInvoiceIntake(p);verifyLocked(r);
+  assert.equal(r.status,'STOP');assert.equal(r.code,expected);
+ });
+}
