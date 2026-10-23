@@ -46,6 +46,10 @@ jobs:
             node --check cloudflare-d1/src/employee-accounting-native-v1.mjs
             node --test tests/easystore_acc213_wael_gaber_customer_invoice_native_sqlite_no_go.test.mjs
           )
+          node --check tests/acc221_t12_official_customer_fk_source_no_go.test.cjs
+          node --test tests/acc221_t12_official_customer_fk_source_no_go.test.cjs
+          echo 'ACC221_REAL_PINNED_TRENDOS_SCHEMA_OFFICIAL_FK_UNATTESTED=YES'
+          echo 'ACC221_ORDER_CUSTOMER_MONEY_AUTHORITY=NO_GO'
           echo 'EASYSTORE_TRENDOS_PINNED_REAL_WORKER_FAKE_INVOICE=PASS'
           echo 'FINANCE_REAL_CLOUD_OR_PROD_WRITE=NOT_ATTEMPTED'
           echo 'EASYSTORE_SEPARATE_CLOUD_DEPLOYMENT=NOT_VERIFIED'
