@@ -30,6 +30,12 @@ jobs:
           test -z "$GOOGLE_APPLICATION_CREDENTIALS"
           node --check tests/accounting_joined_day_flow_offline.test.cjs
           node --test tests/accounting_joined_day_flow_offline.test.cjs
+          node --check scripts/easystore_finance_intake_preview_no_go.cjs
+          node --check tests/easystore_finance_intake_preview_no_go.test.cjs
+          node --test tests/easystore_finance_intake_preview_no_go.test.cjs
+          echo 'CROSS_CLOUD_ORDER_CUSTOMER_FINANCE_INTAKE=FAKE_ONLY_PREVIEW'
+          echo 'CROSS_CLOUD_OFFICIAL_ORDER_FK_LIVE_PROOF=NOT_VERIFIED'
+          echo 'EASYSTORE_SEPARATE_CLOUD_DEPLOYMENT=NOT_VERIFIED'
           echo 'JOINED_ACCOUNTING_OLD_HANDLERS_FAKE_VM_TESTED=YES'
           echo 'JOINED_ACCOUNTING_D1_WORKER_ACCEPTANCE=NOT_TESTED'
           echo 'JOINED_ACCOUNTING_CUSTOMER_CREDIT_SNAPSHOT_RECONCILIATION=OPEN'
