@@ -6476,3 +6476,40 @@ This SELECT enumerates accounting table **names only** in the currently deployed
 - Day 1: cash sales and verified cash customer receipts ONLY. رحمة/ريفان cash entry, ضياء independent review, وائل print, جابر laser; actual staff identity/signoff evidence still G1/G2 OPEN. G3 true signed opening sources, G4 actual authenticated official order/customer BUSINESS ownership + complete signed V1 `order_line_approved` event and ALL approved departmental finance lines with real prices + independently verified EasyStore Cloudflare Worker/D1 and Zero-Google writer switch, G5 real encrypted independent Ubuntu restore are also OPEN. **Customer name/phone, T12 at-create FK candidate, mutable UI cache and tests alone cannot post a financial invoice.**
 - NEXT execution path must extend **existing** original T12 at-create trusted ownership provenance, support full independent item/R2 custody from separate TrendOS Entry683 path, and allow EasyStore's already-existing deterministic invoice handler to process exactly one bill only after authentic department approvals and separately attested finance connector/Cloudflare Stage. No surprise production migrations or setting changes.
 - **`FINANCE_RELEASE=NO_GO`; `T12_AT_CREATE_FINANCE_AUTHORITY=NO`; `EASYSTORE_INDEPENDENT_CLOUD_PROVIDER=UNVERIFIED`; `G1..G5=OPEN`; `PROD_ACCOUNTING_WRITES=ZERO`; `DEPLOY=NO`; `GOOGLE_RETIRED_LIVE=0/9`.**
+
+
+### ACC228-DB-02 — owner-executed live D1 read-only schema inventory SUCCESS (2026-10-23, screenshot evidence)
+
+- **Supersedes the prior ACC228-02 PENDING line for this exact inspection only.** The owner sent **two screenshots** from signed-in Cloudflare → D1 SQL Database → `trendos-main` (UUID `5c4b92bf-e043-4f6e-bd6d-d514a92cd825`) → Console. Owner visibly ran the exact previously approved **metadata-only** SQL:
+```sql
+SELECT name
+FROM sqlite_master
+WHERE type = 'table'
+  AND name LIKE 'employee_accounting_%'
+ORDER BY name;
+```
+- **Direct provider UI evidence:** the two screenshots together, with one overlapping scroll region, display **20 distinct tables**, enumerated exactly below; no customer or finance row contents were displayed. Console reported response time ~262ms and query time ~0.16ms in one capture; timing is not a financial qualification.
+- `employee_accounting_cashbox_v1`
+- `employee_accounting_control_v1`
+- `employee_accounting_custody_closes_v1`
+- `employee_accounting_custody_events_v1`
+- `employee_accounting_daily_purchases_v1`
+- `employee_accounting_day_closes_v1`
+- `employee_accounting_dept_lines_v1`
+- `employee_accounting_events_v1`
+- `employee_accounting_final_invoices_v1`
+- `employee_accounting_materials_v1`
+- `employee_accounting_parties_v1`
+- `employee_accounting_party_balances_v1`
+- `employee_accounting_party_ledger_v1`
+- `employee_accounting_purchase_invoices_v1`
+- `employee_accounting_request_ledger_v1`
+- `employee_accounting_stock_moves_v1`
+- `employee_accounting_templates_v1`
+- `employee_accounting_tx_guard_v1`
+- `employee_accounting_waste_v1`
+- `employee_accounting_write_canary_v1`
+- **Cross-check against actual source (performed separately on GitHub):** 20/20 screenshot-visible names can be located in existing original TrendOS `cloudflare-d1/migrations/0015_employee_accounting_zero_google_v1.sql`, `0020`–`0031` as appropriate on `fix/acc214-accounting-read-scope-precutover-no-go-20261020`. This is **table-name correspondence only**, NOT comparison of live columns/constraints/indexes/triggers to migrations, NOT proof of all migrations having executed, and NOT data/ledger integrity, balances, cash custody, collection execution, zero opening balances, live employee roles, live invoice or independent EasyStore Cloud ownership.
+- **Safe conclusion:** existing published TrendOS D1 physically contains accounting-named schema (not merely repo source). As previously proven from binding screenshot, `trendos-d1-api` uses `DB=trendos-main`; distinct `trendos-accounting-preview` remains non-authoritative. This does **not** establish an independently deployed EasyStore Worker/D1 or permit treating shared D1 as an approved dual-writer ledger. No mutations were requested or performed; the owner ran the SELECT, which can increment metadata read usage only.
+- **Next useful low-risk checkpoint:** Inspect the **declaration only** for the existing final-invoices table, with one read-only `sqlite_master` SELECT in the same D1 Console; do not show actual invoice/customer rows or modify SQL objects. Verify DDL against source and log separately. Independent EasyStore provider account/Stage/Ubuntu restore and authorized financial writer remain separate unverified gates. Do not ask to repeat this 20-table inventory.
+- **Status:** `ACC228_02_LIVE_D1_TABLE_NAMES=PASS_20`; `ACC228_02_SOURCE_NAMES=20_OF_20`; `D1_CONTENT_INTEGRITY=NOT_VERIFIED`; `EASYSTORE_INDEPENDENT_CLOUD=NOT_VERIFIED`; `FINANCE_RELEASE=NO_GO`; `FINANCE_WRITES=OFF`; `G1..G5=OPEN`.
