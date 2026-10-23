@@ -21,7 +21,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: fawakhry/TrendOs
-          ref: af34f404ceb5cc0abd43b03c89fbb046686115d4
+          ref: 22f0ece0efdc82deebeabf919c4ec764fcfdbcd8
           path: native-trendos-acc214
           persist-credentials: false
           sparse-checkout: |
@@ -42,7 +42,7 @@ jobs:
           test "$FINANCE_RELEASE" = "NO_GO"
           (
             cd native-trendos-acc214
-            test "$(git rev-parse HEAD)" = "af34f404ceb5cc0abd43b03c89fbb046686115d4"
+            test "$(git rev-parse HEAD)" = "22f0ece0efdc82deebeabf919c4ec764fcfdbcd8"
             node --check cloudflare-d1/src/employee-accounting-native-v1.mjs
             node --test tests/easystore_acc213_wael_gaber_customer_invoice_native_sqlite_no_go.test.mjs
             node --check cloudflare-d1/src/t12-order-customer-finance-fence-sourceonly.mjs
