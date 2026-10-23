@@ -6632,3 +6632,26 @@ If one matching row exists, it is a migration-ledger **claim** which conflicts w
 **Production release STOPs unchanged and concurrent accounting investigations preserved:** Original EasyStore book live Cloudflare dashboard checkpoints `ACC228_DB_03` found 3 missing customer-credit columns in live final-invoice DDL; later checkpoint `ACC228_DB_05` verified migration-log table presence but `0031` ledger row not yet inspected (do NOT pretend absent or re-query/repair). Independent separately scoped EasyStore provider/Stage remains unverified; original invoice frontend may still route via legacy proxy. Original official `order_id→customer_id` financial ownership attest, source-signed V1 event, real Wael/Gaber financial line approval/EGP prices, live role/cash permissions رحمة/ريفان/ضياء, true signed openings, encrypted independent off-host Ubuntu restore and G1..G5 remain OPEN. No production D1 reads/writes as part of ACC230, no payment, release, deployment, merge, migration, credential or Google retirement.
 
 **`ACC230=READ_ONLY_SOURCE_CI_SUCCESS`; `T12_OUTBOX_COMPLETE_IN_FAKE_SQLITE=YES`; `ORDER_LINE_APPROVED_FINANCE_EVENT_EMITTED=NO`; `REAL_CUSTOMER_OWNER_ATTESTED=NO`; `EASYSTORE_INDEPENDENT_CLOUD_PROVIDER=UNVERIFIED`; `FINANCE_RELEASE=NO_GO`; `ZERO_GOOGLE_CUSTOMER_ACTIONS_RETIRED_LIVE=0/9`.**
+
+
+### ACC228-DB-06 — owner verified no 0031-prefixed migration log entry (2026-10-23; READ-ONLY / NO_GO)
+
+- **ACTUAL Cloudflare D1 provider screenshot** sent by owner: `Storage & databases → D1 SQL Database → trendos-main → Console`, verified prior UUID `5c4b92bf-e043-4f6e-bd6d-d514a92cd825`. The owner executed ONLY this already requested, read-only metadata SQL:
+```sql
+SELECT name, applied_at
+FROM d1_migrations
+WHERE name LIKE '0031%'
+ORDER BY name;
+```
+- **Exact displayed result:** `This query returned no data.` (~671 ms response time; ~0.33 ms query time on dashboard). Therefore **zero history rows with a name beginning `0031`** were found in this live D1 `d1_migrations` table at the screenshot timestamp. The migration-history table itself exists and defines `id`, `name`, `applied_at` (ACC228-DB-05). This is NOT proof of the complete ledger history or the absence of any differently named manual deployment.
+- **Correlated existing source vs live schema evidence:** prior owner-verified reads found `employee_accounting_final_invoices_v1` has 30/33 expected columns, missing `credit_applied`, `cash_received`, `credit_created` from checked-in migration `0031_employee_accounting_customer_advance_credit_v1.sql`; neither `employee_accounting_customer_credits_v1` nor `employee_accounting_customer_credit_events_v1` exists. The source migration `0031` adds those three invoice fields, two tables and two indexes. The combination is strongly **consistent with 0031 not deployed to this specific `trendos-main` environment via a 0031-prefixed Wrangler migration**, but absence cannot certify that absolutely no variant/partial/manual attempt occurred.
+- **No live money reads or changes:** Provider console only ran `SELECT` from migration bookkeeping. No account/cash/invoice/customer rows, credentials, D1 schema changes, deployments, migration application, or finance permission changes. Preserve the concurrent ACC230 source-only branch/CI status; its tests are NOT Cloudflare runtime parity.
+- **NEXT single read-only manual check for owner on same D1 Console** (identify last actual recorded migration filenames without guessing):
+```sql
+SELECT id, name, applied_at
+FROM d1_migrations
+ORDER BY id DESC
+LIMIT 10;
+```
+This reads at most ten migration-history records (names/timestamps only), not sensitive finance/customer data. Record the exact rows before deciding whether any schema repair is appropriate. If names or evidence reveal a conflict, stop and reconcile; **DO NOT manually apply 0031 to production** or assume it is safe due to missing tables. Production rollback and separated independent EasyStore provider/Stage are NOT verified.
+- **Release block:** `ACC228_DB_06=NO_0031_PREFIX_LEDGER_ROWS`; `ACC228_DB_04=CREDIT_TABLES_ABSENT`; `ACC228_DB_03=CREDIT_COLUMNS_ABSENT`; `EASYSTORE_INDEPENDENT_PROVIDER=UNVERIFIED`; `G1..G5=OPEN`; `FINANCE_RELEASE=NO_GO`; `FINANCE_WRITES=OFF`.
