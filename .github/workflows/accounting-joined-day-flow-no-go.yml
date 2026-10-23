@@ -17,11 +17,11 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - name: Read-only checkout of tested TrendOS ACC214 native Worker and fake invoice test (immutable SHA)
+      - name: Read-only checkout of tested TrendOS ACC228+ACC214 original T12 and native invoice Worker (immutable SHA)
         uses: actions/checkout@v4
         with:
           repository: fawakhry/TrendOs
-          ref: 875d469a55c1af2b50f2e50765ad362048fa53f5
+          ref: af34f404ceb5cc0abd43b03c89fbb046686115d4
           path: native-trendos-acc214
           persist-credentials: false
           sparse-checkout: |
@@ -42,7 +42,7 @@ jobs:
           test "$FINANCE_RELEASE" = "NO_GO"
           (
             cd native-trendos-acc214
-            test "$(git rev-parse HEAD)" = "875d469a55c1af2b50f2e50765ad362048fa53f5"
+            test "$(git rev-parse HEAD)" = "af34f404ceb5cc0abd43b03c89fbb046686115d4"
             node --check cloudflare-d1/src/employee-accounting-native-v1.mjs
             node --test tests/easystore_acc213_wael_gaber_customer_invoice_native_sqlite_no_go.test.mjs
             node --check cloudflare-d1/src/t12-order-customer-finance-fence-sourceonly.mjs
@@ -52,6 +52,10 @@ jobs:
             node --check cloudflare-d1/src/t12-general-create.mjs
             node --check tests/t12_general_create.test.mjs
             node --test tests/t12_general_create.test.mjs
+            node --check cloudflare-d1/src/t12-employee-order-finance-intake-sourceonly.mjs
+            node --test tests/t12_employee_order_finance_intake_sourceonly_acc228.test.mjs
+            echo 'ACC228_SOURCE_ONLY_EMPLOYEE_ORDER_TO_EXISTING_FINANCE_HANDOFF=REVIEW_ONLY'
+            echo 'ACC228_SOURCE_CAPTURE_UNVERIFIED_CUSTOMER_OWNER=YES'
             test -f cloudflare-d1/migrations/0035_t12_order_customer_at_create_sourceonly_v1.sql
             echo 'ACC223_REAL_T12_ATOMIC_SOURCE_CAPTURE_IN_ISOLATED_SQLITE=PASS'
             echo 'ACC223_NEW_ROUTER_FOR_REAL_FINANCE=NO'
