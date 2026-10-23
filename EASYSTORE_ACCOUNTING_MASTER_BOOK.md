@@ -6566,3 +6566,29 @@ This reads TWO possible **schema object names only**; it does not read credit/cu
 **Finance/role gates still OPEN:** actual official `order_id→customer_id` customer-owned authority and signed delegated event, true current department financial approval/prices, original EasyStore invoice idempotency, independently verified provider/Stage/rollback, cash custody roles رحمة/ريفان/ضياء/وائل/جابر, G3 signed opening, G5 off-host encrypted Ubuntu restore, full cross-branch multi-item/R2 no-loss integration. ACC223 signed EMPLOYEE selector is not CUSTOMER owner proof; even exact canonical T12 parity grants no payment, ledger or invoice rights. No production finance POST, no Google retirement, no D1/schema write or PR merge.
 
 **`FINANCE_RELEASE=NO_GO`; `ACC229=SOURCE_ONLY_CONSISTENCY_PASS`; `CUSTOMER_OWNER_ATTESTED=NO`; `ACC228_DB_03_SCHEMA_DRIFT=OPEN`; `EASYSTORE_INDEPENDENT_PROVIDER=NOT_ATTESTED`; `PR_MERGE=NO`; `PRODUCTION_WRITES=ZERO`.**
+
+
+### ACC228-DB-04 — two customer-credit tables absent on owner Cloudflare `trendos-main` live Console (2026-10-23; READ-ONLY / NO_GO)
+
+- **Owner source:** screenshot of Cloudflare dashboard `D1 SQL Database > trendos-main > Console` (previously established exact D1 UUID `5c4b92bf-e043-4f6e-bd6d-d514a92cd825`). The **owner**, not this agent, ran the explicitly approved metadata-only read:
+```sql
+SELECT name FROM sqlite_master
+WHERE type='table'
+  AND name IN (
+    'employee_accounting_customer_credits_v1',
+    'employee_accounting_customer_credit_events_v1'
+  )
+ORDER BY name;
+```
+- **Exact observed output:** `This query returned no data.`; response time about 305 ms, query time 0.24 ms on dashboard display. This proves NEITHER table name existed in the inspected `sqlite_master` snapshot at that time. It does NOT report or query any customer balances, invoice rows, cash records, secrets, users, or payment data. No provider write was performed; metadata SELECT usage only.
+- **Source comparison:** checked in `cloudflare-d1/migrations/0031_employee_accounting_customer_advance_credit_v1.sql` (TrendOS existing source, blob `bcce292b07f9c8e0c7816010d87dbe1d928901c0`) creates **both** missing tables, 2 corresponding indexes and subsequently adds invoice columns `credit_applied`, `cash_received`, `credit_created`. Prior ACC228-DB-03 already found all three invoice columns absent, with 30 of 33 expected source fields. Therefore **NONE of the five primary named 0031 table/column effects was visible in these targeted provider reads**, consistent with 0031 not having been applied fully to `trendos-main`. Do **not** certify whether `0031` was never run, previously attempted but rolled back, recorded in migrations history, or has other hidden deployment effects; that requires read-only provenance checks.
+- **Specific risks:** finance source requiring these 0031 fields cannot be presumed compatible with currently deployed D1. The original 0031 introduces customer-credit liability semantics, not a stage for enabling cash operations. Missing 0031 is NOT permission to insert zero balances, apply schema manually on production, reroute live API, override legacy financial fences or authorize any posting. Do not run `wrangler d1 migrations apply` or a manual `ALTER TABLE` against production. Independent EasyStore Cloud/provider Stage remains unverified.
+- **Single next low-risk command for owner on same D1 Console:**
+```sql
+SELECT sql FROM sqlite_master
+WHERE type='table' AND name='d1_migrations';
+```
+This reads only the **declaration** of the Wrangler D1 migration-history table, if present. A no-data result means that exact name is absent, not necessarily that no migrations ever ran. Depending on its actual DDL, request a separately vetted metadata-only migration ledger query. Do not guess its columns, inspect customer/finance rows or perform any writes.
+- **Latest repo state audited before this entry:** same original EasyStore PR #75 and its book had concurrent ACC229 **SOURCE_ONLY** signed-origin/line consistency record appended, and source branch TrendOS #211 advanced. Preserve ACC229 and do not re-run completed ACC229 tests as part of this database-only observation.
+
+**`ACC228_DB_04_CREDIT_TABLES=0_OF_2`; `ACC228_DB_03_CREDIT_COLUMNS=0_OF_3`; `MIGRATION_0031_EFFECTS_IN_TRENDOS_MAIN=ABSENT_BY_TARGETED_METADATA`; `D1_MIGRATION_LEDGER=NOT_QUERIED`; `FINANCE_RELEASE=NO_GO`; `FINANCE_WRITES=OFF`; `G1..G5=OPEN`; `PRODUCTION_FINANCIAL_ROWS_READ_OR_CHANGED=NO`.**
