@@ -79,6 +79,42 @@ function previewInvoiceIntake(packet){
   }
   if(!seen.has(e.source_entity_id)||e.source_entity_id!==e.payload.line_id)
     return stop('SOURCE_APPROVAL_LINE_NOT_IN_ORDER');
+  // ACC231: the original T12 at-create reader returns an OPERATIONAL preview,
+  // not an order/customer ownership proof or an approved financial line. For
+  // a claimed T12 order, compare the exact complete operational line set with
+  // this synthetic finance packet; NEVER upgrade a caller-supplied preview to
+  // a signed V1 event, customer consent, pricing or posting authorization.
+  const claimsT12=o.source_system==='TrendOS_T12';
+  if(claimsT12||Object.prototype.hasOwnProperty.call(packet,'t12OperationalCandidate')){
+    const t=packet.t12OperationalCandidate;
+    if(!claimsT12||!plain(t)||t.success!==true||
+       t.source!=='original-t12-at-create-source-only'||
+       t.operationalSourceShapeVerified!==true||
+       t.sourceOnly!==true||t.readOnly!==true||
+       t.officialCustomerOwnershipAttested!==false||
+       t.financeAuthorized!==false||t.canRequestInvoice!==false||
+       t.departmentApprovalsVerified!==false||t.connectorEventPublished!==false||
+       t.posted!==false||t.orderId!==o.order_id||
+       t.officialCustomerId!==o.customer_id||
+       !Number.isSafeInteger(t.lineCount)||t.lineCount<1||t.lineCount>2||
+       !Array.isArray(t.lines)||t.lines.length!==t.lineCount||
+       t.lineCount!==o.expected_line_count)
+      return stop('T12_OPERATIONAL_CANDIDATE_UNTRUSTED_OR_INCOMPLETE');
+    const byId=new Map(o.lines.map(line=>[line.line_id,line]));
+    const originalIds=new Set();
+    for(let i=0;i<t.lines.length;i++){
+      const l=t.lines[i];
+      if(!plain(l)||!ref(l.lineId)||originalIds.has(l.lineId)||
+         !Number.isSafeInteger(l.ordinal)||l.ordinal!==i+1||
+         !['طباعة','ليزر'].includes(l.department)||
+         !byId.has(l.lineId)||byId.get(l.lineId).department!==l.department)
+        return stop('T12_OPERATIONAL_LINE_SET_CONFLICT');
+      originalIds.add(l.lineId);
+    }
+    if(originalIds.size!==byId.size||
+       (t.lineCount===2&&new Set(t.lines.map(l=>l.department)).size!==2))
+      return stop('T12_OPERATIONAL_LINE_SET_CONFLICT');
+  }
   if(total<=0)return stop('NONPOSITIVE_INVOICE_TOTAL');
   return review('STRUCTURALLY_COHERENT_BUT_UNVERIFIED',{
     order_id:o.order_id,customer_id:o.customer_id,revision:o.revision,
