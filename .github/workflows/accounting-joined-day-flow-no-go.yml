@@ -67,6 +67,10 @@ jobs:
           node --test tests/easystore_finance_intake_preview_no_go.test.cjs
           node --check tests/acc219_isolated_signed_cross_cloud_http_no_go.test.cjs
           node --test tests/acc219_isolated_signed_cross_cloud_http_no_go.test.cjs
+          node --check tests/acc220_live_public_finance_route_readonly_no_go.test.cjs
+          node --test tests/acc220_live_public_finance_route_readonly_no_go.test.cjs
+          echo 'ACC220_PUBLIC_RUNTIME_FINANCE_HEALTH_GET_ONLY=QUALIFIED'
+          echo 'ACC220_EASYSTORE_INDEPENDENT_WORKER_D1_UNVERIFIED=YES'
           echo 'ACC219_FAKE_ONLY_SIGNED_HTTP_BETWEEN_LOCAL_LOOPBACK_SERVICES=PASS'
           echo 'ACC219_EASYSTORE_INDEPENDENT_REAL_CLOUD_CONNECTOR=NOT_DEPLOYED'
           echo 'ACC219_REAL_FINANCIAL_WRITES=ZERO'
