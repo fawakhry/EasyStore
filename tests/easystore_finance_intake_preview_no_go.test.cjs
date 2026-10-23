@@ -109,7 +109,7 @@ for(const [caseName,change,expected] of [
  ['duplicate source line IDs',p=>p.t12OperationalCandidate.lines[1].lineId='L-PRINT','T12_OPERATIONAL_LINE_SET_CONFLICT'],
  ['department substitution without changing original line ID',p=>p.t12OperationalCandidate.lines[1].department='طباعة','T12_OPERATIONAL_LINE_SET_CONFLICT'],
  ['reordered ordinal',p=>p.t12OperationalCandidate.lines[0].ordinal=2,'T12_OPERATIONAL_LINE_SET_CONFLICT'],
- ['missing finance line while claiming 2 original lanes',p=>{p.sourceOrder.lines.pop();p.sourceOrder.expected_line_count=1},'T12_OPERATIONAL_CANDIDATE_UNTRUSTED_OR_INCOMPLETE'],
+ ['missing finance line while claiming 2 original lanes',p=>{p.sourceOrder.lines.pop();p.sourceOrder.expected_line_count=1;p.envelope.source_entity_id='L-PRINT';p.envelope.payload.line_id='L-PRINT'},'T12_OPERATIONAL_CANDIDATE_UNTRUSTED_OR_INCOMPLETE'],
  ['unclaimed injected source evidence',p=>p.sourceOrder.source_system='Browser','T12_OPERATIONAL_CANDIDATE_UNTRUSTED_OR_INCOMPLETE']
 ]){
  test('ACC231 '+caseName,()=>{
