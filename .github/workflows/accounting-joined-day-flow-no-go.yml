@@ -17,6 +17,38 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
+      - name: Read-only checkout of tested TrendOS ACC214 native Worker and fake invoice test (immutable SHA)
+        uses: actions/checkout@v4
+        with:
+          repository: fawakhry/TrendOs
+          ref: f852bb9314588f595c5aa019797953d8726ed3e2
+          path: native-trendos-acc214
+          persist-credentials: false
+          sparse-checkout: |
+            cloudflare-d1
+            tests
+      - name: Execute ACTUAL native finance Worker on disposable SQLite, no Cloudflare/Google access
+        shell: bash
+        env:
+          CLOUDFLARE_API_TOKEN: ''
+          CLOUDFLARE_ACCOUNT_ID: ''
+          GOOGLE_APPLICATION_CREDENTIALS: ''
+          FINANCE_RELEASE: NO_GO
+        run: |
+          set -euo pipefail
+          test -z "$CLOUDFLARE_API_TOKEN"
+          test -z "$CLOUDFLARE_ACCOUNT_ID"
+          test -z "$GOOGLE_APPLICATION_CREDENTIALS"
+          test "$FINANCE_RELEASE" = "NO_GO"
+          (
+            cd native-trendos-acc214
+            test "$(git rev-parse HEAD)" = "f852bb9314588f595c5aa019797953d8726ed3e2"
+            node --check cloudflare-d1/src/employee-accounting-native-v1.mjs
+            node --test tests/easystore_acc213_wael_gaber_customer_invoice_native_sqlite_no_go.test.mjs
+          )
+          echo 'EASYSTORE_TRENDOS_PINNED_REAL_WORKER_FAKE_INVOICE=PASS'
+          echo 'FINANCE_REAL_CLOUD_OR_PROD_WRITE=NOT_ATTEMPTED'
+          echo 'EASYSTORE_SEPARATE_CLOUD_DEPLOYMENT=NOT_VERIFIED'
       - name: Run actual old EasyStore handler integrations only against fake in-memory data
         shell: bash
         env:
