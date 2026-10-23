@@ -6513,3 +6513,39 @@ ORDER BY name;
 - **Safe conclusion:** existing published TrendOS D1 physically contains accounting-named schema (not merely repo source). As previously proven from binding screenshot, `trendos-d1-api` uses `DB=trendos-main`; distinct `trendos-accounting-preview` remains non-authoritative. This does **not** establish an independently deployed EasyStore Worker/D1 or permit treating shared D1 as an approved dual-writer ledger. No mutations were requested or performed; the owner ran the SELECT, which can increment metadata read usage only.
 - **Next useful low-risk checkpoint:** Inspect the **declaration only** for the existing final-invoices table, with one read-only `sqlite_master` SELECT in the same D1 Console; do not show actual invoice/customer rows or modify SQL objects. Verify DDL against source and log separately. Independent EasyStore provider account/Stage/Ubuntu restore and authorized financial writer remain separate unverified gates. Do not ask to repeat this 20-table inventory.
 - **Status:** `ACC228_02_LIVE_D1_TABLE_NAMES=PASS_20`; `ACC228_02_SOURCE_NAMES=20_OF_20`; `D1_CONTENT_INTEGRITY=NOT_VERIFIED`; `EASYSTORE_INDEPENDENT_CLOUD=NOT_VERIFIED`; `FINANCE_RELEASE=NO_GO`; `FINANCE_WRITES=OFF`; `G1..G5=OPEN`.
+
+
+### ACC228-DB-03 — owner-provided live final-invoice table DDL compared with source (2026-10-23, READ-ONLY / NO_GO)
+
+**Evidence source:** Owner replied with the **complete textual output** of the previously requested read-only `sqlite_master.sql` query against Cloudflare D1 `trendos-main`, table `employee_accounting_final_invoices_v1`:
+```sql
+SELECT sql
+FROM sqlite_master
+WHERE type = 'table'
+  AND name = 'employee_accounting_final_invoices_v1';
+```
+The assistant did **not** query Cloudflare directly, change D1, read actual invoice rows or run any migration. The supplied CREATE TABLE DDL contains **30 columns** and shows `invoice_no TEXT PRIMARY KEY`, `request_key TEXT NOT NULL UNIQUE`, `order_id TEXT NOT NULL` and `customer_party_id TEXT NOT NULL DEFAULT ''`. It also includes financial amounts, work_date, reversal fields and manual_cost. Treat this as **owner-transcribed provider query evidence**, not independently authenticated schema attestation or row-level ledger integrity.
+
+**Cross-check of source migrations in ORIGINAL TrendOS repo on existing Draft #211:**
+- `cloudflare-d1/migrations/0015_employee_accounting_zero_google_v1.sql` source blob `203e7c740369f84591cf421b4ae745c86382a22c` defines original 20 invoice columns.
+- `0022_employee_accounting_day_ops_v1.sql` blob `288e21abc7565086085944cd87b79672cf9b1fda`: +`work_date`.
+- `0025_employee_accounting_final_reversal_day_close_v1.sql` blob `adce0c1828687190c82d3ad1bb0dded7608284e3`: +`customer_party_id`, `version`, `held_paid`, `replacement_invoice_no`, `reversed_at_ms`, `reversed_by`, `reversal_reason`, `reversal_ref`.
+- `0027_employee_accounting_direct_sale_cost_v1.sql` blob `340f19cc0c1caf26942d1c2e9063ab474396105d`: +`manual_cost`.
+- `0031_employee_accounting_customer_advance_credit_v1.sql` blob `bcce292b07f9c8e0c7816010d87dbe1d928901c0` expects THREE MORE additive columns: `credit_applied REAL NOT NULL DEFAULT 0 CHECK(credit_applied>=0)`, `cash_received REAL NOT NULL DEFAULT 0 CHECK(cash_received>=0)`, `credit_created REAL NOT NULL DEFAULT 0 CHECK(credit_created>=0)`.
+
+**Exact reconciliation outcome:** observed **30 / expected 33** source columns; no unexpected live columns found in transcription. `credit_applied`, `cash_received`, `credit_created` are **not in the supplied live table definition**. The source-to-runtime difference is a real schema-compatibility blocker for any code expecting these fields. Do NOT infer the entire 0031 migration was not applied, failed, or that customer credit tables are absent without additional provider metadata evidence; no `d1_migrations` ledger was queried. Further, `order_id` and `customer_party_id` are plain TEXT columns in this invoice CREATE TABLE, **without declared REFERENCES/FK constraints**; no authentic cross-system order/customer ownership has been established. SQLite index/trigger inventory was not read; do not claim missing or working index/trigger enforcement just from this table's CREATE definition. `REAL` money columns have existing source definitions, but numerical rounding and real ledger correctness are not assessed here.
+
+**Next single safe evidence step on SAME Cloudflare `trendos-main` D1 console:**
+```sql
+SELECT name
+FROM sqlite_master
+WHERE type='table'
+  AND name IN (
+    'employee_accounting_customer_credits_v1',
+    'employee_accounting_customer_credit_events_v1'
+  )
+ORDER BY name;
+```
+This reads TWO possible **schema object names only**; it does not read credit/customer balances or insert/update/delete anything. If both present, the database may have a partial/drifted 0031 state and needs separate versioned validation; if neither, 0031 most likely has not fully landed, still require separate migration-ledger evidence. If only one, STOP: investigate partial state. Do not run `0031` ad hoc in Production, because prior partial DDL execution, migrations history, production traffic and rollback/backup must be checked before any approved change. A plain SELECT causes D1 read usage only.
+
+**Financial control:** no production data written; no invoice issued; no re-pointing EasyStore/TrendOS; no new account identity, human role grant or opening-balances signoff. `ACC228_DB_03=DDL_30_OF_33_MATCH`; `ACC228_DB_03_CREDIT_COLUMNS=3_ABSENT`; `D1_MIGRATION_0031=NOT_ATTESTED`; `EASYSTORE_CLOUD_PROVIDER=NOT_ATTESTED`; `FINANCE_RELEASE=NO_GO`; `FINANCE_WRITES=OFF`; `G1..G5=OPEN`.
