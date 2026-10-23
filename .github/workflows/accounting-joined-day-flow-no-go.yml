@@ -66,6 +66,42 @@ jobs:
           echo 'EASYSTORE_TRENDOS_PINNED_REAL_WORKER_FAKE_INVOICE=PASS'
           echo 'FINANCE_REAL_CLOUD_OR_PROD_WRITE=NOT_ATTEMPTED'
           echo 'EASYSTORE_SEPARATE_CLOUD_DEPLOYMENT=NOT_VERIFIED'
+      - name: Read-only checkout of original TrendOS sealed-draft → T12 operational reconciliation (immutable Entry683 SHA)
+        uses: actions/checkout@v4
+        with:
+          repository: fawakhry/TrendOs
+          ref: fca5625e53815647addc6d183ebe4040990acdf5
+          path: native-trendos-entry683
+          persist-credentials: false
+          sparse-checkout: |
+            cloudflare-d1
+            tests
+      - name: Verify operational customer draft → canonical T12 source readback, never financial posting
+        shell: bash
+        env:
+          CLOUDFLARE_API_TOKEN: ''
+          CLOUDFLARE_ACCOUNT_ID: ''
+          GOOGLE_APPLICATION_CREDENTIALS: ''
+          FINANCE_RELEASE: NO_GO
+        run: |
+          set -euo pipefail
+          test -z "$CLOUDFLARE_API_TOKEN"
+          test -z "$CLOUDFLARE_ACCOUNT_ID"
+          test -z "$GOOGLE_APPLICATION_CREDENTIALS"
+          test "$FINANCE_RELEASE" = "NO_GO"
+          (
+            cd native-trendos-entry683
+            test "$(git rev-parse HEAD)" = "fca5625e53815647addc6d183ebe4040990acdf5"
+            node --check cloudflare-d1/src/customer-portal-native-seal-t12-link-read-v0.mjs
+            node --test tests/entry683_customer_seal_t12_operational_link_off.test.mjs
+            python3 tests/entry683_customer_seal_t12_operational_link_sqlite.test.py -v
+            test -f cloudflare-d1/migrations/0039_customer_portal_native_draft_seal_v1.sql
+            echo 'ACC227_T12_DRAFT_LINK_IMMUTABLE_SOURCE_TEST=PASS'
+            echo 'ACC227_PROD_ORDER_TO_NATIVE_CUSTOMER_FK=NOT_ATTESTED'
+            echo 'ACC227_CUSTOMER_INVOICE_AUTOMATIC_HANDOFF=NOT_DEPLOYED'
+            echo 'ACC227_SEPARATE_TRENDOS_BRANCHES_INTEGRATED=NO'
+            echo 'ACC227_ORDER_CREATION_OR_EASYSTORE_FINANCE_WRITES=ZERO'
+          )
       - name: Run actual old EasyStore handler integrations only against fake in-memory data
         shell: bash
         env:
