@@ -54,9 +54,11 @@ async function readLimited(req,max=MAX_BODY){
   const chunks=[];let size=0;
   for await(const chunk of req){
     size+=chunk.length;
-    if(size>max)throw Object.assign(new Error('TOO_LARGE'),{code:'TOO_LARGE'});
-    chunks.push(chunk);
+    // Keep draining the tiny local test request before rejecting, to avoid
+    // destroying the socket before HTTP 413 can be delivered.
+    if(size<=max)chunks.push(chunk);
   }
+  if(size>max)throw Object.assign(new Error('TOO_LARGE'),{code:'TOO_LARGE'});
   return Buffer.concat(chunks).toString('utf8');
 }
 async function localServer(handler){
