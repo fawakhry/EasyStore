@@ -1,15 +1,18 @@
 'use strict';
 /**
- * ACC216 cross-Cloud Finance Intake — deliberately offline, READONLY,
+ * ACC216/ACC217 cross-Cloud Finance Intake — deliberately offline, READONLY,
  * caller-supplied evidence preflight. Not a signature check, trusted read,
  * financial posting, production release or substitute for real order FK.
  * TrendOS supplies operational events; EasyStore exclusively owns ledgers.
  */
 const VERSION='ACCOUNTING_CONNECTOR_CONTRACT_V1';
+// Existing V1 connector has a SINGULAR approval event, scoped to one source line.
+const EVENT='order_line_approved';
 const forbiddenKeys=new Set(['password','session_token','api_key','raw_secret','access_token','authorization','secret']);
 function plain(x){return x!==null&&typeof x==='object'&&!Array.isArray(x);}
 function ref(s){return typeof s==='string'&&s.length>0&&s.length<=160&&s===s.trim()&&s===s.normalize('NFC')&&!/[\u0000-\u001f\u007f\u200b-\u200f\u202a-\u202e\u2060\u2066-\u2069]/u.test(s);}
 function natural(n){return Number.isSafeInteger(n)&&n>=0;}
+function utcTimestamp(s){return typeof s==='string'&&/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/.test(s)&&Number.isFinite(Date.parse(s))&&new Date(s).toISOString()===s.replace('Z','.000Z');}
 function inspectSecrets(x,depth=0){
   if(depth>9)return true;
   if(!plain(x)&&!Array.isArray(x))return false;
@@ -37,17 +40,22 @@ function previewInvoiceIntake(packet){
   if(!plain(packet)||inspectSecrets(packet))return stop('INVALID_OR_SECRET_BEARING_PACKET');
   const {envelope:e,sourceOrder:o,officialCustomer:c,financeSnapshot:f}=packet;
   if(!plain(e)||!plain(o)||!plain(c)||!plain(f))return stop('MISSING_REQUIRED_SNAPSHOTS');
-  if(e.contract_version!==VERSION||e.source_system!=='TrendOS'||e.event_type!=='order_lines_approved'||
-     !ref(e.event_id)||!ref(e.correlation_id)||!ref(e.idempotency_key)||
-     !ref(e.source_entity_id)||!ref(e.occurred_at))
+  if(e.contract_version!==VERSION||e.source_system!=='TrendOS'||e.event_type!==EVENT||
+     e.source_entity_type!=='order_line'||!ref(e.event_id)||!ref(e.correlation_id)||
+     !ref(e.idempotency_key)||!ref(e.source_entity_id)||!utcTimestamp(e.occurred_at)||
+     !Array.isArray(e.evidence_refs)||e.evidence_refs.length===0||e.evidence_refs.length>50||
+     e.evidence_refs.some(x=>!ref(x))||!plain(e.payload)||!ref(e.payload.line_id)||
+     !ref(e.payload.order_id)||!ref(e.payload.customer_id)||!natural(e.payload.order_revision))
     return stop('INVALID_SOURCE_ENVELOPE');
   if(!ref(o.order_id)||!ref(o.customer_id)||!ref(c.customer_id)||!ref(f.customer_id)||
-     !ref(f.order_id)||e.source_entity_id!==o.order_id||
+     !ref(f.order_id)||e.payload.order_id!==o.order_id||
+     e.payload.customer_id!==o.customer_id||
      c.customer_id!==o.customer_id||f.customer_id!==o.customer_id||f.order_id!==o.order_id)
     return stop('ORDER_CUSTOMER_IDENTITY_CONFLICT');
   if(c.status!=='ACTIVE')return stop('CUSTOMER_NOT_ACTIVE');
   if(!Number.isSafeInteger(o.revision)||o.revision<1||
-     !Number.isSafeInteger(f.order_revision)||f.order_revision!==o.revision)
+     !Number.isSafeInteger(f.order_revision)||f.order_revision!==o.revision||
+     e.payload.order_revision!==o.revision)
     return stop('STALE_OR_UNVERIFIED_ORDER_REVISION');
   if(!natural(o.expected_line_count)||o.expected_line_count===0||
      o.expected_line_count>100||!Array.isArray(o.lines)||o.lines.length!==o.expected_line_count)
@@ -69,6 +77,8 @@ function previewInvoiceIntake(packet){
     total+=line.total_cents;
     if(!Number.isSafeInteger(total))return stop('AMOUNT_OVERFLOW');
   }
+  if(!seen.has(e.source_entity_id)||e.source_entity_id!==e.payload.line_id)
+    return stop('SOURCE_APPROVAL_LINE_NOT_IN_ORDER');
   if(total<=0)return stop('NONPOSITIVE_INVOICE_TOTAL');
   return review('STRUCTURALLY_COHERENT_BUT_UNVERIFIED',{
     order_id:o.order_id,customer_id:o.customer_id,revision:o.revision,
