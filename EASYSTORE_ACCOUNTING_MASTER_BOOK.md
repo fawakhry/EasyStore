@@ -6655,3 +6655,37 @@ LIMIT 10;
 ```
 This reads at most ten migration-history records (names/timestamps only), not sensitive finance/customer data. Record the exact rows before deciding whether any schema repair is appropriate. If names or evidence reveal a conflict, stop and reconcile; **DO NOT manually apply 0031 to production** or assume it is safe due to missing tables. Production rollback and separated independent EasyStore provider/Stage are NOT verified.
 - **Release block:** `ACC228_DB_06=NO_0031_PREFIX_LEDGER_ROWS`; `ACC228_DB_04=CREDIT_TABLES_ABSENT`; `ACC228_DB_03=CREDIT_COLUMNS_ABSENT`; `EASYSTORE_INDEPENDENT_PROVIDER=UNVERIFIED`; `G1..G5=OPEN`; `FINANCE_RELEASE=NO_GO`; `FINANCE_WRITES=OFF`.
+
+
+### ACC228-DB-07 — owner screenshot of final 10 applied D1 migration ledger entries (2026-10-23; LIVE READ-ONLY / FINANCE NO_GO)
+
+**Original observed evidence:** On owner-signed-in Cloudflare console, **the owner** ran the previously documented SELECT on the current **TrendOS** D1 `trendos-main` (UUID `5c4b92bf-e043-4f6e-bd6d-d514a92cd825`):
+```sql
+SELECT id, name, applied_at
+FROM d1_migrations
+ORDER BY id DESC
+LIMIT 10;
+```
+The returned ten **actual migration metadata rows** displayed in the owner's screenshot are:
+| id | name | applied_at |
+| ---: | --- | --- |
+| 30 | `0012_t12_customer_lane_claim.sql` | `2026-10-08 18:03:33` |
+| 29 | `0030_employee_accounting_write_canary_budget_v1.sql` | `2026-10-06 16:33:40` |
+| 28 | `0029_employee_accounting_canary_mode_v1.sql` | `2026-10-06 16:22:32` |
+| 27 | `0028_employee_accounting_write_canary_v1.sql` | `2026-10-05 19:13:23` |
+| 26 | `0027_employee_accounting_direct_sale_cost_v1.sql` | `2026-10-05 19:08:52` |
+| 25 | `0026_employee_accounting_tx_guard_v1.sql` | `2026-10-05 19:08:52` |
+| 24 | `0025_employee_accounting_final_reversal_day_close_v1.sql` | `2026-10-05 19:08:52` |
+| 23 | `0024_employee_accounting_party_balances_v1.sql` | `2026-10-05 19:08:52` |
+| 22 | `0023_employee_accounting_command_audit_v1.sql` | `2026-10-05 19:08:51` |
+| 21 | `0022_employee_accounting_day_ops_v1.sql` | `2026-10-05 19:08:51` |
+
+**Interpretation with prior checkpoints:** The *latest recorded migration by ledger id* is the TrendOS T12 source `0012_t12_customer_lane_claim.sql` on October 8, while the *latest recorded accounting migration shown* is `0030_employee_accounting_write_canary_budget_v1.sql` on October 6. Note migration filename prefixes do **not** sort by actual application time across systems; avoid claiming a linear 0012-versus-0030 order. Prior exact read of `d1_migrations WHERE name LIKE '0031%'` returned **zero rows**. Prior live schema probes independently showed no `0031` credit tables and none of its three invoice columns. Taken together, **0031 has not been evidenced as an applied Wrangler migration on this specific live `trendos-main`**; this alone cannot prove whether a different environment has 0031, whether a non-ledger manual attempt happened, or whether all historical rows are semantically correct.
+
+**Engineering boundary and decision:** Do **NOT** apply 0031 directly to this production-linked TrendOS D1. Its customer-credit liability fields and tables must be tested on an independently isolated Stage with the original accounting engine, verified migrations state, safe backups and rollback, and finance-owner approval. This TrendOS account/database must NOT be treated as the independent EasyStore authoritative ledger. The agreed future topology is Cloudflare + Ubuntu with separation of finance EasyStore authority from TrendOS order authority. No automatic finance activation, no zero opening balances, no customer/order ownership promotion, no production schema change or legacy route shutdown.
+
+**What was done / not done:** This checkpoint used only a screenshot of the owner's metadata SELECT; did NOT read finance/customer rows, send API commands, migrate D1, open Ubuntu connections, apply changes to Cloudflare, move customer files, issue an invoice/receipt, merge PRs, or modify Cloudflare credentials. Earlier fully read-only checkpoints ACC228-DB-02 through 06 stand and are not repeated.
+
+**Next higher-value step:** STOP repetitive production schema discovery; verify the target **independent EasyStore Stage** and safe rollback/backup/restore plan before rehearsing `0031` on **private fake-data Stage**. For the owner's next one-step manual action, open Cloudflare `trendos-staging` database **Overview only**, and screenshot its metadata (name/UUID/storage/table count) so it can be classified as TrendOS staging—not automatically adopted as EasyStore Stage. The missing EasyStore provider identity remains the actual gate.
+
+**Status:** `ACC228_DB_07=LIVE_LEDGER_LAST10_VERIFIED`; `LAST_LEDGER_ID=30`; `LAST_LEDGER_NAME=0012_t12_customer_lane_claim.sql`; `LAST_VISIBLE_ACCOUNTING_MIGRATION=0030_employee_accounting_write_canary_budget_v1.sql`; `MIGRATION_0031_PRODUCTION_SCHEMA=ABSENT_BY_CHECKS`; `EASYSTORE_SEPARATE_STAGE=NOT_ATTESTED`; `FINANCE_RELEASE=NO_GO`; `FINANCE_WRITES=OFF`; `G1..G5=OPEN`.
