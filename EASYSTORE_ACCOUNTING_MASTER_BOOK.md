@@ -6592,3 +6592,26 @@ This reads only the **declaration** of the Wrangler D1 migration-history table, 
 - **Latest repo state audited before this entry:** same original EasyStore PR #75 and its book had concurrent ACC229 **SOURCE_ONLY** signed-origin/line consistency record appended, and source branch TrendOS #211 advanced. Preserve ACC229 and do not re-run completed ACC229 tests as part of this database-only observation.
 
 **`ACC228_DB_04_CREDIT_TABLES=0_OF_2`; `ACC228_DB_03_CREDIT_COLUMNS=0_OF_3`; `MIGRATION_0031_EFFECTS_IN_TRENDOS_MAIN=ABSENT_BY_TARGETED_METADATA`; `D1_MIGRATION_LEDGER=NOT_QUERIED`; `FINANCE_RELEASE=NO_GO`; `FINANCE_WRITES=OFF`; `G1..G5=OPEN`; `PRODUCTION_FINANCIAL_ROWS_READ_OR_CHANGED=NO`.**
+
+
+### ACC228-DB-05 — owner verified d1_migrations table structure in live D1 (2026-10-23, READ-ONLY / NO_GO)
+
+- **Actual manual Cloudflare screenshot:** owner ran the previously agreed metadata-only `SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'd1_migrations';` in `trendos-main` (UUID `5c4b92bf-e043-4f6e-bd6d-d514a92cd825`). The dashboard returned:
+```sql
+CREATE TABLE d1_migrations (
+ id INTEGER PRIMARY KEY AUTOINCREMENT,
+ name TEXT UNIQUE,
+ applied_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL
+)
+```
+The screenshot shows a successful query response (~335ms response, ~0.24ms query on screen). **The table is present.** This proves the declaration and its named fields only; it does **not** yet prove that migration 0031 was logged, applied, skipped or rolled back.
+- **Prior directly observed provider state:** `employee_accounting_final_invoices_v1` live DDL has 30/33 source-expected columns (missing `credit_applied`, `cash_received`, `credit_created`); neither `employee_accounting_customer_credits_v1` nor `employee_accounting_customer_credit_events_v1` appears in `sqlite_master`. Full migration 0031 has therefore NOT been shown to exist in the live schema. No invoice, cashbox, credit, personal customer rows or money balances were read.
+- **NEXT EXACT OWNER QUERY, name/timestamp only:** In the SAME D1 Console, run this single SELECT:
+```sql
+SELECT name, applied_at
+FROM d1_migrations
+WHERE name LIKE '0031%'
+ORDER BY name;
+```
+If one matching row exists, it is a migration-ledger **claim** which conflicts with missing live schema effects and needs independent reconciliation. If it returns no data, it means no **0031-prefixed** ledger name was found, not necessarily proof that it never ran or that any other database/environment has identical history. Query reads only migration identifiers/timestamps, not financial transaction records, and must not trigger a migration.
+- **Independent account and release gate:** `trendos-main` is part of TrendOS published Worker; not attested as EasyStore's separately scoped finance production cloud. No D1 writes or schema changes, no approvals/role changes or deploys, and no release of financial authority. `FINANCE_RELEASE=NO_GO`; `FINANCE_WRITES=OFF`; `G1..G5=OPEN`; `ACC228_DB_05_MIGRATION_LOG_TABLE=VERIFIED`; `ACC228_DB_05_0031_LOG_ROW=NOT_CHECKED`.
