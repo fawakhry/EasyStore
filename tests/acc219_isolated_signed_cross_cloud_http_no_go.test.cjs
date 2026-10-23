@@ -213,7 +213,7 @@ test('ACC219 two signed isolated HTTP endpoints: real request transport, zero le
   });
   await t.test('signed source still cannot authorize money, tokens or external calls',()=>{
     assert.equal(metrics.sourceGets,1);
-    assert.equal(metrics.receipts,3); // valid + mismatched customer + existing-invoice
+    assert.equal(metrics.receipts,4); // valid + rejected duplicate replay + mismatched customer + existing-invoice
     assert.equal(metrics.reviewOnly,1);
     assert.equal(metrics.financialWrites,0);
     assert.equal(metrics.externalRequests,0);
