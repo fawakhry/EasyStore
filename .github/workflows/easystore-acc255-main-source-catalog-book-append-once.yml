@@ -1,0 +1,79 @@
+name: ACC255 real trendos-main order table source accounting book entry (CAS append only)
+on:
+  push:
+    branches: ['docs/acc214-finance-read-scope-no-go-20261020']
+    paths: ['.github/workflows/easystore-acc255-main-source-catalog-book-append-once.yml']
+permissions:
+  contents: write
+concurrency:
+  group: easystore-original-accounting-book-append-preserve
+  cancel-in-progress: false
+jobs:
+  original-accounting-book-append-only:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Verify original accounting book full data and remotely CAS append only
+        shell: bash
+        env:
+          GH_BOOK_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import os,subprocess,pathlib,urllib.request,urllib.error,json,base64
+          repo=os.environ['GITHUB_REPOSITORY']
+          branch=os.environ['GITHUB_REF_NAME']
+          if repo!='fawakhry/EasyStore' or branch!='docs/acc214-finance-read-scope-no-go-20261020':
+           raise SystemExit('ACC255_WRONG_BRANCH_NO_WRITE')
+          path='EASYSTORE_ACCOUNTING_MASTER_BOOK.md'
+          raw=pathlib.Path(path).read_bytes()
+          marker=b'### ACC255-REAL-TRENDOS-MAIN-ORDER-D1-CATALOG-CROSSBOOK-20261025'
+          if marker in raw:
+           print('ACC255_ALREADY_IN_CANONICAL_ACCOUNTING_BOOK')
+           raise SystemExit(0)
+          if len(raw)<1000000 or raw.count(b'\n')<7000 or not raw.startswith(b'# EasyStore Accounting Master Book\n') or b'ACC254-TRENDOS-PLATFORM-ORDER-IDENTITY-ARCH-20261025' not in raw:
+           raise SystemExit('ACC255_ACCOUNTING_BOOK_MISSING_OR_INCOMPLETE_NO_WRITE')
+          note="""### ACC255-REAL-TRENDOS-MAIN-ORDER-D1-CATALOG-CROSSBOOK-20261025 — existing platform original order source verified via Cloudflare READ-ONLY
+
+          **Owner's direct request:** Verify the exact existing original TrendOS order table on Cloudflare and use this authoritative source instead of creating a second orders table for EasyStore. This is the accounting-facing proof of ACTUAL Cloudflare table NAMES, not invoice authorization or customer ownership proof. Original operational details preserved in [TrendOS Master Book ACC255 commit 3aa33a85](https://github.com/fawakhry/TrendOs/commit/3aa33a8563b811404d8979616f63ba030775df81); accountant's original finance D1 and original ledger are untouched.
+
+          **Exact real provider evidence:** On 2026-10-25 new isolated audit-only workflow [source a6241d07](https://github.com/fawakhry/TrendOs/commit/a6241d0715adf202d2209297a44093b16686d779) [Actions #40214770444](https://github.com/fawakhry/TrendOs/actions/runs/40214770444) SUCCESS: checked Cloudflare D1 exact UUID `5c4b92bf-e043-4f6e-bd6d-d514a92cd825`, name `trendos-main`, as bound to `trendos-d1-api`. Performed **ONLY** `SELECT name FROM sqlite_master WHERE type='table' ORDER BY name` on original existing production D1, NO business rows/PII and NO UPDATE/DDL. Confirmed original T12 creation `t12_prod_create_control`, `t12_prod_request_ledger`, `t12_prod_orders`, `t12_prod_lines`, `t12_prod_events`, `t12_prod_outbox` **6/6**; runtime `t12_prod_line_runtime`, `t12_prod_runtime_events` **2/2**; customer `t12_customers` **1/1**. Legacy `orders` and `sheet_rows` **2/2** exist but are NOT the same authoritative native order record. Original at-create financial/customer capture `t12_order_customer_at_create_control_v1` and `t12_order_customer_at_create_v1` **0/2 ABSENT** from current original live `trendos-main`.
+
+          **Finance integration consequence:** New Cloud-native orders MUST refer to their original trusted `(source_system='trendos_t12_native', order_id)` and scoped `line_id` in TrendOS, not manufacture a duplicate source orders table or join historical mirror on phone/name/order number. Previous isolated `trendos-staging` missing 0005/0006/0035 is a separate D1, not evidence that `trendos-main` lacks original T12 order data. However 0035 absence means existing original five-SELECT ACC228/251 strict reader cannot qualify a real customer-at-create relationship; even matching unverified external customer ID is NOT official accounting owner. `order_created` must remain context-only; EasyStore posting requires authentic source-issued Wael/Gaber approvals, separate finance recipient idempotency and explicit owner-authorized private read/deploy.
+
+          **Safe preparatory code status:** [TrendOS PR #261](https://github.com/fawakhry/TrendOs/pull/261) contains a new separate OFF/un-deployed main-source candidate config and strictly fake offline test. Latest offline CI [#40215187052](https://github.com/fawakhry/TrendOs/actions/runs/40215187052) has 19/20 passing and an unresolved fake D1 batch-mocking assertion; PR not merged or deployed. The production table metadata audit succeeded independently; neither success of source-names query nor candidate config constitutes an actual finance Worker binding. No finance D1, original customer rows, real order rows, money or session secret changed.
+
+          `ACC255_ORIGINAL_ORDER_D1=TRENDOS_MAIN_ID_VERIFIED`, `ACC255_T12_CREATE=6_6`, `ACC255_T12_RUNTIME=2_2`, `ACC255_T12_CUSTOMER_AT_CREATE=0_2`, `ACC256_PLATFORM_PRIVATE_READER=OFF_UNDEPLOYED`, `FINANCE_WRITES=OFF`, `FINANCE_RELEASE=NO_GO`.
+          """.strip().encode('utf-8')+b'\n'
+          localsha=subprocess.check_output(['git','hash-object','--',path],text=True).strip()
+          headers={'Authorization':'Bearer '+os.environ['GH_BOOK_TOKEN'],
+                   'Accept':'application/vnd.github+json','X-GitHub-Api-Version':'2022-11-28',
+                   'User-Agent':'ACC255-canonical-accounting-book-CAS'}
+          api='https://api.github.com/repos/'+repo+'/contents/'+path
+          with urllib.request.urlopen(urllib.request.Request(api+'?ref='+branch,headers=headers),timeout=40) as f:
+           remote=json.load(f)
+          if remote.get('sha')!=localsha:
+           raise SystemExit('ACC255_ACCOUNTING_BOOK_CONCURRENT_EDIT_CAS_STOP')
+          updated=raw.rstrip(b'\n')+b'\n\n'+note
+          if len(updated)<=len(raw) or not updated.startswith(raw.rstrip(b'\n')):
+           raise SystemExit('ACC255_APPEND_ONLY_INVARIANT_FAILED')
+          payload=json.dumps({'message':'docs(accounting-book): ACC255 real trendos-main source table-name inventory verified, 0035 remains missing NO_GO',
+            'content':base64.b64encode(updated).decode('ascii'),'sha':localsha,'branch':branch},
+            separators=(',',':')).encode('utf-8')
+          try:
+           with urllib.request.urlopen(urllib.request.Request(api,headers={
+             **headers,'Content-Type':'application/json'},method='PUT',data=payload),timeout=60) as f:
+            out=json.load(f)
+          except urllib.error.HTTPError as e:
+           raise SystemExit('ACC255_CANONICAL_ACCOUNTING_BOOK_CAS_FAILED_'+str(e.code))
+          if not out.get('commit',{}).get('sha'):
+           raise SystemExit('ACC255_BOOK_WRITE_NOT_CONFIRMED')
+          print('ACC255_ORIGINAL_ACCOUNTING_BOOK_APPEND=SUCCESS')
+          print('ACC255_OLD_BOOK_BYTES='+str(len(raw)))
+          print('ACC255_NEW_BOOK_BYTES='+str(len(updated)))
+          print('ACC255_FINANCE_DATA_WRITES=ZERO')
+          PY
