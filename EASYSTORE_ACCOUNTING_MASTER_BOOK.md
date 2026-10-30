@@ -7488,3 +7488,30 @@ No novel accounting engine, invoice writer, customer copy or database was create
 
 **Execution status:** `ACC265_REAL_ORIGINAL_STAGE_SOURCE_TESTS=PASS`; `ACC265_GITHUB_ACTIONS_EXACT_HEAD=19_OF_19_SUCCESS`; `ACC265_ORIGINAL_PRIVATE_STAGE_LIVE_SSO=NOT_RUN`; `ACC265_FINANCE_DB_WRITES=NONE`; `ACC265_PUBLIC_UI_CUTOVER=NO`; `FINANCE_RELEASE=NO_GO`; `FINANCE_WRITES=OFF`; `G1..G5=OPEN`.
 
+
+### ACC266-REAL-STAGE-EMPLOYEE-SSO-COUNT-AUDIT-20261030 — actual owner Cloudflare D1 Stage read-only truth (NO_GO)
+
+**Purpose and precise boundary:** Owner instruction "نفذ" following tested ACC265 and ACC264 requires executing practical EasyStore first-use gates. This phase verified actual existing PRIVATE Cloudflare **Stage-only**, not production; no new employee/customer/order database, no copying original customer/employee data, no bank/financial record exposure, no source-to-finance shared table access, no grant, no real SSO token, no D1 write, no deployment. Source remains ONLY original TrendOS accounting Worker and EasyStore finance book; no second book or finance engine.
+
+**STEP ACC266-01 — separate independent audit branch and workflow.** Created `audit/acc266-native-employee-stage-counts-readonly-20261030` from exact verified ACC265 source `8dc50e50baedf16d5d90b0e3f960a268ff8d7ead`. Added `.github/workflows/easystore-acc266-stage-private-employee-auth-counts-readonly.yml` [first workflow `bdf4ce76`](https://github.com/fawakhry/TrendOs/commit/bdf4ce76b403680ecfeca0b5b22a191baa576e15) and strengthened same-repo PR-only evidence trigger [`85567c4d`](https://github.com/fawakhry/TrendOs/commit/85567c4d9601329bc12998768f4e396e3ab54f05). [Draft PR #299](https://github.com/fawakhry/TrendOs/pull/299) is stacked on ACC265 draft, not `main`; no frontend/backend code, private Stage bindings or secrets were changed. Owner's existing GitHub Cloudflare provider secrets are consumed in Actions only, never printed or moved into repo, chat, logs or another host.
+
+**STEP ACC266-02 — strictly read-only live provider commands, actual execution.** GitHub Actions checked exact existing finance Stage `easystore-accounting-staging` UUID `c2fe1a54-90f5-4e6f-9d51-80ce23e21328` and operational `trendos-staging` UUID `bfe05bde-a3a1-49bc-ad3d-3f0b94a8f8a6`; original private `workers_dev=false` OFF source configuration and original empty finance grants were checked before REST. Real Cloudflare API GET independently verified exact names/UUIDs. The D1 `/query` REST transport uses HTTP POST **containing only hard-coded SQL SELECT statements**, never mutating SQL. Each query result explicitly checked zero `rows_written` and zero `changes`. Only `employee_auth_control_v1.mode`, aggregate counts in `employee_auth_users_v1` and `employee_auth_sessions_v1`, `employee_accounting_control_v1.mode`, and finance application table count via `sqlite_master` were queried; **no personal identifiers, password hashes, login tokens, customer data, invoices, balances or operational order rows read**.
+
+**STEP ACC266-03 — actual Cloudflare Stage measurements (verified GitHub logs):**
+- `ACC266_REAL_PROVIDER_STAGE_NAMES_AND_UUIDS=PASS`
+- `ACC266_FINANCE_STAGE_TABLES=22`
+- `ACC266_FINANCE_STAGE_D1_MODE=OFF`
+- `ACC266_NATIVE_EMPLOYEE_STAGE_MODE=OFF`
+- `ACC266_NATIVE_EMPLOYEE_USER_COUNT=0`
+- `ACC266_NATIVE_EMPLOYEE_SESSION_COUNT=0`
+- `ACC266_NATIVE_EMPLOYEE_ACTIVE_SESSION_COUNT=0`
+- `ACC266_REAL_EMPLOYEE_SSO_ACCEPTANCE=NOT_EXECUTED`
+- `ACC266_LIVE_FINANCE_READ_API=NOT_TESTED`
+- `FINANCE_WRITES=OFF`; `FINANCE_RELEASE=NO_GO`.
+
+**STEP ACC266-04 — independent exact run verification:** Real provider [push run #41132185997](https://github.com/fawakhry/TrendOs/actions/runs/41132185997) job `124325585360` and [PR run #41132197162](https://github.com/fawakhry/TrendOs/actions/runs/41132197162) job `124325696888` both independently completed SUCCESS; decoded GitHub Actions job logs show the measurements above on both runs, not mere synthetic CI. Query attempts were read-only and verified 0 rows written; Stage's actual D1 controls remain OFF. The PR #299 exact HEAD is `85567c4d9601329bc12998768f4e396e3ab54f05`; 18/18 PR-triggered workflow runs visible on that head completed SUCCESS, including actual ACC266 run. Do not confuse these logs with an authenticated real employee SSO or an active finance route.
+
+**Critical next dependency established, not guessed:** The existing operational Stage is **intentionally EMPTY and OFF for native employees**; it cannot authenticate actual cashiers, Wael/Gaber or manager accounts on that isolated Stage. This does NOT indicate that the operational production TrendOS employee roster is absent; nor is it permission to copy employee records/signer secrets from production, fabricate login names, use shared credentials or enable controls. The safe functional path needs original trusted employee identity/session provenance and an authorized private scoped session verification contract, a real approved grants mapping, then an authenticated finance READONLY test using independently approved Stage-only controls and independent EasyStore accounting D1. Actual finances remain OFF until original customer order ownership, genuine signed line approvals, staged end-to-end, complete opening-balance evidence and independent backup/restore qualify.
+
+**Verified final:** `ACC266_REAL_STAGE_METADATA_AGGREGATE_READ=PASS`; `ACC266_FINANCE_SCHEMA=22_OF_22`; `ACC266_STAGE_USERS=0`; `ACC266_STAGE_SESSIONS=0`; `ACC266_STAGE_EMPLOYEE_AUTH_MODE=OFF`; `ACC266_FINANCE_D1_MODE=OFF`; `ACC266_FINANCIAL_WRITES=ZERO`; `ACC266_REAL_LOGIN=NOT_RUN`; `FINANCE_RELEASE=NO_GO`; `G1..G5=OPEN`; `PRODUCTION_CHANGE=NONE`.
+
