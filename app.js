@@ -212,8 +212,10 @@
   }
 
   const D1_ACCOUNTING_READ_ACTIONS = new Set(['getAccounting','getDeptInvoiceDraftV1887','getPartyAccountV1858','getCustomerAccountV1915','getEasyStoreCustomers','searchCustomers','getEasyStoreSuppliers','easyStoreSystemHealth','calculateAccountingLaserQuoteV1913','getDailyDepartmentReportV1920','previewAccountingAutomationV1921']);
+  // Preserve the original 21-action inventory pinned to the existing native Worker.
+  // Standalone customer creation is opt-in and independently checked by the server.
+  const ACC269_OPTIONAL_NATIVE_WRITE_ACTIONS = new Set(['saveEasyStoreCustomer']);
   const D1_ACCOUNTING_WRITE_ACTIONS = new Set([
-    'saveEasyStoreCustomer',
     'saveAccountingMaterial','saveAccountingTemplate','archiveAccountingTemplate','recalcAccountingMaterialsCascade',
     'saveAccountingDeptLine','approveAccountingDeptInvoice','saveAccountingFinalInvoice','reopenAccountingFinalInvoice',
     'saveCustomerAccountMovementV1915','saveEasyStoreSupplier','saveEasyStorePurchaseV2','saveEasyStoreSaleV2',
@@ -231,7 +233,11 @@
     const actionName=String(action||'');
     if(RETIRED_ACCOUNTING_ACTIONS.has(actionName)) throw new Error('تم إيقاف أداة الترحيل القديمة بعد بدء الحسابات من قاعدة نظيفة.');
     const readActionRequested = D1_ACCOUNTING_READ_ACTIONS.has(actionName);
-    const writeActionRequested = D1_ACCOUNTING_WRITE_ACTIONS.has(actionName);
+    const standaloneCustomerAction = ACC269_OPTIONAL_NATIVE_WRITE_ACTIONS.has(actionName);
+    // A disabled optional D1 action must fail closed here, never fall back to Apps Script.
+    if(standaloneCustomerAction && window.EASYSTORE_STANDALONE_CUSTOMERS_V1 !== true)
+      throw new Error('تسجيل عميل EasyStore المستقل غير مفعّل.');
+    const writeActionRequested = D1_ACCOUNTING_WRITE_ACTIONS.has(actionName) || standaloneCustomerAction;
     // Only explicitly inventoried accounting actions may leave this client.
     if(!readActionRequested && !writeActionRequested) throw new Error('عملية الحسابات غير معروفة؛ تم منع الطلب دون استخدام السيرفر القديم.');
     // Read-only flag is not permission to route accounting data to the legacy API.
