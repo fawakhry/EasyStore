@@ -1,0 +1,63 @@
+name: ACC269 original EasyStore accounting-first UI source guard (NO_GO)
+on:
+  push:
+    branches: ['feature/acc269-accounting-first-standalone-ui-off-20261030']
+    paths:
+      - 'app.js'
+      - 'config.js'
+      - '.github/workflows/easystore-acc269-accounting-first-ui-off-no-go.yml'
+  pull_request:
+    branches: ['candidate/easystore-zero-google-audit-20261004']
+permissions:
+  contents: read
+jobs:
+  only-existing-frontend-no-publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      FINANCE_WRITES: OFF
+      FINANCE_RELEASE: NO_GO
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Original EasyStore UI source-only validation
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$FINANCE_WRITES" = OFF
+          test "$FINANCE_RELEASE" = NO_GO
+          node --check app.js
+          node --check config.js
+          node <<'JS'
+          const fs=require('fs'),code=fs.readFileSync('app.js','utf8'),cfg=fs.readFileSync('config.js','utf8');
+          const checks={
+            'CURRENT_PUBLIC_WRITE_MODE_OFF':"window.EASYSTORE_ACCOUNTING_D1_WRITE_MODE = 'OFF'",
+            'CURRENT_PUBLIC_ACCOUNTING_WRITES_FALSE':'window.EASYSTORE_ACCOUNTING_D1_WRITES = false',
+            'STANDALONE_UI_DEFAULT_OFF':'window.EASYSTORE_STANDALONE_CUSTOMERS_V1 = false'
+          };
+          for(const [name,expected] of Object.entries(checks)){
+            if(!cfg.includes(expected))throw Error(name+'_MISSING');
+            console.log('ACC269_'+name+'=PASS');
+          }
+          const required=[
+            "async saveStandaloneCustomer()",
+            "api('saveEasyStoreCustomer',p)",
+            "state.saleSelectedCustomer.customerId",
+            "p.customerId=exactCustomerId",
+            "p.orderId=''",
+            "المرحلة الأولى للبيع النقدي المدفوع بالكامل فقط",
+            "if(writeActionRequested && configuredWriteMode === 'OFF')"
+          ];
+          for(const [i,c] of required.entries())
+            if(!code.includes(c))throw Error('ACC269_ORIGINAL_UI_GUARD_'+i);
+          if(/EASYSTORE_STANDALONE_CUSTOMERS_V1\s*=\s*true/.test(cfg))
+            throw Error('ACC269_STANDALONE_ACTIVATED_UNREVIEWED');
+          console.log('ACC269_EXISTING_EASYSTORE_STANDALONE_CASH_FIRST_UI_SOURCE=PASS');
+          console.log('ACC269_PUBLISHED_SITE_UNCHANGED=YES');
+          console.log('FINANCE_WRITES=OFF');
+          console.log('FINANCE_RELEASE=NO_GO');
+          JS
