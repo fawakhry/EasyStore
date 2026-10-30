@@ -194,7 +194,7 @@
     },
     recipeComps: [], salePulledLines: [], saleSelectedCustomer: null, saleCustomerContext: null, customerSearchTimer: null, customerSearchSeq: 0, customerDropdownLocked: false,
     laserQuote: null, saleRequestId: '', finalRequestId: '', purchaseRequestId: '', dailyPurchaseRequestId: '',
-    customerAccount: null, customerAccountSelected: '', customerAccountRequestId: '', dailyReport: null, dailyReportDate: '', dailyReportDepartment: 'ليزر',
+    customerAccount: null, customerAccountSelected: '', customerAccountRequestId: '', standaloneCustomerRequestId:'', dailyReport: null, dailyReportDate: '', dailyReportDepartment: 'ليزر',
     automationPreview: null, lastLoadedAt: 0, formDirty: false
   };
 
@@ -213,6 +213,7 @@
 
   const D1_ACCOUNTING_READ_ACTIONS = new Set(['getAccounting','getDeptInvoiceDraftV1887','getPartyAccountV1858','getCustomerAccountV1915','getEasyStoreCustomers','searchCustomers','getEasyStoreSuppliers','easyStoreSystemHealth','calculateAccountingLaserQuoteV1913','getDailyDepartmentReportV1920','previewAccountingAutomationV1921']);
   const D1_ACCOUNTING_WRITE_ACTIONS = new Set([
+    'saveEasyStoreCustomer',
     'saveAccountingMaterial','saveAccountingTemplate','archiveAccountingTemplate','recalcAccountingMaterialsCascade',
     'saveAccountingDeptLine','approveAccountingDeptInvoice','saveAccountingFinalInvoice','reopenAccountingFinalInvoice',
     'saveCustomerAccountMovementV1915','saveEasyStoreSupplier','saveEasyStorePurchaseV2','saveEasyStoreSaleV2',
@@ -513,7 +514,10 @@
 
   function screenCustomers(){
     const drawer=state.customerAccountSelected ? `<div class="customerAccountDrawerBackdrop" onclick="ES27.closeCustomerAccount()" aria-hidden="true"></div><aside id="customerAccountPanel" class="customerAccountDrawer" role="dialog" aria-modal="true" aria-label="كشف حساب العميل"><div class="customerAccountDrawerBar"><strong>حساب العميل</strong><button class="btn small secondary" onclick="ES27.closeCustomerAccount()" aria-label="إغلاق كشف الحساب">إغلاق ×</button></div>${customerAccountPanel()}</aside>` : '';
-    return `<section class="customerAccountsHero"><div><span>حسابات العملاء</span><h2>كشف الحساب والتحصيل</h2><p>ضياء ورحمة وريفان يمكنهم فتح كشف العميل وتسجيل التحصيل. إضافة المديونية والتسويات متاحة لضياء فقط.</p></div><div class="customerAccountsRoles"><b>تحصيل: ضياء / رحمة / ريفان</b><b>تسويات: ضياء فقط</b></div></section><div class="card"><div class="toolbar"><div><h2>العملاء</h2><div class="muted">ابحث بالاسم أو رقم الهاتف ثم افتح الحساب؛ سيظهر الكشف بجانب القائمة مباشرة.</div></div><input id="custSearch" class="searchInput" placeholder="بحث عن عميل" oninput="ES27.filterCustomers()"></div><div id="custTable">${customersTable(state.data.customers)}</div></div>${drawer}`;
+    const standaloneCustomerCard=window.EASYSTORE_STANDALONE_CUSTOMERS_V1===true && isAdmin()
+      ? `<div class="card"><h2>تسجيل عميل في حسابات EasyStore</h2><p class="hint">مستقل عن أوردرات TrendOS. يمنع إضافة رصيد افتتاحي من هذه الشاشة؛ لا تستخدم أسماء مكررة.</p><div class="grid four"><div class="field"><label>اسم العميل</label><input id="esStandaloneCustomerName" maxlength="120"></div><div class="field"><label>رقم الهاتف (اختياري)</label><input id="esStandaloneCustomerPhone" maxlength="40"></div><div class="field"><label>عنوان (اختياري)</label><input id="esStandaloneCustomerAddress" maxlength="300"></div><div class="field"><label>ملاحظات</label><input id="esStandaloneCustomerNotes" maxlength="300"></div></div><button class="btn" onclick="ES27.saveStandaloneCustomer()">تسجيل العميل في حسابات EasyStore</button></div>`
+      : '';
+    return `${standaloneCustomerCard}<section class="customerAccountsHero"><div><span>حسابات العملاء</span><h2>كشف الحساب والتحصيل</h2><p>ضياء ورحمة وريفان يمكنهم فتح كشف العميل وتسجيل التحصيل. إضافة المديونية والتسويات متاحة لضياء فقط.</p></div><div class="customerAccountsRoles"><b>تحصيل: ضياء / رحمة / ريفان</b><b>تسويات: ضياء فقط</b></div></section><div class="card"><div class="toolbar"><div><h2>العملاء</h2><div class="muted">ابحث بالاسم أو رقم الهاتف ثم افتح الحساب؛ سيظهر الكشف بجانب القائمة مباشرة.</div></div><input id="custSearch" class="searchInput" placeholder="بحث عن عميل" oninput="ES27.filterCustomers()"></div><div id="custTable">${customersTable(state.data.customers)}</div></div>${drawer}`;
   }
   function customerAccountToken(name){ return encodeURIComponent(String(name||'')).replace(/'/g,'%27'); }
   function customersTable(rows){ return table(rows||[],['العميل','الهاتف','النوع/المسؤول','المديونية','الحساب'],c=>{ const name=customerMainName(c); const selected=nkey(state.customerAccountSelected)===nkey(name); return [esc(name),esc(c.phone||c.mobile||''),esc(c.type||c.manager||''),`<span class="customerDebtBadge ${customerDebtClass(c)}">${esc(customerDebtText(c))}</span>`,`<button class="btn small ${selected?'':'secondary'}" onclick="ES27.openCustomerAccount('${customerAccountToken(name)}')">${selected?'الحساب مفتوح':'فتح الحساب'}</button>`]; }); }
@@ -1198,6 +1202,26 @@
       try{const reply=await api('reverseApprovedPurchaseV1920',{id,invoiceNo,reason,requestId:stableAccountingRequestId('PUR-REV',id+'|'+invoiceNo)});if(!reply||reply.success===false)throw new Error((reply&&reply.message)||'تعذر عكس المشتريات.');await load(true);flash(reply.message||'تم عكس المشتريات.');}catch(e){flash(e.message||'تعذر عكس المشتريات.',true);}
     },
     quickSearch(q){ q=nkey(q); if(!q) return; const found = templates().find(r=>nkey(templateName(r)).includes(q)) || materials().find(r=>nkey(materialName(r)).includes(q)); if(found) flash('تم العثور على: ' + (templateName(found)||materialName(found))); },
+    async saveStandaloneCustomer(){
+      if(window.EASYSTORE_STANDALONE_CUSTOMERS_V1!==true || !canManageAccounting())
+        return deny('إضافة عميل للحسابات المستقلة غير متاحة.');
+      if(!state.standaloneCustomerRequestId)
+        state.standaloneCustomerRequestId=newAccountingRequestId('ESC');
+      const customerName=val('esStandaloneCustomerName').trim();
+      if(customerName.length<2) return flash('اكتب اسم العميل الصحيح.',true);
+      const p={requestId:state.standaloneCustomerRequestId,customerName,
+        phone:val('esStandaloneCustomerPhone'),address:val('esStandaloneCustomerAddress'),
+        notes:val('esStandaloneCustomerNotes'),openingDebt:0};
+      try{
+        const result=await api('saveEasyStoreCustomer',p);
+        if(!result||result.success===false)
+          throw new Error((result&&result.message)||(result&&result.code)||'تعذر تسجيل العميل');
+        state.standaloneCustomerRequestId='';
+        const list=await api('getEasyStoreCustomers',{limit:1000});
+        if(list&&list.success&&Array.isArray(list.customers))state.data.customers=list.customers;
+        saveLocal();shell();flash('تم تسجيل العميل في دليل الحسابات.');
+      }catch(e){flash('لم يتم تسجيل العميل: '+(e.message||e),true)}
+    },
     async saveSupplier(){ if(!canManageAccounting()) return deny(); const s={name:val('supName'),phone:val('supPhone'),opening:num(val('supOpening')),address:val('supAddress')}; if(!s.name) return flash('اكتب اسم المورد',true); try{ const reply=await api('saveEasyStoreSupplier',Object.assign({requestId:newAccountingRequestId('SUP')},s)); if(!reply||reply.success===false) throw new Error((reply&&reply.message)||'تعذر حفظ المورد'); const i=state.data.suppliers.findIndex(x=>nkey(x.name||x.supplier)===nkey(s.name)); if(i>=0) state.data.suppliers[i]=s; else state.data.suppliers.unshift(s); saveLocal(); shell(); flash('تم حفظ المورد على السيرفر'); }catch(e){ flash('لم يتم حفظ المورد: '+(e.message||e),true); } },
     editSupplier(i){ const s=state.data.suppliers[i]; if(!s) return; set('supName',s.name||s.supplier); set('supPhone',s.phone); set('supOpening',s.opening||s.openingBalance); set('supAddress',s.address); },
     filterCustomers(){ const q=nkey(val('custSearch')); const rows=(state.data.customers||[]).filter(c=>nkey([c.name,c.customerName,c.phone,c.mobile].join(' ')).includes(q)); const box=$('custTable'); if(box) box.innerHTML=customersTable(rows); },
@@ -1380,11 +1404,26 @@
       const desc = pulledRows.map(x=>rowDept(x)+': '+rowItem(x)+' × '+rowQty(x)).join(' / ');
       const pulledOrders=salePulledDeptSummary().orders;
       if(!val('saCustomer')) return flash('اختار العميل قبل حفظ الفاتورة.',true);
+      if(window.EASYSTORE_STANDALONE_CUSTOMERS_V1===true){
+        if(lineIds.length) return flash('فواتير الأقسام والربط التلقائي مؤجلان. اختار بيعًا مباشرًا.',true);
+        if(!state.saleSelectedCustomer || !(state.saleSelectedCustomer.customerId||state.saleSelectedCustomer.id))
+          return flash('اختار عميلًا مسجّلًا بمعرّفه من قائمة حسابات EasyStore، مش بالاسم فقط.',true);
+      }
       if(lineIds.length && !val('saOrder')) return flash('رقم الأوردر مطلوب لتقفيل بنود وائل/جابر.',true);
       if(lineIds.length && pulledOrders.length>1) return flash('لا يمكن تقفيل أكتر من أوردر في نفس الفاتورة. اختار رقم أوردر واحد ثم اسحب البنود.',true);
       if(!lineIds.length && !manualDescription && !manualAmount) return flash('أضف بند يدوي أو اسحب بنود وائل/جابر أولًا.',true);
       if(/^DRAFT/i.test(val('saNo')) || !val('saNo')) set('saNo', officialSaleNo());
       const p={no:val('saNo'),customer:val('saCustomer'),customerPhone:customerMainPhone(state.saleSelectedCustomer||{}),orderId:val('saOrder'),paymentType:val('saPay'),department:val('saDept'),item:desc || manualDescription || 'فاتورة مبيعات موحدة',qty:manualQty||pulledRows.length||1,unit:manualUnit,discount:num(val('saDiscount')),paid:num(val('saPaid')),total:num(val('saTotal')),remain:num(val('saRemain')),notes:val('saNotes'),lineIds:JSON.stringify(lineIds),date:new Date().toISOString()};
+      if(window.EASYSTORE_STANDALONE_CUSTOMERS_V1===true){
+        const exactCustomerId=String(state.saleSelectedCustomer.customerId||state.saleSelectedCustomer.id||'');
+        if(!/^ESC-[A-F0-9]{20}$/.test(exactCustomerId))
+          return flash('المعرّف لا يخص عميل حسابات EasyStore مستقل.',true);
+        if(Math.abs(p.total-p.paid)>0.00001||!['نقدي','cash'].includes(String(p.paymentType).toLowerCase()))
+          return flash('المرحلة الأولى للبيع النقدي المدفوع بالكامل فقط.',true);
+        p.customerId=exactCustomerId;
+        p.customerName=p.customer;p.invoiceNo=p.no;p.unitPrice=p.unit;
+        p.paymentMethod='نقدي';p.orderId='';
+      }
       if(!state.saleRequestId) state.saleRequestId='SALE-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,10);
       p.requestId=state.saleRequestId;
       flash('جاري حفظ الفاتورة على السيرفر...');
