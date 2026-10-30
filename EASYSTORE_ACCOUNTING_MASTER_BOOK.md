@@ -7346,3 +7346,21 @@ No novel accounting engine, invoice writer, customer copy or database was create
 **Linked canonical TrendOS book:** The complete preflight and next UBU-002 read-only inventory plan are appended to original active `TrendOS_MASTER_BOOK.md` at [TrendOS book commit eab12eba](https://github.com/fawakhry/TrendOs/commit/eab12eba09e35c2ea0beb8d7a108bf72b2394123). Next step is strictly to inspect local Git/npm/npx availability and existing worktree directories—no npm install, login, direct finance/D1, Worker binding, migration or deploy without owner authorization. Historical source ACC262 remains only synthetic read-only validation; original at-create customer candidate does not attest ownership; no genuine signed `order_line_approved` or EasyStore ACK has been activated.
 
 **Accounting safety invariant:** This Ubuntu preflight is **not** financial release, readiness of a private production connector, nor proof of cloud session. All real EasyStore accounting, invoice, receivable, D1, customer financial balances and ledger remain untouched. Every future host step affecting TrendOS/EasyStore to be numbered `UBU-###` and logged with the owner-observed output and corresponding handoff in both canonical books. `UBUNTU_PREFLIGHT=UBU-001_READ_ONLY`, `WRANGLER_IN_PATH=NO`, `CLOUDFLARE_ACCOUNT_AUTH=UNVERIFIED`, `FINANCE_RELEASE=NO_GO`, `FINANCE_WRITES=OFF`, `EASYSTORE_DEPLOY=NO`.
+
+### UBU-002-20261030 — owner-supplied Ubuntu git/npm/npx and TrendOS worktrees read-only
+
+**Source and purpose:** Owner submitted a 2026-10-30 Ubuntu screenshot at prompt `trend-main@TrendosShop:~$`. The assistant did not execute SSH or any server command. UBU-002 records observed results of previously prescribed read-only terminal checks, following UBU-001. Full technical inventory, all paths, interpretation and UBU-003 command documented in original active [TrendOS Master Book commit cd7b558a](https://github.com/fawakhry/TrendOs/commit/cd7b558a3893a4e7df04ef3cdc0a742d2ffed120).
+
+**Exact basic observations:** `git --version` → `git version 2.43.0`; `npm --version` → `10.9.9`; `command -v npx` → `/home/trend-main/.nvm/versions/node/v22.23.3/bin/npx`; `command -v wrangler` → `NOT FOUND` in current `PATH`. UBU-001 had `Ubuntu 24.04.5 LTS`, `node v22.23.3`, GitHub HTTPS `HTTP 200`. No claim that Wrangler is absent in project-local dependencies; no Cloudflare login or finance provider connectivity tested. Owner's `$HOME/TrendOs*`/`$HOME/EasyStore*` directory-only glob returned exactly these eight entries (none matched EasyStore glob at this home path):
+- `/home/trend-main/TrendOs`
+- `/home/trend-main/TrendOs-AP281-staging-66b64ab`
+- `/home/trend-main/TrendOs-finance-inspect-acc238`
+- `/home/trend-main/TrendOs-finance-inspect-acc240`
+- `/home/trend-main/TrendOs-finance-inspect-acc241`
+- `/home/trend-main/TrendOs-ops-pilot`
+- `/home/trend-main/TrendOs-server-reader-staging`
+- `/home/trend-main/TrendOs-stage-access-sandbox`
+
+**Scope and finance authority:** No new packages or npm commands executed beyond version lookup; no Git fetch/pull/branch operations on Ubuntu, no Wrangler install/login/deploy, no service secrets, accounts, production or EasyStore finance databases touched. Folders are NOT confirmed worktrees; refrain from deleting/resetting/reusing existing staging/finance-inspect folders. Planned UBU-003 only reads Git branch, HEAD, tracked-file status for `$HOME/TrendOs`, and tests the existence of a project-local `node_modules/.bin/wrangler`; NOT YET EXECUTED. Host findings are observational only and cannot qualify signed source `order_line_approved`, customer owner attestation, EasyStore endpoint or financial release.
+
+**Records/status:** `UBU-002_OWNER_SCREENSHOT=LOGGED`, `GIT=2.43.0`, `NPM=10.9.9`, `NPX=PATH_AVAILABLE`, `GLOBAL_WRANGLER_PATH=NOT_FOUND`, `TRENDOS_HOME_DIRS=8`, `PRODUCTION_CHANGE=NONE`, `EASYSTORE_FINANCE_WRITES=OFF`, `FINANCE_RELEASE=NO_GO`.
