@@ -7398,3 +7398,19 @@ No novel accounting engine, invoice writer, customer copy or database was create
 **Book trace and next task:** Complete command/output/accountability details appended to canonical [TrendOS Master Book UBU-005 commit 21ec9fd6](https://github.com/fawakhry/TrendOs/commit/21ec9fd6ebc5f366527d584d99331ef91d5bfe5b). UBU-006 next is *read-only* `git -C "$HOME/TrendOs" worktree list` and `git -C "$HOME/TrendOs" rev-parse --show-toplevel` to inspect relationships, not executed yet. Require owner approval before any future installation, isolated checkout creation, migration, production binding or financial enablement.
 
 **State:** `UBU-005=OBSERVED_READONLY_AND_LOGGED`, `UBU-006=NOT_EXECUTED`, `HOST_WRITES=NONE`, `CLOUDFLARE_INTEGRATION_LIVE=NO`, `FINANCE_RELEASE=NO_GO`, `FINANCE_WRITES=OFF`.
+
+### UBU-006-20261030 — registered TrendOS Git worktrees; ops-pilot not in list
+
+**Owner-provided Ubuntu screenshot, 2026-10-30 Egypt (read-only).** The owner ran `git -C "$HOME/TrendOs" worktree list` and `git -C "$HOME/TrendOs" rev-parse --show-toplevel`; ChatGPT did not access Ubuntu through SSH. The primary worktree registry lists seven paths; their existence is evidence of local Git worktree registration only, NOT an accounting connector, runtime health or production-authorized checkout. Original canonical [TrendOS UBU-006 Book commit 31dae927](https://github.com/fawakhry/TrendOs/commit/31dae927fcfc9ef878e629e8034025a734fc3a73) contains exact commands and full path inventory.
+
+**Observed worktree registry:**
+- `/home/trend-main/TrendOs` — `a238ce5a`, branch `feature/ap155-imac-ssh-service-absent-owner-install-20261012`.
+- `/home/trend-main/TrendOs-AP281-staging-66b64ab` — `66b64ab9`, detached HEAD.
+- `/home/trend-main/TrendOs-finance-inspect-acc238` — `b216e91b`, detached HEAD.
+- `/home/trend-main/TrendOs-finance-inspect-acc240` — `682aa001`, detached HEAD.
+- `/home/trend-main/TrendOs-finance-inspect-acc241` — `0db543fd`, detached HEAD.
+- `/home/trend-main/TrendOs-server-reader-staging` — `c29e8c1c`, detached HEAD.
+- `/home/trend-main/TrendOs-stage-access-sandbox` — `9ba16651`, detached HEAD.
+- `rev-parse --show-toplevel` for main TrendOs -> `/home/trend-main/TrendOs`. Eighth earlier directory `/home/trend-main/TrendOs-ops-pilot` (on own previously observed `feature/ops-pilot-local-orders-manager-finance-off-20261018`, `9217e3b`) is **not registered in this worktree list**; do not assume it is an independent clone or damaged. UBU-007 will compare `git rev-parse --path-format=absolute --git-common-dir` for the main and ops-pilot working copies; it has not been run.
+
+**Preservation and finance guard:** Do not alter or reuse the seven worktrees or unlisted ops-pilot, especially the ACC238/240/241 finance-inspect directories. Status CLEAN from earlier checks only meant tracked paths, not untracked/ignored files; no server mutations or secret checks occurred. Safe GitHub integration branch `affaa4b6f47b637cbb51823743e3df5789255fb2` differs from Ubuntu's AP155 branch; not a production release. No original D1 customer owner attestation, no real signed finance line event, no EasyStore finance receiver, no worker deployment or accounting/ledger/invoice writes. `UBU-006=READONLY_OWNER_OBSERVATION_LOGGED`, `UBU-007=NOT_EXECUTED`, `FINANCE_RELEASE=NO_GO`, `FINANCE_WRITES=OFF`, `PRODUCTION_CHANGE=NONE`.
