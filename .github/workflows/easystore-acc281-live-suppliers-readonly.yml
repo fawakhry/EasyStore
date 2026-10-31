@@ -1,0 +1,31 @@
+name: ACC281 live supplier directory READONLY truthful status
+on:
+  push:
+    branches:
+      - fix/acc281-live-supplier-readonly-truth-20261031
+      - main
+    paths:
+      - app.js
+      - config.js
+      - tests/easystore_acc281_supplier_readonly_truth.test.mjs
+      - .github/workflows/easystore-acc281-live-suppliers-readonly.yml
+  pull_request:
+    paths:
+      - app.js
+      - config.js
+      - tests/easystore_acc281_supplier_readonly_truth.test.mjs
+      - .github/workflows/easystore-acc281-live-suppliers-readonly.yml
+permissions:
+  contents: read
+jobs:
+  no-money-supplier-readonly:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Original EasyStore app syntax check
+        run: node --check app.js
+      - name: Authoritative D1 supplier read/error/disabled-write test (no backend calls)
+        run: node --test tests/easystore_acc281_supplier_readonly_truth.test.mjs
