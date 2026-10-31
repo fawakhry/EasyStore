@@ -523,8 +523,63 @@
     return `<div class="card"><div class="toolbar"><h2>${esc(accountingScopeTitle('لوحة الحسابات'))}</h2><input class="searchInput" placeholder="بحث سريع" oninput="ES27.quickSearch(this.value)"></div><div class="grid four"><div class="kpi"><b>${money(sales)}</b><span>${salesLabel}</span></div><div class="kpi"><b>${money(actualCost)}</b><span>تكلفة الشغل الفعلية</span></div><div class="kpi"><b>${money(sales-actualCost-waste)}</b><span>الربح الفعلي</span></div><div class="kpi"><b>${lows.length}</b><span>خامات تحت الحد</span></div></div><div class="hint">مشتريات الفترة: ${money(purchases)} — للمتابعة فقط ولا تُخصم مرة ثانية من الربح.</div><div class="quickbar"><button class="btn" onclick="ES27.go('items')">الأصناف</button><button class="btn" onclick="ES27.go('purchase')">فاتورة شراء</button><button class="btn" onclick="ES27.go('sales')">فاتورة مبيعات</button><button class="btn" onclick="ES27.go('dailyClose')">مركز متابعة اليوم</button><button class="btn secondary" onclick="ES27.load(true)">تحديث الآن</button></div></div>${isAdmin()?automationCenterHtml():''}${lows.length?'<div class="card"><h3>تنبيهات النواقص</h3>'+table(lows,['الخامة','الرصيد','حد النقص','القسم'],r=>[esc(materialName(r)),esc(matStock(r)),esc(matMin(r)),esc(matDept(r))])+'</div>':''}`;
   }
 
+
+  // ACC278: source-only optional opening DRAFT UI in original EasyStore.
+  // No monetary ledger posting and no local-cache-as-authority.
+  function acc278ToCents(raw){
+    const s=String(raw==null?'':raw).trim();
+    if(!/^\d{1,12}(?:\.\d{1,2})?$/.test(s))throw new Error('اكتب المبلغ بالجنيه والقرش مثل 1250.50 بدون فواصل آلاف.');
+    const parts=s.split('.');
+    const cents=Number(parts[0])*100+Number((parts[1]||'').padEnd(2,'0'));
+    if(!Number.isSafeInteger(cents))throw new Error('المبلغ أكبر من الحد الآمن.');
+    return cents;
+  }
+  function acc278OpeningDraftCard(){
+    if(window.EASYSTORE_OPENING_DRAFT_INTAKE_V1!==true || !isAdmin())return '';
+    const d=state.openingIntake,h=d.header;
+    const vendors=(state.data.suppliers||[]).filter(s=>s.partyId||s.id);
+    const options=vendors.map(s=>`<option value="${esc(s.partyId||s.id)}">${esc(s.name||s.supplierName||s.partyId||s.id)}</option>`).join('');
+    const vendorRows=d.suppliers.map((s,i)=>`<tr><td>${esc(s.supplierId)}</td><td>${money(s.balanceCents/100)}</td><td>${esc(s.evidenceRef)}</td><td><button class="btn small secondary" onclick="ES27.removeOpeningSupplier(${i})">حذف</button></td></tr>`).join('');
+    const installmentRows=d.installments.map((s,i)=>`<tr><td>${esc(s.contractId)}</td><td>${esc(s.creditorRef)}</td><td>${money(s.remainingCents/100)}</td><td>${esc(s.nextDueDate)}</td><td><button class="btn small secondary" onclick="ES27.removeOpeningInstallment(${i})">حذف</button></td></tr>`).join('');
+    const result=d.verified?`<p class="hint">تم التأكد من مسودة D1 رقم ${esc(d.verified.batchId)} — ${money(d.verified.totalLiabilityCents/100)} ج — الحالة: DRAFT، غير مُرحّلة للخزنة أو كشف المورد.</p>`:'';
+    return `<div class="card" id="acc278OpeningDraftPanel">
+      <h2>تجهيز أرصدة الموردين والأقساط — مسودة الحسابات الأصلية</h2>
+      <p class="hint">تسجيل تمهيدي داخل D1 المالية الأصلية بعد اعتماد التفعيل فقط. لا يُضيف مديونية فعلية ولا حركة خزنة. كل مسودة مرتبطة بمراجع المستندات ولا تُعدّل بعد الحفظ؛ المراجعة والترحيل يتطلبان موافقة منفصلة.</p>
+      <div class="grid four">
+        <div class="field"><label>رقم دفعة الجرد</label><input id="openBatchId" maxlength="180" value="${esc(h.batchId)}"></div>
+        <div class="field"><label>تاريخ الرصيد</label><input id="openCutoverDate" type="date" value="${esc(h.cutoverDate)}"></div>
+        <div class="field"><label>مرجع مستند الجرد</label><input id="openSourceRef" maxlength="180" value="${esc(h.sourceEvidenceRef)}"></div>
+      </div>
+      <h3>رصيد مورد موجود في دليل الحسابات</h3>
+      <div class="grid four">
+        <div class="field"><label>المورد بمعرفه</label><select id="openSupplierId"><option value="">اختر المورد</option>${options}</select></div>
+        <div class="field"><label>المتبقي بالجنيه</label><input id="openSupplierBalance" inputmode="decimal" placeholder="مثال 1250.50"></div>
+        <div class="field"><label>مرجع كشف المورد</label><input id="openSupplierEvidence" maxlength="180" placeholder="مثال DOC-001"></div>
+      </div>
+      <button class="btn secondary" onclick="ES27.addOpeningSupplier()">إضافة رصيد مورد للمسودة</button>
+      <div class="muted">المورد لازم يكون مسجلًا بمعرّف رسمي في EasyStore قبل إضافة رصيده. ممنوع الاعتماد على تشابه الأسماء.</div>
+      <table class="table"><thead><tr><th>معرّف المورد</th><th>الرصيد</th><th>المستند</th><th></th></tr></thead><tbody>${vendorRows}</tbody></table>
+      <h3>الأقساط المستحقة</h3>
+      <div class="grid four">
+        <div class="field"><label>رقم العقد</label><input id="openContractId" maxlength="180"></div>
+        <div class="field"><label>طبيعة القسط</label><select id="openTreatment"><option value="INCLUDED_IN_SUPPLIER_OPENING">داخل مديونية المورد</option><option value="SEPARATE_CREDITOR">التزام مستقل</option></select></div>
+        <div class="field"><label>المورد / الدائن</label><select id="openIncludedSupplier"><option value="">اختر إن كان داخل المورد</option>${d.suppliers.map(s=>`<option value="${esc(s.supplierId)}">${esc(s.supplierId)}</option>`).join('')}</select></div>
+        <div class="field"><label>معرّف الدائن المستقل</label><input id="openSeparateCreditor" maxlength="180" placeholder="CREDITOR-001"></div>
+        <div class="field"><label>إجمالي العقد بالجنيه</label><input id="openContractTotal" inputmode="decimal"></div>
+        <div class="field"><label>المدفوع قبل الجرد بالجنيه</label><input id="openContractPaid" inputmode="decimal"></div>
+        <div class="field"><label>قيمة القسط بالجنيه</label><input id="openInstallmentAmount" inputmode="decimal"></div>
+        <div class="field"><label>دورية السداد</label><select id="openFrequency"><option value="monthly">شهري</option><option value="weekly">أسبوعي</option><option value="quarterly">ربع سنوي</option><option value="yearly">سنوي</option></select></div>
+        <div class="field"><label>موعد القسط القادم</label><input id="openNextDue" type="date"></div>
+        <div class="field"><label>مرجع العقد</label><input id="openContractEvidence" maxlength="180"></div>
+      </div>
+      <button class="btn secondary" onclick="ES27.addOpeningInstallment()">إضافة قسط للمسودة</button>
+      <table class="table"><thead><tr><th>العقد</th><th>الدائن</th><th>المتبقي</th><th>الاستحقاق</th><th></th></tr></thead><tbody>${installmentRows}</tbody></table>
+      <div class="actions"><button class="btn" onclick="ES27.saveOpeningDraft()">حفظ المسودة والتأكد من D1</button><button class="btn secondary" onclick="ES27.loadOpeningDraft()">استرجاع مسودة محفوظة</button></div>${result}
+    </div>`;
+  }
+
   function screenSuppliers(){
-    return `<div class="card"><h2>الموردين</h2><p class="hint">تسجيل المورد لا يرحّل مديونيات قديمة تلقائيًا. الأرصدة الافتتاحية والأقساط غير الصفرية تنتظر الجرد والاعتماد المالي النهائي؛ لا تستخدم هذه الشاشة لترحيل ديون تاريخية.</p><div class="grid four"><div class="field"><label>اسم المورد</label><input id="supName"></div><div class="field"><label>هاتف</label><input id="supPhone"></div><div class="field"><label>رصيد افتتاحي</label><input id="supOpening" type="number"></div><div class="field"><label>عنوان / ملاحظات</label><input id="supAddress"></div></div><button class="btn" onclick="ES27.saveSupplier()">حفظ / تحديث المورد</button></div>${table(state.data.suppliers,['المورد','الهاتف','رصيد افتتاحي','إجراء'],(s,i)=>[esc(s.name||s.supplier),esc(s.phone||''),money(s.opening||s.openingBalance),`<button class="btn small secondary" onclick="ES27.editSupplier(${i})">تعديل</button>`])}`;
+    return `<div class="card"><h2>الموردين</h2><p class="hint">تسجيل المورد لا يرحّل مديونيات قديمة تلقائيًا. الأرصدة الافتتاحية والأقساط غير الصفرية تنتظر الجرد والاعتماد المالي النهائي؛ لا تستخدم هذه الشاشة لترحيل ديون تاريخية.</p><div class="grid four"><div class="field"><label>اسم المورد</label><input id="supName"></div><div class="field"><label>هاتف</label><input id="supPhone"></div><div class="field"><label>رصيد افتتاحي</label><input id="supOpening" type="number"></div><div class="field"><label>عنوان / ملاحظات</label><input id="supAddress"></div></div><button class="btn" onclick="ES27.saveSupplier()">حفظ / تحديث المورد</button></div>${table(state.data.suppliers,['المورد','الهاتف','رصيد افتتاحي','إجراء'],(s,i)=>[esc(s.name||s.supplier),esc(s.phone||''),money(s.opening||s.openingBalance),`<button class="btn small secondary" onclick="ES27.editSupplier(${i})">تعديل</button>`])}${acc278OpeningDraftCard()}`;
   }
 
   function screenCustomers(){
