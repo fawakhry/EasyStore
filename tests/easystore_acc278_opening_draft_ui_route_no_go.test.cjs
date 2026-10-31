@@ -96,3 +96,63 @@ test('ACC278 original supplier/debt screens must read original D1 before final s
 console.log('ACC278_ORIGINAL_EASYSTORE_UI_D1_ONLY_DRAFT=PASS');
 console.log('ACC278_21_LEGACY_WRITES_STILL_OFF=PASS');
 console.log('ACC278_REAL_MONEY_WRITE_ON=NO');
+
+
+// ACC279: prove matching totals alone cannot trigger a 'saved and verified' banner.
+// The real original UI helper is extracted, not reimplemented in the fixture.
+const acc279Start=source.indexOf('  function acc279OpeningDraftReadbackMatches(');
+const acc279End=source.indexOf('  function acc278OpeningDraftCard()',acc279Start);
+assert.ok(acc279Start>0&&acc279End>acc279Start,'original ACC279 exact-readback guard absent');
+const acc279Ctx={Map,Set,Number,Array};
+vm.runInNewContext(source.slice(acc279Start,acc279End)+
+  '\\nglobalThis.__acc279Match=acc279OpeningDraftReadbackMatches;',acc279Ctx,{timeout:1500});
+const exactMatch=acc279Ctx.__acc279Match;
+const submitted=()=>({batchId:'SYNTH-BATCH-ACC279',cutoverDate:'2026-10-31',
+  currency:'EGP',sourceEvidenceRef:'SYNTH-SIGNED-SOURCE-REF',
+  suppliers:[{supplierId:'SUP-SYNTH-001',balanceCents:125000,evidenceRef:'SYNTH-SUP-REF'}],
+  installments:[{contractId:'CONTRACT-SYNTH-001',creditorRef:'SUP-SYNTH-001',
+    supplierId:'SUP-SYNTH-001',liabilityTreatment:'INCLUDED_IN_SUPPLIER_OPENING',
+    contractTotalCents:100000,paidToCutoverCents:40000,remainingCents:60000,
+    installmentCents:15000,frequency:'monthly',nextDueDate:'2026-11-15',
+    evidenceRef:'SYNTH-CONTRACT-REF'},
+    {contractId:'CONTRACT-SYNTH-002',creditorRef:'CREDITOR-SYNTH-EXTERNAL',
+    supplierId:'',liabilityTreatment:'SEPARATE_CREDITOR',contractTotalCents:90000,
+    paidToCutoverCents:30000,remainingCents:60000,installmentCents:10000,
+    frequency:'monthly',nextDueDate:'2026-11-20',evidenceRef:'SYNTH-EXT-REF'}]
+});
+const readback=(b=submitted())=>({...b,success:true,status:'DRAFT',posted:false,
+  postingAllowed:false,financeRelease:'NO_GO',supplierTotalCents:125000,
+  separateInstallmentTotalCents:60000,includedInSupplierCents:60000,
+  totalLiabilityCents:185000});
+test('ACC279 full supplier and installment row readback, order independent',()=>{
+  const e=submitted(),a=readback();
+  assert.equal(exactMatch(e,a),true);
+  assert.equal(exactMatch(e,{...a,installments:[...a.installments].reverse()}),true);
+});
+test('ACC279 same totals and counts but changed creditor IDs, evidence or contract details MUST fail',()=>{
+  const e=submitted();
+  for(const altered of [
+    {...readback(),suppliers:[{...e.suppliers[0],supplierId:'SUP-SYNTH-DIFFERENT'}]},
+    {...readback(),suppliers:[{...e.suppliers[0],evidenceRef:'SYNTH-WRONG-REF'}]},
+    {...readback(),installments:e.installments.map((v,i)=>i?{...v,creditorRef:'CREDITOR-SYNTH-WRONG'}:v)},
+    {...readback(),installments:e.installments.map((v,i)=>i?{...v,nextDueDate:'2026-12-20'}:v)},
+    {...readback(),installments:e.installments.map((v,i)=>i?{...v,installmentCents:9999}:v)},
+    {...readback(),installments:e.installments.map((v,i)=>i?{...v,evidenceRef:'SYNTH-WRONG'}:v)},
+    {...readback(),cutoverDate:'2026-10-30'},
+    {...readback(),sourceEvidenceRef:'SYNTH-OTHER-SOURCE'},
+    {...readback(),postingAllowed:true},
+    {...readback(),financeRelease:'GO'},
+    {...readback(),posted:true},
+    {...readback(),totalLiabilityCents:185001},
+    {...readback(),installments:[e.installments[0],e.installments[0]]}
+  ])assert.equal(exactMatch(e,altered),false,JSON.stringify(altered));
+});
+test('ACC279 UI saves snapshot and requires exact D1 readback before success',()=>{
+  assert.match(source,/suppliers:d\\.suppliers\\.map\\(s=>\\(\\{\\.\\.\\.s\\}\\)\\)/);
+  assert.match(source,/acc279OpeningDraftReadbackMatches\\(payload,verified\\)/);
+  assert.match(source,/if\\(!acc279OpeningDraftReadbackMatches/);
+  assert.match(config,/EASYSTORE_OPENING_DRAFT_INTAKE_V1\\s*=\\s*false/);
+});
+console.log('ACC279_EXACT_ORIGINAL_D1_DRAFT_ROW_READBACK=PASS');
+console.log('ACC279_FALSE_SAME_TOTALS_SUCCESS_BLOCKED=PASS');
+console.log('ACC279_NO_FINANCIAL_POSTING=PASS');
