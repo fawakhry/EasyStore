@@ -1292,6 +1292,109 @@
         saveLocal();shell();flash('تم تسجيل العميل في دليل الحسابات.');
       }catch(e){flash('لم يتم تسجيل العميل: '+(e.message||e),true)}
     },
+
+    captureOpeningDraftHeader(){
+      const d=state.openingIntake;
+      d.header={batchId:val('openBatchId'),cutoverDate:val('openCutoverDate'),
+        sourceEvidenceRef:val('openSourceRef')};
+      return d.header;
+    },
+    addOpeningSupplier(){
+      if(!isAdmin()||window.EASYSTORE_OPENING_DRAFT_INTAKE_V1!==true)return deny();
+      const d=state.openingIntake;
+      this.captureOpeningDraftHeader();
+      try{
+        const supplierId=val('openSupplierId'),evidenceRef=val('openSupplierEvidence');
+        const cents=acc278ToCents(val('openSupplierBalance'));
+        if(!supplierId||!evidenceRef)return flash('اختر المورد بمعرّفه واكتب مرجع كشفه.',true);
+        if(d.suppliers.some(s=>s.supplierId===supplierId))return flash('المورد موجود بالفعل في نفس دفعة الجرد؛ لا تكرره.',true);
+        d.suppliers.push({supplierId,balanceCents:cents,evidenceRef});
+        d.requestId='';d.verified=null;render();
+      }catch(e){flash(e.message||String(e),true);}
+    },
+    removeOpeningSupplier(i){
+      if(!isAdmin())return deny();
+      const d=state.openingIntake;this.captureOpeningDraftHeader();
+      if(!Number.isInteger(i)||i<0||i>=d.suppliers.length)return;
+      const id=d.suppliers[i].supplierId;
+      if(d.installments.some(x=>x.supplierId===id))return flash('احذف الأقساط المرتبطة بالمورد أولًا.',true);
+      d.suppliers.splice(i,1);d.requestId='';d.verified=null;render();
+    },
+    addOpeningInstallment(){
+      if(!isAdmin()||window.EASYSTORE_OPENING_DRAFT_INTAKE_V1!==true)return deny();
+      const d=state.openingIntake;this.captureOpeningDraftHeader();
+      try{
+        const contractId=val('openContractId'),treatment=val('openTreatment'),
+          evidenceRef=val('openContractEvidence'),nextDueDate=val('openNextDue');
+        const included=treatment==='INCLUDED_IN_SUPPLIER_OPENING';
+        const supplierId=included?val('openIncludedSupplier'):'';
+        const creditorRef=included?supplierId:val('openSeparateCreditor');
+        const contractTotalCents=acc278ToCents(val('openContractTotal')),
+          paidToCutoverCents=acc278ToCents(val('openContractPaid')),
+          installmentCents=acc278ToCents(val('openInstallmentAmount'));
+        const remainingCents=contractTotalCents-paidToCutoverCents;
+        if(!contractId||!creditorRef||!evidenceRef||!nextDueDate)
+          return flash('أكمل رقم العقد والدائن وتاريخ الاستحقاق ومرجع العقد.',true);
+        if(remainingCents<=0||installmentCents<=0||installmentCents>remainingCents)
+          return flash('إجمالي العقد والمدفوع والمتبقي وقيمة القسط غير متوازنين.',true);
+        if(d.installments.some(i=>i.contractId===contractId))
+          return flash('رقم العقد مكرر في مسودة الجرد؛ لا يمكن إضافته مرتين.',true);
+        d.installments.push({contractId,creditorRef,supplierId,
+          liabilityTreatment:treatment,contractTotalCents,paidToCutoverCents,
+          remainingCents,installmentCents,frequency:val('openFrequency'),
+          nextDueDate,evidenceRef});
+        d.requestId='';d.verified=null;render();
+      }catch(e){flash(e.message||String(e),true);}
+    },
+    removeOpeningInstallment(i){
+      if(!isAdmin())return deny();
+      const d=state.openingIntake;this.captureOpeningDraftHeader();
+      if(!Number.isInteger(i)||i<0||i>=d.installments.length)return;
+      d.installments.splice(i,1);d.requestId='';d.verified=null;render();
+    },
+    async saveOpeningDraft(){
+      if(!isAdmin()||window.EASYSTORE_OPENING_DRAFT_INTAKE_V1!==true)return deny();
+      const d=state.openingIntake;
+      this.captureOpeningDraftHeader();
+      if(!d.header.batchId||!d.header.cutoverDate||!d.header.sourceEvidenceRef)
+        return flash('اكتب رقم دفعة الجرد وتاريخها ومرجع المستند.',true);
+      if(!d.suppliers.length&&!d.installments.length)
+        return flash('أضف مديونية مورد أو قسطًا واحدًا على الأقل.',true);
+      if(d.verified)return flash('المسودة محفوظة بالفعل؛ استخدم الاسترجاع للتحقق من نفس رقم الدفعة.',true);
+      if(!d.requestId)d.requestId=newAccountingRequestId('ODRAFT');
+      const payload={...d.header,currency:'EGP',requestId:d.requestId,
+        suppliers:d.suppliers,installments:d.installments};
+      try{
+        const saved=await api('saveEasyStoreOpeningDraftV1',payload);
+        if(!saved||saved.success!==true||saved.status!=='DRAFT'||saved.posted!==false)
+          throw new Error('لم تؤكد D1 حفظ مسودة فقط.');
+        const verified=await api('getEasyStoreOpeningDraftV1',{batchId:d.header.batchId});
+        if(!verified||verified.success!==true||verified.status!=='DRAFT'||
+          verified.posted!==false||verified.batchId!==d.header.batchId||
+          verified.supplierTotalCents!==saved.supplierTotalCents||
+          verified.separateInstallmentTotalCents!==saved.separateInstallmentTotalCents||
+          verified.totalLiabilityCents!==saved.totalLiabilityCents||
+          !Array.isArray(verified.suppliers)||verified.suppliers.length!==d.suppliers.length||
+          !Array.isArray(verified.installments)||verified.installments.length!==d.installments.length)
+          throw new Error('استجابة الحفظ لا تطابق قراءة القاعدة الأصلية؛ لا تعيد الإدخال بمعرّف جديد.');
+        d.verified=verified;render();
+        flash('تم حفظ مسودة الجرد والتحقق من قراءتها من D1؛ لم تُرحّل أي أموال.');
+      }catch(e){flash('فشل تأكيد مسودة الجرد: '+(e.message||e),true);}
+    },
+    async loadOpeningDraft(){
+      if(!isAdmin()||window.EASYSTORE_OPENING_DRAFT_INTAKE_V1!==true)return deny();
+      const d=state.openingIntake;this.captureOpeningDraftHeader();
+      try{
+        if(!d.header.batchId)return flash('اكتب رقم دفعة الجرد المطلوب استرجاعها.',true);
+        const v=await api('getEasyStoreOpeningDraftV1',{batchId:d.header.batchId});
+        if(!v||v.success!==true||v.status!=='DRAFT'||v.posted!==false)
+          throw new Error('لم ترجع القاعدة مسودة مؤكدة.');
+        d.header={batchId:v.batchId,cutoverDate:v.cutoverDate,sourceEvidenceRef:v.sourceEvidenceRef};
+        d.suppliers=v.suppliers||[];d.installments=v.installments||[];
+        d.requestId='';d.verified=v;render();
+        flash('تم استرجاع مسودة الجرد من D1، بدون أي ترحيل مالي.');
+      }catch(e){flash('تعذر استرجاع المسودة: '+(e.message||e),true);}
+    },
     async saveSupplier(){
       if(!canManageAccounting()) return deny();
       const rawOpening=String(val('supOpening')||'').trim();
