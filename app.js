@@ -207,6 +207,8 @@
     active: initialScreen(),
     accountingScope: initialAccountingScope(),
     loading: false,
+    // ACC281: exact original-D1 directory read outcome, never inferred from local cache.
+    supplierDirectory: {status:'unchecked',rows:[]},
     data: {
       materials: [], templates: [], suppliers: [], purchases: [], dailyPurchases: [], sales: [], customers: [],
       stockMoves: [], wasteLines: [], deptLines: [], finalInvoices: [], custodyEntries: [], custodySummary: [], departmentDayCloses: [], unclassifiedRows: [], summary: {}
@@ -549,7 +551,26 @@
   }
 
   function screenSuppliers(){
-    return `<div class="card"><h2>الموردين</h2><div class="grid four"><div class="field"><label>اسم المورد</label><input id="supName"></div><div class="field"><label>هاتف</label><input id="supPhone"></div><div class="field"><label>رصيد افتتاحي</label><input id="supOpening" type="number"></div><div class="field"><label>عنوان / ملاحظات</label><input id="supAddress"></div></div><button class="btn" onclick="ES27.saveSupplier()">حفظ / تحديث المورد</button></div>${table(state.data.suppliers,['المورد','الهاتف','رصيد افتتاحي','إجراء'],(s,i)=>[esc(s.name||s.supplier),esc(s.phone||''),money(s.opening||s.openingBalance),`<button class="btn small secondary" onclick="ES27.editSupplier(${i})">تعديل</button>`])}`;
+    // ACC281 R0: a failed/unverified D1 GET is NEVER displayed as an empty directory.
+    const directory=state.supplierDirectory||{status:'unchecked',rows:[]};
+    const verified=directory.status==='verified';
+    const readMessage=verified
+      ? 'تم التحقق من قراءة دليل الموردين من D1. عدد الموردين: '+directory.rows.length
+      : directory.status==='loading' || directory.status==='unchecked'
+        ? 'جارٍ التحقق من دليل الموردين عبر قاعدة D1 الأصلية.'
+        : 'تعذر التحقق من قراءة الموردين من D1. القائمة غير مؤكدة؛ راجع تسجيل الدخول ثم اضغط تحديث البيانات.';
+    const readStatus=`<div class="card" role="status" aria-live="polite"><strong>${esc(readMessage)}</strong></div>`;
+    // In this published ES47 build, saveEasyStoreSupplier is not in the allowed
+    // D1 write canary; don't show a form that cannot possibly commit.
+    const blocked=`<div class="card"><h2>الموردين</h2><p class="hint">قراءة دليل الموردين فقط. إضافة مورد أو رصيد افتتاحي من هذه النسخة مقفولة لحين اعتماد وتفعيل مسار الحفظ الآمن في D1.</p><button class="btn" disabled aria-disabled="true" title="الحفظ المالي غير مفعّل">حفظ المورد — غير مفعل</button></div>`;
+    const verifiedList=verified
+      ? table(directory.rows,['معرف المورد','اسم المورد','الهاتف'],r=>[
+          esc(r.partyId||r.id||r.supplierId||'—'),
+          esc(r.name||r.supplierName||r.supplier||'—'),
+          esc(r.phone||'')
+        ])
+      : '<div class="card">لا يمكن عرض موردين على أنهم بيانات مؤكدة قبل نجاح قراءة D1.</div>';
+    return blocked+readStatus+verifiedList;
   }
 
   function screenCustomers(){
@@ -1140,6 +1161,7 @@
   async function load(silent){
     if(state.loading) return;
     state.loading = true;
+    state.supplierDirectory={status:'loading',rows:[]};
     if(!silent) msg('جاري تحميل البيانات...');
     try{
       const r = await api('getAccounting',{requestedRole:isAdmin()?'admin':isFinal()?'final':isLaser()?'laser':isPrint()?'print':'employee',requestedDepartment:userDept()});
@@ -1152,7 +1174,14 @@
         isAdmin()?api('previewAccountingAutomationV1921',{workDate:dailyPurchaseTodayKey()}).catch(()=>({})):Promise.resolve({})
       ]);
       if(extras[0]&&extras[0].success)customerRows=extras[0].customers||[];
-      if(extras[1]&&extras[1].success)supplierRows=extras[1].suppliers||extras[1].rows||[];
+      // ACC281: only a successful, well-shaped original D1 read proves emptiness.
+      // No getAccounting fallback, session cache or fake zero supplier balances.
+      if(extras[1]&&extras[1].success===true&&Array.isArray(extras[1].suppliers)){
+        supplierRows=extras[1].suppliers;
+        state.supplierDirectory={status:'verified',rows:supplierRows};
+      }else{
+        state.supplierDirectory={status:'failed',rows:[]};
+      }
       if(extras[2]&&extras[2].success)state.automationPreview=extras[2].preview||null;
       mergeData(normalizeIncomingData({
         materials: r.materials || r.rawMaterials || [],
@@ -1174,6 +1203,7 @@
       }));
       saveLocal(); state.lastLoadedAt=Date.now(); state.formDirty=false; render(); if(state.active==='sales' && (qs.get('pullLines') || qs.get('autoLoadCustomer') || qs.get('customer'))){ setTimeout(()=>{ try{ ES27.loadSaleCustomerFromInput(true); }catch(e){ try{ ES27.pullDeptCandidates(); }catch(x){} } },160); } msg('تم التحديث من الشيتات: ' + now());
     }catch(e){
+      state.supplierDirectory={status:'failed',rows:[]};
       mergeData(); render(); msg('تنبيه: يعمل بنسخة محلية مؤقتة - ' + e.message, true);
     }finally{ state.loading = false; }
   }
