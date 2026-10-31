@@ -105,7 +105,7 @@ const acc279End=source.indexOf('  function acc278OpeningDraftCard()',acc279Start
 assert.ok(acc279Start>0&&acc279End>acc279Start,'original ACC279 exact-readback guard absent');
 const acc279Ctx={Map,Set,Number,Array};
 vm.runInNewContext(source.slice(acc279Start,acc279End)+
-  '\\nglobalThis.__acc279Match=acc279OpeningDraftReadbackMatches;',acc279Ctx,{timeout:1500});
+  '\nglobalThis.__acc279Match=acc279OpeningDraftReadbackMatches;',acc279Ctx,{timeout:1500});
 const exactMatch=acc279Ctx.__acc279Match;
 const submitted=()=>({batchId:'SYNTH-BATCH-ACC279',cutoverDate:'2026-10-31',
   currency:'EGP',sourceEvidenceRef:'SYNTH-SIGNED-SOURCE-REF',
@@ -148,10 +148,10 @@ test('ACC279 same totals and counts but changed creditor IDs, evidence or contra
   ])assert.equal(exactMatch(e,altered),false,JSON.stringify(altered));
 });
 test('ACC279 UI saves snapshot and requires exact D1 readback before success',()=>{
-  assert.match(source,/suppliers:d\\.suppliers\\.map\\(s=>\\(\\{\\.\\.\\.s\\}\\)\\)/);
-  assert.match(source,/acc279OpeningDraftReadbackMatches\\(payload,verified\\)/);
-  assert.match(source,/if\\(!acc279OpeningDraftReadbackMatches/);
-  assert.match(config,/EASYSTORE_OPENING_DRAFT_INTAKE_V1\\s*=\\s*false/);
+  assert.match(source,/suppliers:d\.suppliers\.map\(s=>\(\{\.\.\.s\}\)\)/);
+  assert.match(source,/acc279OpeningDraftReadbackMatches\(payload,verified\)/);
+  assert.match(source,/if\(!acc279OpeningDraftReadbackMatches/);
+  assert.match(config,/EASYSTORE_OPENING_DRAFT_INTAKE_V1\s*=\s*false/);
 });
 console.log('ACC279_EXACT_ORIGINAL_D1_DRAFT_ROW_READBACK=PASS');
 console.log('ACC279_FALSE_SAME_TOTALS_SUCCESS_BLOCKED=PASS');
