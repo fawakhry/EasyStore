@@ -51,6 +51,13 @@ test('ACC278 ON with finance WRITE OFF uses original D1 ONLY for draft save',asy
   const b=JSON.parse(h.calls[0].options.body);
   assert.equal(b.action,open);assert.equal(b.username,'FAKE_ACC278');
 });
+test('ACC278 supplier master zero balance also routes to original D1 with financial posting OFF',async()=>{
+  const h=fixture({EASYSTORE_OPENING_DRAFT_INTAKE_V1:true});
+  await h.api('saveEasyStoreSupplier',{name:'FAKE SUPPLIER',opening:0,requestId:'ACC278-SUP-ZERO-FAKE-001'});
+  assert.equal(h.calls.length,1);
+  assert.equal(h.calls[0].endpoint,h.win.EASYSTORE_ACCOUNTING_D1_URL);
+  assert.equal(JSON.parse(h.calls[0].options.body).action,'saveEasyStoreSupplier');
+});
 test('ACC278 read goes to D1 and never legacy',async()=>{
   const h=fixture({EASYSTORE_OPENING_DRAFT_INTAKE_V1:true});
   await h.api(read,{batchId:'FAKE-BATCH-1'});
@@ -61,6 +68,7 @@ test('ACC278 read goes to D1 and never legacy',async()=>{
 test('ACC278 D1 read flag missing must NOT send draft to Google',async()=>{
   const h=fixture({EASYSTORE_OPENING_DRAFT_INTAKE_V1:true,EASYSTORE_ACCOUNTING_D1_READONLY:false});
   await assert.rejects(h.api(open,{}),/منع مسار السيرفر القديم/);
+  await assert.rejects(h.api('saveEasyStoreSupplier',{opening:0}),/منع مسار السيرفر القديم/);
   await assert.rejects(h.api(read,{}),/قراءة الحسابات من D1 غير مفعلة/);
   assert.equal(h.calls.length,0);
 });
