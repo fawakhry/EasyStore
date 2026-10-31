@@ -7,6 +7,10 @@ window.EASYSTORE_ACCOUNTING_D1_READONLY = true;
 window.EASYSTORE_ACCOUNTING_D1_WRITES = false; // legacy compatibility flag; kept false during bounded CANARY
 window.EASYSTORE_ACCOUNTING_D1_WRITE_MODE = 'OFF'; // OFF | CANARY | GENERAL
 window.EASYSTORE_ACCOUNTING_D1_WRITE_CANARY_ACTIONS = []; // exactly one action during first bounded canary
+// ACC269 source-only customer master / direct cash pilot; NEVER enable in published UI before independently qualified finance Stage.
+window.EASYSTORE_STANDALONE_CUSTOMERS_V1 = false;
+// ACC278: draft-only finance intake is separately gated; NEVER real ledger posting.
+window.EASYSTORE_OPENING_DRAFT_INTAKE_V1 = false;
 window.EASYSTORE_ACCOUNTING_D1_URL = "https://trendos-d1-api.trendmall-contact.workers.dev/v1/employee/accounting";
 window.EASYSTORE_TRENDOS_SSO_HANDOFF_V1 = true;
 
