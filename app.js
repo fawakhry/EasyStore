@@ -240,6 +240,8 @@
     const openingDraftRead = actionName==='getEasyStoreOpeningDraftV1';
     if((openingDraftWrite||openingDraftRead) && window.EASYSTORE_OPENING_DRAFT_INTAKE_V1!==true)
       throw new Error('تسجيل مسودات الأرصدة الافتتاحية غير معتمد بعد.');
+    if(openingDraftWrite && window.EASYSTORE_ACCOUNTING_D1_READONLY !== true)
+      throw new Error('نقل مسودة الجرد إلى D1 غير متاح؛ تم منع مسار السيرفر القديم.');
     // A disabled optional D1 action must fail closed here, never fall back to Apps Script.
     if(standaloneCustomerAction && window.EASYSTORE_STANDALONE_CUSTOMERS_V1 !== true)
       throw new Error('تسجيل عميل EasyStore المستقل غير مفعّل.');
