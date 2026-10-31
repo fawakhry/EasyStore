@@ -539,6 +539,46 @@
     if(!Number.isSafeInteger(cents))throw new Error('المبلغ أكبر من الحد الآمن.');
     return cents;
   }
+  // ACC279: A matching grand total is NOT proof of matching creditor identities,
+  // installment contracts or source evidence. Compare every original D1 row.
+  function acc279OpeningDraftReadbackMatches(expected,actual){
+    if(!expected||!actual||actual.success!==true||actual.status!=='DRAFT'||
+      actual.posted!==false||actual.postingAllowed!==false||
+      actual.financeRelease!=='NO_GO'||actual.batchId!==expected.batchId||
+      actual.cutoverDate!==expected.cutoverDate||actual.currency!==expected.currency||
+      actual.sourceEvidenceRef!==expected.sourceEvidenceRef)return false;
+    const sameRows=(planned,stored,key,fields)=>{
+      if(!Array.isArray(planned)||!Array.isArray(stored)||planned.length!==stored.length)return false;
+      const index=new Map(),seen=new Set();
+      for(const row of planned){
+        if(!row||typeof row[key]!=='string'||!row[key]||index.has(row[key]))return false;
+        index.set(row[key],row);
+      }
+      for(const row of stored){
+        if(!row||typeof row[key]!=='string'||seen.has(row[key])||!index.has(row[key]))return false;
+        seen.add(row[key]);
+        for(const field of fields)if(row[field]!==index.get(row[key])[field])return false;
+      }
+      return true;
+    };
+    if(!sameRows(expected.suppliers,actual.suppliers,'supplierId',
+      ['supplierId','balanceCents','evidenceRef'])||
+      !sameRows(expected.installments,actual.installments,'contractId',
+      ['contractId','creditorRef','supplierId','liabilityTreatment',
+        'contractTotalCents','paidToCutoverCents','remainingCents',
+        'installmentCents','frequency','nextDueDate','evidenceRef']))return false;
+    const supplierCents=expected.suppliers.reduce((n,r)=>n+r.balanceCents,0);
+    const separateCents=expected.installments.reduce((n,r)=>n+
+      (r.liabilityTreatment==='SEPARATE_CREDITOR'?r.remainingCents:0),0);
+    const includedCents=expected.installments.reduce((n,r)=>n+
+      (r.liabilityTreatment==='INCLUDED_IN_SUPPLIER_OPENING'?r.remainingCents:0),0);
+    const total=supplierCents+separateCents;
+    return [supplierCents,separateCents,includedCents,total].every(Number.isSafeInteger)&&
+      actual.supplierTotalCents===supplierCents&&
+      actual.separateInstallmentTotalCents===separateCents&&
+      actual.includedInSupplierCents===includedCents&&
+      actual.totalLiabilityCents===total;
+  }
   function acc278OpeningDraftCard(){
     if(window.EASYSTORE_OPENING_DRAFT_INTAKE_V1!==true || !isAdmin())return '';
     const d=state.openingIntake,h=d.header;
@@ -1368,19 +1408,16 @@
       if(d.verified)return flash('المسودة محفوظة بالفعل؛ استخدم الاسترجاع للتحقق من نفس رقم الدفعة.',true);
       if(!d.requestId)d.requestId=newAccountingRequestId('ODRAFT');
       const payload={...d.header,currency:'EGP',requestId:d.requestId,
-        suppliers:d.suppliers,installments:d.installments};
+        suppliers:d.suppliers.map(s=>({...s})),installments:d.installments.map(i=>({...i}))};
       try{
         const saved=await api('saveEasyStoreOpeningDraftV1',payload);
         if(!saved||saved.success!==true||saved.status!=='DRAFT'||saved.posted!==false)
           throw new Error('لم تؤكد D1 حفظ مسودة فقط.');
         const verified=await api('getEasyStoreOpeningDraftV1',{batchId:d.header.batchId});
-        if(!verified||verified.success!==true||verified.status!=='DRAFT'||
-          verified.posted!==false||verified.batchId!==d.header.batchId||
+        if(!acc279OpeningDraftReadbackMatches(payload,verified)||
           verified.supplierTotalCents!==saved.supplierTotalCents||
           verified.separateInstallmentTotalCents!==saved.separateInstallmentTotalCents||
-          verified.totalLiabilityCents!==saved.totalLiabilityCents||
-          !Array.isArray(verified.suppliers)||verified.suppliers.length!==d.suppliers.length||
-          !Array.isArray(verified.installments)||verified.installments.length!==d.installments.length)
+          verified.totalLiabilityCents!==saved.totalLiabilityCents)
           throw new Error('استجابة الحفظ لا تطابق قراءة القاعدة الأصلية؛ لا تعيد الإدخال بمعرّف جديد.');
         d.verified=verified;render();
         flash('تم حفظ مسودة الجرد والتحقق من قراءتها من D1؛ لم تُرحّل أي أموال.');
