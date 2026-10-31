@@ -194,7 +194,7 @@
     },
     recipeComps: [], salePulledLines: [], saleSelectedCustomer: null, saleCustomerContext: null, customerSearchTimer: null, customerSearchSeq: 0, customerDropdownLocked: false,
     laserQuote: null, saleRequestId: '', finalRequestId: '', purchaseRequestId: '', dailyPurchaseRequestId: '',
-    customerAccount: null, customerAccountSelected: '', customerAccountRequestId: '', standaloneCustomerRequestId:'', dailyReport: null, dailyReportDate: '', dailyReportDepartment: 'ليزر',
+    customerAccount: null, customerAccountSelected: '', customerAccountRequestId: '', standaloneCustomerRequestId:'', supplierRequestId:'', supplierRequestFingerprint:'', dailyReport: null, dailyReportDate: '', dailyReportDepartment: 'ليزر',
     automationPreview: null, lastLoadedAt: 0, formDirty: false
   };
 
@@ -515,7 +515,7 @@
   }
 
   function screenSuppliers(){
-    return `<div class="card"><h2>الموردين</h2><div class="grid four"><div class="field"><label>اسم المورد</label><input id="supName"></div><div class="field"><label>هاتف</label><input id="supPhone"></div><div class="field"><label>رصيد افتتاحي</label><input id="supOpening" type="number"></div><div class="field"><label>عنوان / ملاحظات</label><input id="supAddress"></div></div><button class="btn" onclick="ES27.saveSupplier()">حفظ / تحديث المورد</button></div>${table(state.data.suppliers,['المورد','الهاتف','رصيد افتتاحي','إجراء'],(s,i)=>[esc(s.name||s.supplier),esc(s.phone||''),money(s.opening||s.openingBalance),`<button class="btn small secondary" onclick="ES27.editSupplier(${i})">تعديل</button>`])}`;
+    return `<div class="card"><h2>الموردين</h2><p class="hint">تسجيل المورد لا يرحّل مديونيات قديمة تلقائيًا. الأرصدة الافتتاحية والأقساط غير الصفرية تنتظر الجرد والاعتماد المالي النهائي؛ لا تستخدم هذه الشاشة لترحيل ديون تاريخية.</p><div class="grid four"><div class="field"><label>اسم المورد</label><input id="supName"></div><div class="field"><label>هاتف</label><input id="supPhone"></div><div class="field"><label>رصيد افتتاحي</label><input id="supOpening" type="number"></div><div class="field"><label>عنوان / ملاحظات</label><input id="supAddress"></div></div><button class="btn" onclick="ES27.saveSupplier()">حفظ / تحديث المورد</button></div>${table(state.data.suppliers,['المورد','الهاتف','رصيد افتتاحي','إجراء'],(s,i)=>[esc(s.name||s.supplier),esc(s.phone||''),money(s.opening||s.openingBalance),`<button class="btn small secondary" onclick="ES27.editSupplier(${i})">تعديل</button>`])}`;
   }
 
   function screenCustomers(){
@@ -1228,7 +1228,34 @@
         saveLocal();shell();flash('تم تسجيل العميل في دليل الحسابات.');
       }catch(e){flash('لم يتم تسجيل العميل: '+(e.message||e),true)}
     },
-    async saveSupplier(){ if(!canManageAccounting()) return deny(); const s={name:val('supName'),phone:val('supPhone'),opening:num(val('supOpening')),address:val('supAddress')}; if(!s.name) return flash('اكتب اسم المورد',true); try{ const reply=await api('saveEasyStoreSupplier',Object.assign({requestId:newAccountingRequestId('SUP')},s)); if(!reply||reply.success===false) throw new Error((reply&&reply.message)||'تعذر حفظ المورد'); const i=state.data.suppliers.findIndex(x=>nkey(x.name||x.supplier)===nkey(s.name)); if(i>=0) state.data.suppliers[i]=s; else state.data.suppliers.unshift(s); saveLocal(); shell(); flash('تم حفظ المورد على السيرفر'); }catch(e){ flash('لم يتم حفظ المورد: '+(e.message||e),true); } },
+    async saveSupplier(){
+      if(!canManageAccounting()) return deny();
+      const rawOpening=String(val('supOpening')||'').trim();
+      if(rawOpening && (!Number.isFinite(Number(rawOpening)) || Number(rawOpening)!==0))
+        return flash('تسجيل مديونيات الموردين والأقساط القديمة متوقف حتى اعتماد الأرصدة الافتتاحية؛ لم يتم حفظ أي حركة مالية.',true);
+      const s={name:val('supName'),phone:val('supPhone'),opening:0,address:val('supAddress')};
+      if(!s.name) return flash('اكتب اسم المورد',true);
+      const fingerprint=JSON.stringify(s);
+      if(state.supplierRequestFingerprint!==fingerprint || !state.supplierRequestId){
+        state.supplierRequestId=newAccountingRequestId('SUP');
+        state.supplierRequestFingerprint=fingerprint;
+      }
+      try{
+        const reply=await api('saveEasyStoreSupplier',{...s,requestId:state.supplierRequestId});
+        if(!reply||reply.success===false) throw new Error((reply&&reply.message)||'تعذر حفظ المورد');
+        // A successful write response or local cache is not sufficient evidence.
+        // Read the same canonical finance D1 through the verified server session.
+        const verified=await api('getEasyStoreSuppliers',{limit:1000});
+        if(!verified||verified.success!==true||!Array.isArray(verified.suppliers))
+          throw new Error('لم يتم تأكيد قراءة دليل الموردين من D1؛ لا تعيد الحفظ بمعرف جديد.');
+        const match=verified.suppliers.find(v=>nkey(v.name||v.supplierName)===nkey(s.name)&&!!(v.partyId||v.id));
+        if(!match) throw new Error('لم يظهر المورد في قاعدة الحسابات بعد الحفظ؛ احتفظ بمعرف الطلب ولا تكرر إدخاله.');
+        state.data.suppliers=verified.suppliers;
+        state.supplierRequestId='';state.supplierRequestFingerprint='';
+        saveLocal();shell();
+        flash('تم حفظ المورد والتأكد من ظهوره بمعرّفه في قاعدة الحسابات الأصلية.');
+      }catch(e){flash('تعذر تأكيد الحفظ النهائي: '+(e.message||e),true);}
+    },
     editSupplier(i){ const s=state.data.suppliers[i]; if(!s) return; set('supName',s.name||s.supplier); set('supPhone',s.phone); set('supOpening',s.opening||s.openingBalance); set('supAddress',s.address); },
     filterCustomers(){ const q=nkey(val('custSearch')); const rows=(state.data.customers||[]).filter(c=>nkey([c.name,c.customerName,c.phone,c.mobile].join(' ')).includes(q)); const box=$('custTable'); if(box) box.innerHTML=customersTable(rows); },
     resetCustomerAccountRequest(){ state.customerAccountRequestId=''; },
