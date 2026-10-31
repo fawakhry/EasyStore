@@ -238,9 +238,10 @@
     const standaloneCustomerAction = ACC269_OPTIONAL_NATIVE_WRITE_ACTIONS.has(actionName);
     const openingDraftWrite = ACC278_OPTIONAL_DRAFT_WRITE_ACTIONS.has(actionName);
     const openingDraftRead = actionName==='getEasyStoreOpeningDraftV1';
+    const draftSupplierMasterIntake = actionName==='saveEasyStoreSupplier' && window.EASYSTORE_OPENING_DRAFT_INTAKE_V1===true;
     if((openingDraftWrite||openingDraftRead) && window.EASYSTORE_OPENING_DRAFT_INTAKE_V1!==true)
       throw new Error('تسجيل مسودات الأرصدة الافتتاحية غير معتمد بعد.');
-    if(openingDraftWrite && window.EASYSTORE_ACCOUNTING_D1_READONLY !== true)
+    if((openingDraftWrite||draftSupplierMasterIntake) && window.EASYSTORE_ACCOUNTING_D1_READONLY !== true)
       throw new Error('نقل مسودة الجرد إلى D1 غير متاح؛ تم منع مسار السيرفر القديم.');
     // A disabled optional D1 action must fail closed here, never fall back to Apps Script.
     if(standaloneCustomerAction && window.EASYSTORE_STANDALONE_CUSTOMERS_V1 !== true)
@@ -258,10 +259,10 @@
     if(openingDraftWrite && configuredWriteMode !== 'OFF')
       throw new Error('حفظ مسودات الأرصدة متاح فقط بينما الترحيل المالي العام مقفول.');
     if(writeActionRequested && configuredWriteMode === 'OFF'){
-      if(!openingDraftWrite)throw new Error('كتابة D1 للحسابات غير مفعلة.');
+      if(!openingDraftWrite&&!draftSupplierMasterIntake)throw new Error('كتابة D1 للحسابات غير مفعلة.');
     }
     if(writeActionRequested && !openingDraftWrite && configuredWriteMode === 'CANARY' && !configuredCanaryActions.has(actionName)) throw new Error('هذه الحركة خارج نطاق كاناري الحسابات المسموح.');
-    const useD1DraftWrite = openingDraftWrite && configuredWriteMode==='OFF' && window.EASYSTORE_ACCOUNTING_D1_READONLY===true;
+    const useD1DraftWrite = (openingDraftWrite||draftSupplierMasterIntake) && configuredWriteMode==='OFF' && window.EASYSTORE_ACCOUNTING_D1_READONLY===true;
     const useD1Write = writeActionRequested && !openingDraftWrite && (configuredWriteMode === 'GENERAL' || (configuredWriteMode === 'CANARY' && configuredCanaryActions.has(actionName)));
     const useD1Accounting = useD1Read || useD1Write || useD1DraftWrite;
     const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),90000);
