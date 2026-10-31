@@ -211,11 +211,12 @@
     ['materials','templates','suppliers','purchases','dailyPurchases','sales','customers','stockMoves','wasteLines','deptLines','finalInvoices','custodyEntries','custodySummary','departmentDayCloses','unclassifiedRows'].forEach(k=>{ if(!Array.isArray(state.data[k])) state.data[k] = []; });
   }
 
-  const D1_ACCOUNTING_READ_ACTIONS = new Set(['getEasyStoreOpeningDraftV1','getAccounting','getDeptInvoiceDraftV1887','getPartyAccountV1858','getCustomerAccountV1915','getEasyStoreCustomers','searchCustomers','getEasyStoreSuppliers','easyStoreSystemHealth','calculateAccountingLaserQuoteV1913','getDailyDepartmentReportV1920','previewAccountingAutomationV1921']);
+  const D1_ACCOUNTING_READ_ACTIONS = new Set(['getAccounting','getDeptInvoiceDraftV1887','getPartyAccountV1858','getCustomerAccountV1915','getEasyStoreCustomers','searchCustomers','getEasyStoreSuppliers','easyStoreSystemHealth','calculateAccountingLaserQuoteV1913','getDailyDepartmentReportV1920','previewAccountingAutomationV1921']);
   // Preserve the original 21-action inventory pinned to the existing native Worker.
   // Standalone customer creation is opt-in and independently checked by the server.
   const ACC269_OPTIONAL_NATIVE_WRITE_ACTIONS = new Set(['saveEasyStoreCustomer']);
   const ACC278_OPTIONAL_DRAFT_WRITE_ACTIONS = new Set(['saveEasyStoreOpeningDraftV1']);
+  const ACC278_OPTIONAL_DRAFT_READ_ACTIONS = new Set(['getEasyStoreOpeningDraftV1']);
   const D1_ACCOUNTING_WRITE_ACTIONS = new Set([
     'saveAccountingMaterial','saveAccountingTemplate','archiveAccountingTemplate','recalcAccountingMaterialsCascade',
     'saveAccountingDeptLine','approveAccountingDeptInvoice','saveAccountingFinalInvoice','reopenAccountingFinalInvoice',
@@ -233,7 +234,7 @@
   async function api(action, data){
     const actionName=String(action||'');
     if(RETIRED_ACCOUNTING_ACTIONS.has(actionName)) throw new Error('تم إيقاف أداة الترحيل القديمة بعد بدء الحسابات من قاعدة نظيفة.');
-    const readActionRequested = D1_ACCOUNTING_READ_ACTIONS.has(actionName);
+    const readActionRequested = D1_ACCOUNTING_READ_ACTIONS.has(actionName) || ACC278_OPTIONAL_DRAFT_READ_ACTIONS.has(actionName);
     const standaloneCustomerAction = ACC269_OPTIONAL_NATIVE_WRITE_ACTIONS.has(actionName);
     const openingDraftWrite = ACC278_OPTIONAL_DRAFT_WRITE_ACTIONS.has(actionName);
     const openingDraftRead = actionName==='getEasyStoreOpeningDraftV1';
@@ -254,8 +255,9 @@
     if(writeActionRequested && !['OFF','CANARY','GENERAL'].includes(configuredWriteMode)) throw new Error('وضع كتابة D1 للحسابات غير صالح؛ تم منع الحركة.');
     if(openingDraftWrite && configuredWriteMode !== 'OFF')
       throw new Error('حفظ مسودات الأرصدة متاح فقط بينما الترحيل المالي العام مقفول.');
-    if(writeActionRequested && configuredWriteMode === 'OFF' && !openingDraftWrite)
-      throw new Error('كتابة D1 للحسابات غير مفعلة.');
+    if(writeActionRequested && configuredWriteMode === 'OFF'){
+      if(!openingDraftWrite)throw new Error('كتابة D1 للحسابات غير مفعلة.');
+    }
     if(writeActionRequested && !openingDraftWrite && configuredWriteMode === 'CANARY' && !configuredCanaryActions.has(actionName)) throw new Error('هذه الحركة خارج نطاق كاناري الحسابات المسموح.');
     const useD1DraftWrite = openingDraftWrite && configuredWriteMode==='OFF' && window.EASYSTORE_ACCOUNTING_D1_READONLY===true;
     const useD1Write = writeActionRequested && !openingDraftWrite && (configuredWriteMode === 'GENERAL' || (configuredWriteMode === 'CANARY' && configuredCanaryActions.has(actionName)));
