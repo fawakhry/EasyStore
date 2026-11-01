@@ -18,7 +18,7 @@ function scopedDataKey(user) {
   return 'EASYSTORE_CLEAN_V1880_DATA_'+name+'_'+(hash>>>0).toString(36);
 }
 
-function createApp(role) {
+function createApp(role,writeMode='OFF') {
   const screen = { innerHTML: '' };
   const app = {};
   Object.defineProperty(app, 'innerHTML', {
@@ -57,7 +57,7 @@ function createApp(role) {
     TREND_API_URL: 'https://fake-legacy.example.invalid/exec',
     EASYSTORE_ACCOUNTING_D1_URL: 'https://fake-d1.example.invalid/accounting',
     EASYSTORE_ACCOUNTING_D1_READONLY: true,
-    EASYSTORE_ACCOUNTING_D1_WRITE_MODE: 'OFF',
+    EASYSTORE_ACCOUNTING_D1_WRITE_MODE: writeMode,
     EASYSTORE_ACCOUNTING_D1_WRITES: false,
     AbortController,
     fetch: async (_url, options) => {
@@ -74,7 +74,9 @@ function createApp(role) {
 }
 
 (async () => {
-  const finalApp = createApp('final');
+  // A synthetic CANARY fixture retains the old authorized-role visual tests.
+  // No D1 financial write is performed; the real backend stays OFF.
+  const finalApp = createApp('final','CANARY');
   assert.match(finalApp.screen.innerHTML, /حسابات العملاء/);
   assert.match(finalApp.screen.innerHTML, /فتح الحساب/);
   assert.doesNotMatch(finalApp.screen.innerHTML, /customerAccountDrawer/);
@@ -87,10 +89,21 @@ function createApp(role) {
   finalApp.context.ES27.closeCustomerAccount();
   assert.doesNotMatch(finalApp.screen.innerHTML, /customerAccountDrawer/);
 
-  const adminApp = createApp('admin');
+  const adminApp = createApp('admin','CANARY');
   await adminApp.context.ES27.openCustomerAccount(encodeURIComponent('عميل اختبار'));
   assert.match(adminApp.screen.innerHTML, /value="opening_debt"/);
   assert.match(adminApp.screen.innerHTML, /تسوية بالزيادة/);
+  // New exact OFF behavior: show ledger but NEVER expose cash or debt buttons,
+  // including to full-role employees. Default public config remains OFF.
+  for(const role of ['admin','final']){
+    const readonly=createApp(role);
+    await readonly.context.ES27.openCustomerAccount(encodeURIComponent('عميل اختبار'));
+    assert.match(readonly.screen.innerHTML,/كشف حساب للقراءة فقط/);
+    assert.match(readonly.screen.innerHTML,/التحصيل والتسويات المالية مقفولة/);
+    assert.doesNotMatch(readonly.screen.innerHTML,/id="caSaveBtn"/);
+    assert.doesNotMatch(readonly.screen.innerHTML,/value="opening_debt"/);
+    assert.doesNotMatch(readonly.screen.innerHTML,/ES27.saveCustomerAccountMovement\(\)/);
+  }
   console.log('customer account V1915 UI tests passed');
 })().catch(error => {
   console.error(error);
