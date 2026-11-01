@@ -1277,6 +1277,23 @@
     }finally{ state.loading = false; }
   }
 
+  // ACC286: no optimistic customer-create success. A successful POST still
+  // requires matching exact finance-local D1 identity in a fresh directory GET.
+  // If readback fails, keep the original request ID for safe idempotent retry.
+  function acc286StandaloneCustomerReadbackMatches(saved,directory,name){
+    if(!saved||saved.success!==true ||
+       saved.version!=='EASYSTORE_STANDALONE_V1' ||
+       !/^ESC-[A-F0-9]{20}$/.test(String(saved.customerId||'')) ||
+       !directory||directory.success!==true ||
+       directory.identitySource!=='EASYSTORE_FINANCE_LOCAL' ||
+       directory.version!=='EASYSTORE_STANDALONE_V1' ||
+       !Array.isArray(directory.customers))return false;
+    return directory.customers.some(c=>
+      String(c.customerId||c.id||'')===String(saved.customerId) &&
+      String(c.name||c.customerName||'').trim()===String(name||'').trim()
+    );
+  }
+
   window.ES27 = {
     go(t){ if(!allowedScreens().includes(t)) return deny('هذه الشاشة غير متاحة لصلاحية المستخدم الحالي.'); state.active = t; shell(); if(t==='dailyClose'){this.loadAutomationPreview();if(!state.dailyReport)this.loadDailyReport();} },
     load,
@@ -1354,11 +1371,16 @@
         const result=await api('saveEasyStoreCustomer',p);
         if(!result||result.success===false)
           throw new Error((result&&result.message)||(result&&result.code)||'تعذر تسجيل العميل');
-        state.standaloneCustomerRequestId='';
+        // Do not clear the stable request ID until finance D1 confirms the
+        // precise identity. A timeout or stale/foreign list is AMBIGUOUS,
+        // not proof of a failed write; retry the SAME idempotency key.
         const list=await api('getEasyStoreCustomers',{limit:1000});
-        if(list&&list.success&&Array.isArray(list.customers))state.data.customers=list.customers;
-        saveLocal();shell();flash('تم تسجيل العميل في دليل الحسابات.');
-      }catch(e){flash('لم يتم تسجيل العميل: '+(e.message||e),true)}
+        if(!acc286StandaloneCustomerReadbackMatches(result,list,customerName))
+          throw new Error('لم يتم تأكيد هوية العميل من قاعدة D1. أعد المحاولة بنفس البيانات دون فتح طلب جديد.');
+        state.data.customers=list.customers;
+        state.standaloneCustomerRequestId='';
+        saveLocal();shell();flash('تم تسجيل العميل والتحقق من وجوده في قاعدة D1 الأصلية.');
+      }catch(e){flash('التسجيل غير مؤكد؛ احتفظ بنفس الطلب: '+(e.message||e),true)}
     },
 
     captureOpeningDraftHeader(){
