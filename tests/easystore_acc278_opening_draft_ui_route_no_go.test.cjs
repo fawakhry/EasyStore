@@ -12,6 +12,7 @@ function fixture(changes={},session=true){
     EASYSTORE_ACCOUNTING_D1_WRITE_MODE:'OFF',
     EASYSTORE_ACCOUNTING_D1_WRITE_CANARY_ACTIONS:[],
     EASYSTORE_OPENING_DRAFT_INTAKE_V1:false,
+    EASYSTORE_SUPPLIER_MASTER_INTAKE_V1:false,
     EASYSTORE_ACCOUNTING_D1_URL:'https://synthetic-d1.invalid/accounting',
     TREND_API_URL:'https://synthetic-old-script.invalid',
     MATBAGY_SECURE_API_PROXY_URL:'',...changes
@@ -58,6 +59,59 @@ test('ACC278 supplier master zero balance also routes to original D1 with financ
   assert.equal(h.calls[0].endpoint,h.win.EASYSTORE_ACCOUNTING_D1_URL);
   assert.equal(JSON.parse(h.calls[0].options.body).action,'saveEasyStoreSupplier');
 });
+test('ACC281 existing supplier-only feature defaults OFF and original D1 is fail-closed',async()=>{
+  assert.match(config,/EASYSTORE_SUPPLIER_MASTER_INTAKE_V1\s*=\s*false/);
+  const h=fixture();
+  await assert.rejects(h.api('saveEasyStoreSupplier',{
+    name:'FAKE VENDOR',opening:0,requestId:'ACC281-SUP-SYNTH-001'
+  }),/كتابة D1 للحسابات غير مفعلة/);
+  assert.equal(h.calls.length,0);
+});
+test('ACC281 supplier-only flag routes ONLY supplier zero master to original D1; drafts OFF',async()=>{
+  const h=fixture({EASYSTORE_SUPPLIER_MASTER_INTAKE_V1:true});
+  await h.api('saveEasyStoreSupplier',{
+    name:'FAKE VENDOR',opening:0,requestId:'ACC281-SUP-SYNTH-001'
+  });
+  assert.equal(h.calls.length,1);
+  assert.equal(h.calls[0].endpoint,h.win.EASYSTORE_ACCOUNTING_D1_URL);
+  assert.equal(JSON.parse(h.calls[0].options.body).action,'saveEasyStoreSupplier');
+  await assert.rejects(h.api(open,{}),/غير معتمد/);
+  await assert.rejects(h.api(read,{}),/غير معتمد/);
+  await assert.rejects(h.api('saveEasyStoreSaleV2',{
+    customerId:'FAKE',amount:100
+  }),/كتابة D1 للحسابات غير مفعلة/);
+  assert.equal(h.calls.length,1,'supplier flag cannot enable any other D1 writer');
+});
+test('ACC281 supplier-only flag cannot fallback to Apps Script or bypass expired SSO',async()=>{
+  const f=fixture({EASYSTORE_SUPPLIER_MASTER_INTAKE_V1:true,
+    EASYSTORE_ACCOUNTING_D1_READONLY:false});
+  await assert.rejects(f.api('saveEasyStoreSupplier',{opening:0}),/منع مسار السيرفر القديم/);
+  assert.equal(f.calls.length,0);
+  const expired=fixture({EASYSTORE_SUPPLIER_MASTER_INTAKE_V1:true},false);
+  await assert.rejects(expired.api('saveEasyStoreSupplier',{opening:0}),/انتهت الجلسة/);
+  assert.equal(expired.calls.length,0);
+});
+test('ACC281 original supplier form visible only in owner-authorized supplier-only mode',()=>{
+  const i=source.indexOf('  function screenSuppliers(){');
+  const j=source.indexOf('\n  function screenCustomers(){',i);
+  assert.ok(i>0&&j>i);
+  const body=source.slice(i,j);
+  const execute=(flag,isOwner=true)=>vm.runInNewContext(
+    '('+body.trim()+')',
+    {window:{EASYSTORE_SUPPLIER_MASTER_INTAKE_V1:flag,
+      EASYSTORE_ACCOUNTING_D1_READONLY:true,
+      EASYSTORE_ACCOUNTING_D1_WRITE_MODE:'OFF'},
+     isAdmin:()=>isOwner,state:{data:{suppliers:[]}},
+     table:()=>'',acc278OpeningDraftCard:()=>'',esc:String,money:String}
+  )();
+  assert.match(execute(false),/حفظ المورد — غير مفعل/);
+  assert.doesNotMatch(execute(false),/ES27\.saveSupplier\(\)/);
+  assert.match(execute(true),/ES27\.saveSupplier\(\)/);
+  assert.match(execute(true),/رصيد افتتاحي \(صفر فقط\)/);
+  assert.match(execute(true),/id="supOpening" type="number" value="0" disabled/);
+  assert.doesNotMatch(execute(true,false),/ES27\.saveSupplier\(\)/);
+});
+
 test('ACC278 read goes to D1 and never legacy',async()=>{
   const h=fixture({EASYSTORE_OPENING_DRAFT_INTAKE_V1:true});
   await h.api(read,{batchId:'FAKE-BATCH-1'});
