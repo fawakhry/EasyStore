@@ -238,7 +238,11 @@
     const standaloneCustomerAction = ACC269_OPTIONAL_NATIVE_WRITE_ACTIONS.has(actionName);
     const openingDraftWrite = ACC278_OPTIONAL_DRAFT_WRITE_ACTIONS.has(actionName);
     const openingDraftRead = actionName==='getEasyStoreOpeningDraftV1';
-    const draftSupplierMasterIntake = actionName==='saveEasyStoreSupplier' && window.EASYSTORE_OPENING_DRAFT_INTAKE_V1===true;
+    // ACC281: supplier-master-only intake is independently gated.
+    // Enabling this flag does not turn on supplier opening/instalment drafts.
+    const draftSupplierMasterIntake = actionName==='saveEasyStoreSupplier' &&
+      (window.EASYSTORE_SUPPLIER_MASTER_INTAKE_V1===true ||
+       window.EASYSTORE_OPENING_DRAFT_INTAKE_V1===true);
     if((openingDraftWrite||openingDraftRead) && window.EASYSTORE_OPENING_DRAFT_INTAKE_V1!==true)
       throw new Error('تسجيل مسودات الأرصدة الافتتاحية غير معتمد بعد.');
     if((openingDraftWrite||draftSupplierMasterIntake) && window.EASYSTORE_ACCOUNTING_D1_READONLY !== true)
@@ -624,7 +628,26 @@
   }
 
   function screenSuppliers(){
-    return `<div class="card"><h2>الموردين</h2><p class="hint">تسجيل المورد لا يرحّل مديونيات قديمة تلقائيًا. الأرصدة الافتتاحية والأقساط غير الصفرية تنتظر الجرد والاعتماد المالي النهائي؛ لا تستخدم هذه الشاشة لترحيل ديون تاريخية.</p><div class="grid four"><div class="field"><label>اسم المورد</label><input id="supName"></div><div class="field"><label>هاتف</label><input id="supPhone"></div><div class="field"><label>رصيد افتتاحي</label><input id="supOpening" type="number"></div><div class="field"><label>عنوان / ملاحظات</label><input id="supAddress"></div></div><button class="btn" onclick="ES27.saveSupplier()">حفظ / تحديث المورد</button></div>${table(state.data.suppliers,['المورد','الهاتف','رصيد افتتاحي','إجراء'],(s,i)=>[esc(s.name||s.supplier),esc(s.phone||''),money(s.opening||s.openingBalance),`<button class="btn small secondary" onclick="ES27.editSupplier(${i})">تعديل</button>`])}${acc278OpeningDraftCard()}`;
+    // ACC281 R2: supplier ZERO-master activation must not depend on opening
+    // liability/instalment drafts, and is OFF until original Stage gates clear.
+    const supplierOnlyOn=window.EASYSTORE_SUPPLIER_MASTER_INTAKE_V1===true &&
+      window.EASYSTORE_ACCOUNTING_D1_READONLY===true &&
+      String(window.EASYSTORE_ACCOUNTING_D1_WRITE_MODE||'OFF').toUpperCase()==='OFF' &&
+      isAdmin();
+    const intro='<div class="card"><h2>الموردين</h2>';
+    const form=supplierOnlyOn
+      ? `<p class="hint">تسجيل مورد برصيد صفر فقط في D1 الأصلية. المديونيات والأقساط القديمة لا تُرحّل من هذه الشاشة.</p>
+        <div class="grid four"><div class="field"><label>اسم المورد</label><input id="supName"></div>
+          <div class="field"><label>هاتف</label><input id="supPhone"></div>
+          <div class="field"><label>رصيد افتتاحي (صفر فقط)</label><input id="supOpening" type="number" value="0" disabled></div>
+          <div class="field"><label>عنوان / ملاحظات</label><input id="supAddress"></div></div>
+        <button class="btn" onclick="ES27.saveSupplier()">حفظ المورد في D1 والتحقق من قراءته</button>`
+      : '<p class="hint">قراءة الموردين فقط؛ تسجيل مورد جديد مقفول حتى اعتماد وتفعيل صلاحيات الموردين في قاعدة D1 الأصلية.</p><button class="btn" disabled aria-disabled="true">حفظ المورد — غير مفعل</button>';
+    return intro+form+'</div>'+
+      table(state.data.suppliers,['المورد','الهاتف','رصيد افتتاحي','إجراء'],
+        (s,i)=>[esc(s.name||s.supplier),esc(s.phone||''),money(s.opening||s.openingBalance),
+        supplierOnlyOn?`<button class="btn small secondary" onclick="ES27.editSupplier(${i})">تعديل</button>`:'—'])
+      +acc278OpeningDraftCard();
   }
 
   function screenCustomers(){
