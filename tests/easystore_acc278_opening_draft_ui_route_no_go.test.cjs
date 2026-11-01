@@ -210,3 +210,108 @@ test('ACC279 UI saves snapshot and requires exact D1 readback before success',()
 console.log('ACC279_EXACT_ORIGINAL_D1_DRAFT_ROW_READBACK=PASS');
 console.log('ACC279_FALSE_SAME_TOTALS_SUCCESS_BLOCKED=PASS');
 console.log('ACC279_NO_FINANCIAL_POSTING=PASS');
+
+
+// ACC286 exact finance-local customer readback and stable retry key.
+// Execute the ACTUAL original EasyStore action in an offline VM; never POST
+// to any live D1, legacy Apps Script, or production finance route.
+const acc286HelperStart=source.indexOf('  function acc286StandaloneCustomerReadbackMatches(');
+const acc286HelperEnd=source.indexOf('\n  window.ES27 = {',acc286HelperStart);
+const acc286ActionStart=source.indexOf('    async saveStandaloneCustomer(){');
+const acc286ActionEnd=source.indexOf('\n    captureOpeningDraftHeader(){',acc286ActionStart);
+assert.ok(acc286HelperStart>0&&acc286HelperEnd>acc286HelperStart);
+assert.ok(acc286ActionStart>acc286HelperEnd&&acc286ActionEnd>acc286ActionStart);
+const acc286OriginalHelper=source.slice(acc286HelperStart,acc286HelperEnd);
+const acc286OriginalMethod=source.slice(acc286ActionStart,acc286ActionEnd);
+function acc286Fixture(readback,opts={}){
+  const state={standaloneCustomerRequestId:'',data:{customers:[]}};
+  const events=[],requests=[],id='ESC-RETRY-ACC286-STABLE-KEY';
+  const customerId='ESC-'+'A'.repeat(20);
+  const inputs={esStandaloneCustomerName:'FAKE ACCOUNT CUSTOMER',
+    esStandaloneCustomerPhone:'',esStandaloneCustomerAddress:'',
+    esStandaloneCustomerNotes:''};
+  const getResult=()=>{
+    if(readback==='error')throw Error('SYNTHETIC_D1_READBACK_TIMEOUT');
+    if(readback==='foreign')return {success:true,
+      identitySource:'TRENDOS_SIGNED_INTERNAL',version:'A1_D1_READ_MODEL_V1',
+      customers:[{customerId,name:inputs.esStandaloneCustomerName}]};
+    if(readback==='missing')return {success:true,
+      identitySource:'EASYSTORE_FINANCE_LOCAL',version:'EASYSTORE_STANDALONE_V1',
+      customers:[{customerId:'ESC-'+'B'.repeat(20),name:inputs.esStandaloneCustomerName}]};
+    if(readback==='other-name')return {success:true,
+      identitySource:'EASYSTORE_FINANCE_LOCAL',version:'EASYSTORE_STANDALONE_V1',
+      customers:[{customerId,name:'FAKE DIFFERENT CUSTOMER'}]};
+    if(readback==='empty')return {success:true,
+      identitySource:'EASYSTORE_FINANCE_LOCAL',version:'EASYSTORE_STANDALONE_V1',
+      customers:[]};
+    return {success:true,
+      identitySource:'EASYSTORE_FINANCE_LOCAL',version:'EASYSTORE_STANDALONE_V1',
+      customers:[{customerId,name:inputs.esStandaloneCustomerName}]};
+  };
+  const ctx={
+    window:{EASYSTORE_STANDALONE_CUSTOMERS_V1:opts.enabled!==false},
+    state,canManageAccounting:()=>opts.manager!==false,
+    newAccountingRequestId:()=>id,val:k=>inputs[k]||'',
+    saveLocal:()=>events.push('cache'),shell:()=>events.push('shell'),
+    flash:(message,bad)=>events.push({message,bad:!!bad}),
+    deny:()=>events.push('denied'),
+    api:async(action,p)=>{
+      requests.push({action,requestId:p&&p.requestId});
+      if(action==='saveEasyStoreCustomer')
+        return {success:true,customerId,version:'EASYSTORE_STANDALONE_V1'};
+      if(action==='getEasyStoreCustomers')return getResult();
+      throw Error('Unexpected accounting action');
+    }
+  };
+  const instance=vm.runInNewContext(
+    acc286OriginalHelper+'\n({'+acc286OriginalMethod+'\n})',
+    ctx,{timeout:1500});
+  return {state,requests,events,id,instance};
+}
+test('ACC286 verified D1 exact customer identity alone permits success and resets retry key',async()=>{
+  const h=acc286Fixture('verified');
+  await h.instance.saveStandaloneCustomer();
+  assert.deepEqual(h.requests.map(x=>x.action),
+    ['saveEasyStoreCustomer','getEasyStoreCustomers']);
+  assert.equal(h.requests[0].requestId,h.id);
+  assert.equal(h.state.standaloneCustomerRequestId,'');
+  assert.equal(h.state.data.customers.length,1);
+  assert.ok(h.events.includes('cache'));
+  assert.ok(h.events.includes('shell'));
+  assert.equal(h.events.at(-1).bad,false);
+});
+test('ACC286 D1 GET timeout is ambiguous; repeat submit MUST keep same idempotency key',async()=>{
+  const h=acc286Fixture('error');
+  await h.instance.saveStandaloneCustomer();
+  await h.instance.saveStandaloneCustomer();
+  assert.equal(h.requests.filter(x=>x.action==='saveEasyStoreCustomer').length,2);
+  assert.equal(h.requests.filter(x=>x.action==='saveEasyStoreCustomer')[0].requestId,h.id);
+  assert.equal(h.requests.filter(x=>x.action==='saveEasyStoreCustomer')[1].requestId,h.id);
+  assert.equal(h.state.standaloneCustomerRequestId,h.id);
+  assert.deepEqual(h.state.data.customers,[]);
+  assert.equal(h.events.filter(x=>x==='cache'||x==='shell').length,0);
+  assert.equal(h.events.at(-1).bad,true);
+});
+test('ACC286 missing, forged source, mismatched id/name never give optimistic success',async()=>{
+  for(const response of ['missing','foreign','other-name','empty']){
+    const h=acc286Fixture(response);
+    await h.instance.saveStandaloneCustomer();
+    assert.equal(h.state.standaloneCustomerRequestId,h.id,response);
+    assert.deepEqual(h.state.data.customers,[],response);
+    assert.equal(h.events.filter(x=>x==='cache'||x==='shell').length,0,response);
+    assert.equal(h.events.at(-1).bad,true,response);
+  }
+});
+test('ACC286 OFF customer feature forbids any D1 request',async()=>{
+  for(const opts of [{enabled:false},{manager:false}]){
+    const h=acc286Fixture('verified',opts);
+    await h.instance.saveStandaloneCustomer();
+    assert.equal(h.requests.length,0);
+    assert.equal(h.state.standaloneCustomerRequestId,'');
+  }
+  assert.match(config,/EASYSTORE_STANDALONE_CUSTOMERS_V1\s*=\s*false/);
+  assert.match(config,/EASYSTORE_ACCOUNTING_D1_WRITE_MODE\s*=\s*'OFF'/);
+  assert.match(config,/EASYSTORE_ACCOUNTING_D1_WRITES\s*=\s*false/);
+});
+console.log('ACC286_CUSTOMER_D1_READBACK_IDEMPOTENT_RETRY_TESTED=PASS');
+console.log('ACC286_PRODUCTION_FINANCE_WRITES_STILL_OFF=PASS');
