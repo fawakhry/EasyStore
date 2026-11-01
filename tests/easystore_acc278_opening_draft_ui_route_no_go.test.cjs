@@ -324,7 +324,7 @@ test('ACC286 finance OFF renders operational viewer state and guards invoice sav
   assert.ok(start>0&&end>start,'original EasyStore finance OFF helper not found');
   function mode(v){
     const ctx={window:{EASYSTORE_ACCOUNTING_D1_WRITE_MODE:v}};
-    vm.runInNewContext(source.slice(start,end)+'\nglobalThis.__financeOff=financePostOff;',ctx);
+    vm.runInNewContext(source.slice(start,end)+'\nglobalThis.__financeOff=financePostOff();',ctx);
     return ctx.__financeOff;
   }
   assert.equal(mode('OFF'),true);
