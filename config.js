@@ -9,7 +9,9 @@ window.EASYSTORE_ACCOUNTING_D1_WRITE_MODE = 'OFF'; // OFF | CANARY | GENERAL
 window.EASYSTORE_ACCOUNTING_D1_WRITE_CANARY_ACTIONS = []; // exactly one action during first bounded canary
 // ACC269 source-only customer master / direct cash pilot; NEVER enable in published UI before independently qualified finance Stage.
 window.EASYSTORE_STANDALONE_CUSTOMERS_V1 = false;
-// ACC278: draft-only finance intake is separately gated; NEVER real ledger posting.
+// ACC281 R2 supplier-only no-money intake: OFF until original finance Stage and owner release.
+window.EASYSTORE_SUPPLIER_MASTER_INTAKE_V1 = false;
+// ACC278: separate historic opening and instalment DRAFT storage; OFF and NO_LEDGER.
 window.EASYSTORE_OPENING_DRAFT_INTAKE_V1 = false;
 window.EASYSTORE_ACCOUNTING_D1_URL = "https://trendos-d1-api.trendmall-contact.workers.dev/v1/employee/accounting";
 window.EASYSTORE_TRENDOS_SSO_HANDOFF_V1 = true;
