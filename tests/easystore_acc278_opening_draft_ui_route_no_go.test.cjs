@@ -315,3 +315,30 @@ test('ACC286 OFF customer feature forbids any D1 request',async()=>{
 });
 console.log('ACC286_CUSTOMER_D1_READBACK_IDEMPOTENT_RETRY_TESTED=PASS');
 console.log('ACC286_PRODUCTION_FINANCE_WRITES_STILL_OFF=PASS');
+
+
+// ACC286 Day-1 viewer mode cannot advertise or trigger live financial posts.
+test('ACC286 finance OFF renders operational viewer state and guards invoice save',()=>{
+  const start=source.indexOf('  function financePostOff(){');
+  const end=source.indexOf('  function screenSales(){',start);
+  assert.ok(start>0&&end>start,'original EasyStore finance OFF helper not found');
+  function mode(v){
+    const ctx={window:{EASYSTORE_ACCOUNTING_D1_WRITE_MODE:v}};
+    vm.runInNewContext(source.slice(start,end)+'\nglobalThis.__financeOff=financePostOff;',ctx);
+    return ctx.__financeOff;
+  }
+  assert.equal(mode('OFF'),true);
+  assert.equal(mode('off'),true);
+  assert.equal(mode(undefined),true);
+  assert.equal(mode('CANARY'),false);
+  assert.equal(mode('GENERAL'),false);
+  assert.match(source,/const movementForm=financeOff\?/);
+  assert.match(source,/كشف حساب للقراءة فقط؛ التحصيل والتسويات المالية مقفولة/);
+  assert.match(source,/التحصيل والتسويات مقفولة حتى اعتماد التشغيل المالي/);
+  assert.match(source,/financeOff\?'disabled aria-disabled="true"':''/);
+  assert.match(source,/async saveSale\(\)\{\s*if\(financePostOff\(\)\)return flash/);
+  assert.match(source,/const standaloneCustomerCard=window\.EASYSTORE_STANDALONE_CUSTOMERS_V1===true && isAdmin\(\) && !financePostOff\(\)/);
+  assert.match(config,/EASYSTORE_ACCOUNTING_D1_WRITE_MODE\s*=\s*'OFF'/);
+  assert.match(config,/EASYSTORE_ACCOUNTING_D1_WRITES\s*=\s*false/);
+});
+console.log('ACC286_READONLY_OPERATOR_UI_DOES_NOT_ADVERTISE_FINANCE_POSTS=PASS');
