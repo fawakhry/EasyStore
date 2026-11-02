@@ -12,7 +12,9 @@ assert.ok(action.includes("api('saveEasyStoreSupplier',{...s,requestId:state.sup
   'missing stable supplier request ID');
 assert.ok(action.includes("api('getEasyStoreSuppliers',{limit:1000})"),
   'missing server D1 post-write readback');
-assert.ok(action.includes('v.partyId||v.id'),'post-write server proof must have exact party ID');
+assert.ok(action.includes("String(v.partyId||'')===String(reply.partyId)"),'ACC289 post-write readback must match returned supplier party ID exactly');
+assert.ok(action.includes("verified.version!=='A1_D1_READ_MODEL_V1'"),'exact D1 supplier directory version is required');
+assert.ok(action.includes('Number(v.currentBalance??v.balance)===0'),'supplier master must remain zero balance');
 const write=action.indexOf("api('saveEasyStoreSupplier'");
 const read=action.indexOf("api('getEasyStoreSuppliers'");
 const cache=action.indexOf('saveLocal()');
