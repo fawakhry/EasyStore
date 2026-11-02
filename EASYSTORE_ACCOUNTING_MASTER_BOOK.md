@@ -8038,3 +8038,100 @@ At owner's request to continue accounting today, implementation on **same origin
 **Next operation and hard security constraints:** Before anything writes the Stage, owner must establish secure custody/provenance of the **original native fingerprint signer value** (Cloudflare doesn't display secrets' existing values), verify it is the exact authorized Stage issuer value rather than guessing or generating another value or copying production staff. A Cloudflare Workers secret change is a Worker version deployment: do NOT run `wrangler secret put`, Cloudflare dashboard **Deploy**, or any automatic GitHub credentials action without a specific private owner-approved Stage Worker change and rollback. The independent off-host AES256 protected 22-table restore G3 remains owner-deferred (no second Ubuntu), real native operational Stage employee enrollment/session verification and individual finance-full grant still OPEN, real supplier-zero Stage POST G4 has NOT RUN, public supplier save remains disabled by ACC281 R0, real accounting money OFF. No new project, database, migrations or branch and no repeat of ACC107 one-shot production vendor canary.
 
 **Same original operator record:** [TrendOS `OPERATE_STAGE.md` ACC293 at `d1be2029`](https://github.com/fawakhry/TrendOs/commit/d1be2029d992559dd72ea32d1886b46ada2336a1). This is a provider owner screenshot-based **STOP checkpoint**, not G1 clearance or go-live. Resume at **secret provenance and source Stage native auth**, NOT repeating ACC282 backup or ACC107/ACC281 supplier tests. `ACC293_OWNER_READONLY_INVENTORY=EXECUTED_STOP`; `STAGE_D1_IDENTITIES=PASS`; `EDGE_SESSION_SECRET_SOURCE=NAME_MISSING`; `NATIVE_SESSION_REAL_G1=NOT_QUALIFIED`; `STAGE_AUTH_CURRENT_ROWS=NOT_READ`; `G3_SECOND_HOST=OWNER_DEFERRED`; `FINANCE_RELEASE=NO_GO`; `FINANCE_WRITES=OFF`.
+
+
+### ACC294 — autonomous continuation, current-gate correction and native-auth diagnostic gap (2026-11-02 Cairo)
+
+Owner requested independent work toward completing the original accounting program
+and full book review, without routine implementation questions. This does not
+supply missing credentials, verified balances or independent restore evidence.
+
+The canonical file was obtained in full locally (8,040 lines before this change);
+its full heading inventory, original mission/baseline, relevant source and recent
+ACC268–293 records were inspected. **Full end-to-end prose reading is not yet
+complete**; do not claim that fetching/indexing the file alone completes that
+request. No new project, branch, DB, migration, synthetic production canary or
+public write switch was created.
+
+Concrete changes: replaced obsolete top-level A2.13/epoch-39 next-gate summary
+with the actual ACC293 missing-signer STOP and separate G1–G5 statuses. Historical
+entries are preserved. Original TrendOS PR #303 helper now offers explicit
+`--inventory-despite-missing-signer`: checks exact existing Stage configs/UUIDs,
+reads only existing allowlisted auth mode/count aggregates even if a secret NAME
+is absent, and STILL exits STOP/nonzero with G1 NOT_QUALIFIED. Default behavior
+still stops before SQL. No usernames, passwords, tokens or fingerprints read;
+no secret values generated/copied/printed. Boolean counts are rejected.
+
+Validation: original stage_bootstrap_safety.test.py local 36/36 PASS, including
+new missing-signer zero/nonzero count inventory and metadata-write rejection.
+This is LOCAL source verification only, not 20/20 GitHub CI and not provider proof.
+Current workspace has repository access, not the owner's authenticated Ubuntu
+Wrangler session. No remote D1 inventory, mutation, deployment, real supplier POST,
+financial posting, grant or employee provisioning performed.
+
+Next: finish full canonical prose review; use authenticated aggregate inventory to
+ground Stage auth state; establish genuine signer/issuer custody before changes.
+G2 signed nonzero openings remain unreconciled, G3 independently restored second
+host remains deferred. Source-only work does not close real program acceptance.
+FINANCE_WRITES=OFF; FINANCE_RELEASE=NO_GO; ACTUAL_ACCOUNTING_COMPLETION=NOT_DONE.
+
+### ACC294 current gate addendum (supersedes historical summary)
+
+Updated 2026-11-02 Cairo from ACC293–294. Earlier baseline/entries are historical.
+
+```ini
+CURRENT_STATUS=ACC293_NATIVE_STAGE_SIGNER_NAME_MISSING
+STAGE_D1_IDENTITIES=PASS_OWNER_ACC293
+EDGE_SESSION_SECRET_SOURCE=NAME_MISSING_OWNER_ACC293
+STAGE_AUTH_CURRENT_ROWS=NOT_READ
+G1_REAL_NATIVE_SESSION=NOT_QUALIFIED
+G2_NONZERO_OPENINGS=UNRECONCILED_PRIVATE
+G3_SECOND_HOST_RESTORE=OWNER_DEFERRED
+G4_REAL_SUPPLIER_STAGE_POST=NOT_RUN
+G5_PRODUCTION_RELEASE=NOT_QUALIFIED
+PUBLISHED_SUPPLIER_SAVE=DISABLED
+FINANCE_WRITES=OFF
+FINANCE_RELEASE=NO_GO
+NEXT=AUTHENTICATED_STAGE_AGGREGATE_INVENTORY_AND_SIGNER_PROVENANCE
+```
+
+ACC294 adds an optional aggregate-only diagnostic, not a release gate clearance.
+No fresh provider observations were made by the current workspace. Reuse ACC283–285
+backup evidence and ACC281 supplier read acceptance; do not replay closed production
+canaries or reapply migrations. Source tests cannot qualify real staff or money.
+
+
+### ACC295 — append-only correction and owner merge/closure review (2026-11-02 Cairo)
+
+The ACC294 top-level historical summary edit violated append-only preservation.
+Restored the entire exact ACC293 book prefix; current-gate correction is now
+append-only. Repair replaces only our own ACC294 remote commit using an exact
+head lease, never concurrent owner work. No financial/runtime mutation.
+Owner explicitly authorizes merging qualified accounting work and closing
+obsolete drafts; not all green source checks establish real finance GO.
+
+
+**ACC295 actual GitHub outcomes:** EasyStore #76 merged with merge commit
+`68b249098a4cb5739a29503a9fef6f14b32bcf8f` into its existing non-main
+`candidate/easystore-zero-google-audit-20261004`; exact source checks all success.
+This is candidate integration only, not public R0 replacement or activation.
+TrendOS #306 closed as an already executed dated diagnostic (ACC270), superseded
+for current auth diagnosis by existing ACC292/294 helper. No code force-merged.
+TrendOS #134 retained: offline-native-accounting, fake-d1-stock and role-matrix
+checks fail; original legacy waste stock route remains in current #303 source,
+so the safety change is NOT proven redundant and must not be discarded.
+TrendOS #303 retained pending investigation of external Cloudflare Workers Build
+failure (20 Actions source checks green). EasyStore #75 append-only history
+repair prepared; exact new-head CI must be checked before merging.
+Unrelated platform/UI/server PRs left alone. Real G1–G5 finance gates unchanged.
+
+**Fastest supported release sequence:** finish original accounting-only source
+integration; establish real Stage native auth/signer and named finance grants;
+finish already prepared independent encrypted restore; reconcile private nonzero
+openings and business instalments with preparer/reviewer; prove actual Stage
+supplier/customer/cash sale/receipt fresh D1 readback and identical-request replay;
+then narrowly deploy pinned original UI+Worker with rollback. Begin cash-only,
+with TrendOS automatic order linkage and AI automation deferred per ACC274.
+Missing nonzero-opening final ledger and Stage CASH entrypoint qualification
+are still real work, not removed by merging drafts. No reliable completion time
+can be asserted without credentials/provider access and signed source facts.
