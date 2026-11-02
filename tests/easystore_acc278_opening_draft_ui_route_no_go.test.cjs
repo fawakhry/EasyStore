@@ -342,3 +342,51 @@ test('ACC286 finance OFF renders operational viewer state and guards invoice sav
   assert.match(config,/EASYSTORE_ACCOUNTING_D1_WRITES\s*=\s*false/);
 });
 console.log('ACC286_READONLY_OPERATOR_UI_DOES_NOT_ADVERTISE_FINANCE_POSTS=PASS');
+
+
+// ACC288 R0/R2 integration ONLY: reuse published ACC281 supplier directory
+// contract with previously qualified ACC281 R2 supplier-only feature OFF.
+test('ACC288 R0/R2 integration preserves verified supplier GET and independent OFF default',()=>{
+  const start=source.indexOf('  function screenSuppliers(){');
+  const end=source.indexOf('\n  function screenCustomers(){',start);
+  assert.ok(start>=0&&end>start,'original supplier screen must remain present');
+  function screen(status,flag,admin=true){
+    let tableCalls=0;
+    const ctx={
+      window:{EASYSTORE_SUPPLIER_MASTER_INTAKE_V1:flag,
+        EASYSTORE_ACCOUNTING_D1_READONLY:true,
+        EASYSTORE_ACCOUNTING_D1_WRITE_MODE:'OFF'},
+      state:{supplierDirectory:{status,rows:status==='verified'?
+        [{partyId:'SUP-VERIFIED-ONLY',name:'FAKE D1 SUPPLIER',phone:'000'}]:[]},
+        data:{suppliers:[{partyId:'SUP-STALE-CACHE',name:'FAKE STALE'}]}},
+      isAdmin:()=>admin,esc:x=>String(x||''),money:x=>String(x||0),
+      table:(rows,headers,render)=>{
+        tableCalls++;
+        return rows.length?rows.map((v,i)=>render(v,i).join('~')).join('|'):'<div>لا توجد بيانات حتى الآن</div>';
+      },acc278OpeningDraftCard:()=>''
+    };
+    const f=vm.runInNewContext('('+source.slice(start,end)+')',ctx);
+    return {html:f(),tableCalls};
+  }
+  const failed=screen('failed',false);
+  assert.match(failed.html,/تعذر التحقق من قراءة الموردين من D1/);
+  assert.doesNotMatch(failed.html,/SUP-STALE-CACHE|SUP-VERIFIED-ONLY/);
+  assert.equal(failed.tableCalls,0);
+  const emptyLike=screen('unchecked',false);
+  assert.doesNotMatch(emptyLike.html,/لا توجد بيانات حتى الآن/);
+  const verified=screen('verified',false);
+  assert.match(verified.html,/تم التحقق من قراءة دليل الموردين من D1/);
+  assert.match(verified.html,/SUP-VERIFIED-ONLY/);
+  assert.doesNotMatch(verified.html,/SUP-STALE-CACHE/);
+  assert.match(verified.html,/حفظ المورد — غير مفعل/);
+  assert.doesNotMatch(verified.html,/onclick="ES27\.saveSupplier\(\)"/);
+  const manager=screen('verified',true,true);
+  assert.match(manager.html,/onclick="ES27\.saveSupplier\(\)"/);
+  assert.match(manager.html,/value="0" disabled/);
+  const employee=screen('verified',true,false);
+  assert.match(employee.html,/حفظ المورد — غير مفعل/);
+  assert.doesNotMatch(employee.html,/onclick="ES27\.saveSupplier\(\)"/);
+  assert.match(config,/EASYSTORE_SUPPLIER_MASTER_INTAKE_V1\s*=\s*false/);
+  assert.match(config,/EASYSTORE_OPENING_DRAFT_INTAKE_V1\s*=\s*false/);
+});
+console.log('ACC288_R0_R2_SUPPLIER_GET_COMPATIBILITY_NEW_GAP=PASS');
