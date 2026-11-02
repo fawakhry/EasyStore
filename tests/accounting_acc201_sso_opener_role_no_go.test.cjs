@@ -107,7 +107,9 @@ test('09 stale timestamp denied', () => {
   assert.equal(h.user().token,'');
 });
 test('10 far future timestamp denied', () => {
-  const h=harness();h.send({data:{issuedAt:Date.now()+30001}});
+  // Keep the invalid timestamp safely outside the 30-second skew window;
+  // +30001ms is timing-flaky when the test process advances between calls.
+  const h=harness();h.send({data:{issuedAt:Date.now()+60001}});
   assert.equal(h.user().token,'');
 });
 test('11 missing fake token denied', () => {
