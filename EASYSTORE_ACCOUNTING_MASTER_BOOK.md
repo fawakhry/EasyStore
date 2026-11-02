@@ -8158,3 +8158,40 @@ nonproduction candidate is not final money release.
 Full prose reading of the 1.3MB canonical book is still incomplete; whole-file
 retrieval, structural entry inventory and targeted policy/result review are
 not claimed to satisfy owner's request for full end-to-end reading.
+
+
+### ACC296 — investigate current CI failures and repair stale waste integration expectation (2026-11-02 Cairo)
+
+Read/reused ACC276 known backlog causes, original owner waste approval policy
+and actual PR134 logs; current source history had already identified legacy
+ACC189 waste-success fixtures as stale, not authorization to post stock.
+Current GitHub PR75 at 2d4a289 still fails joined-accounting-offline in actual
+ACC220 public health GET: missing writeAuthorityMode (undefined, required OFF).
+No default/waiver added. PR303 still has 20 successful source Actions and a
+failed external Workers Builds check for trendos-tasks-v3-t1-preview-20260914.
+The external check supplies a build link, not the build log/root cause; do not
+claim a diagnosed Cloudflare deploy bug without the private build evidence.
+
+All THREE failing Actions in original PR134 (offline-native-accounting,
+fake-d1-stock, role-matrix-no-go) shared one assertion: ACC189 expected immediate
+successful waste stock posting after the handler intentionally denies it until
+verified owner approval exists. Updated ONLY the existing ACC189 integration
+test on the SAME original PR134 branch, commit
+26c0d7ccd1c905572d637a301e61d33c734a7e01. Assert status400, exact denial code,
+stockPosted/ledgerPosted false and exact complete accounting-table snapshot
+invariance, including command/audit/cash rows. Retried same requestId with
+client approved/ownerVerified/admin spoof still denies without mutation.
+Adjusted subsequent overdraw and race quantities for six remaining sheets
+instead of historical five (waste no longer deducted). Existing positive
+composite sale/cost, race one-success, cash/debt checks remain.
+
+LOCAL tests: changed SQLite integration + 6 handler denial source tests +
+10 owner preview tests PASS (17 Node test results). Eight other original
+finance integration files PASS (ACC170/174/175/187/188/190/192/193), and original
+ACC188 no-bot-push Python check PASS. Node v24.22.1 locally; hosted Node22 exact
+commit CI must be independently checked. No runtime handler behavior changed
+by this test fix; source PR134 remains unmerged/unpublished pending checks.
+No production D1 read/write, canary, secret generation, staff grant or deploy.
+Cloudflare plugin discovery found no matching integration, so private external
+build evidence is not available through a connected Cloudflare tool here.
+FINANCE_WRITES=OFF; FINANCE_RELEASE=NO_GO.
