@@ -390,3 +390,85 @@ test('ACC288 R0/R2 integration preserves verified supplier GET and independent O
   assert.match(config,/EASYSTORE_OPENING_DRAFT_INTAKE_V1\s*=\s*false/);
 });
 console.log('ACC288_R0_R2_SUPPLIER_GET_COMPATIBILITY_NEW_GAP=PASS');
+
+
+// ACC289 exact supplier response identity: only previously UNTESTED success
+// proof gap; historical A2.10 production supplier canary is NOT re-executed.
+function acc289SupplierFixture(failure,featureOn=true){
+  const name='FAKE SUPPLIER ACC289',id='SUP-FAKE-289',requestId='SUP-ACC289-STABLE-REQUEST';
+  const inputs={supOpening:'0',supName:name,supPhone:'000',supAddress:'FAKE'};
+  const calls=[],messages=[],state={
+    supplierRequestId:'',supplierRequestFingerprint:'',
+    supplierDirectory:{status:'unchecked',rows:[]},
+    data:{suppliers:[]}
+  };
+  const goodWrite={success:true,partyId:id,supplierId:id,name,
+    supplierName:name,openingBalance:0,active:true,version:'A2_D1_ACCOUNTING_V1'};
+  const goodRead={success:true,version:'A1_D1_READ_MODEL_V1',
+    suppliers:[{partyId:id,name,active:true,currentBalance:0}]};
+  let write=(Object.assign({},goodWrite)),read=(Object.assign({},goodRead));
+  if(failure==='wrong-write-id')write.partyId='SUP-DIFFERENT';
+  if(failure==='wrong-write-version')write.version='FAKE-VERSION';
+  if(failure==='wrong-directory-version')read.version='FAKE-VERSION';
+  if(failure==='wrong-read-id')read.suppliers=[{partyId:'SUP-OTHER',name,active:true,currentBalance:0}];
+  if(failure==='wrong-read-name')read.suppliers=[{partyId:id,name:'OTHER NAME',active:true,currentBalance:0}];
+  if(failure==='wrong-read-balance')read.suppliers=[{partyId:id,name,active:true,currentBalance:90}];
+  if(failure==='inactive')read.suppliers=[{partyId:id,name,active:false,currentBalance:0}];
+  const context={
+    window:{EASYSTORE_SUPPLIER_MASTER_INTAKE_V1:featureOn,
+      EASYSTORE_ACCOUNTING_D1_READONLY:true,EASYSTORE_ACCOUNTING_D1_WRITE_MODE:'OFF'},
+    state,canManageAccounting:()=>true,deny:()=>messages.push('denied'),
+    flash:(msg,bad)=>messages.push({msg,bad:!!bad}),
+    nkey:x=>String(x||'').trim().toLowerCase(),val:k=>inputs[k]||'',
+    newAccountingRequestId:()=>requestId,
+    saveLocal:()=>messages.push('cache'),shell:()=>messages.push('shell'),
+    api:async(action,data)=>{
+      calls.push({action,requestId:data&&data.requestId});
+      if(action==='saveEasyStoreSupplier')return write;
+      if(action==='getEasyStoreSuppliers'){
+        if(failure==='read-timeout')throw Error('FAKE_READ_TIMEOUT');
+        return read;
+      }
+      throw Error('Unknown supplier test action');
+    }
+  };
+  const start=source.indexOf('    async saveSupplier(){');
+  const end=source.indexOf('\n    editSupplier(i)',start);
+  assert.ok(start>=0&&end>start);
+  const instance=vm.runInNewContext('({'+source.slice(start,end)+'\n})',context);
+  return {instance,state,calls,messages,requestId};
+}
+test('ACC289 exact supplier save and D1 readback alone can clear idempotent retry',async()=>{
+  const h=acc289SupplierFixture('ok');
+  await h.instance.saveSupplier();
+  assert.deepEqual(h.calls.map(x=>x.action),['saveEasyStoreSupplier','getEasyStoreSuppliers']);
+  assert.equal(h.calls[0].requestId,h.requestId);
+  assert.equal(h.state.supplierRequestId,'');
+  assert.equal(h.state.supplierDirectory.status,'verified');
+  assert.equal(h.state.data.suppliers.length,1);
+  assert.equal(h.messages.at(-1).bad,false);
+});
+test('ACC289 wrong supplier identity/version/balance and timeout cannot declare success',async()=>{
+  for(const failure of ['wrong-write-id','wrong-write-version',
+    'wrong-directory-version','wrong-read-id','wrong-read-name',
+    'wrong-read-balance','inactive','read-timeout']){
+    const h=acc289SupplierFixture(failure);
+    await h.instance.saveSupplier();
+    await h.instance.saveSupplier();
+    assert.equal(h.state.supplierRequestId,h.requestId,failure);
+    assert.equal(h.calls.filter(x=>x.action==='saveEasyStoreSupplier').length,2,failure);
+    assert.equal(h.calls[0].requestId,h.calls.filter(x=>x.action==='saveEasyStoreSupplier')[1].requestId,failure);
+    assert.equal(h.state.supplierDirectory.status,'unchecked',failure);
+    assert.equal(h.messages.some(x=>x==='cache'||x==='shell'),false,failure);
+    assert.equal(h.messages.at(-1).bad,true,failure);
+  }
+});
+test('ACC289 optional supplier OFF blocks even direct action before network',async()=>{
+  const h=acc289SupplierFixture('ok',false);
+  await h.instance.saveSupplier();
+  assert.equal(h.calls.length,0);
+  assert.equal(h.state.supplierRequestId,'');
+  assert.equal(h.messages.at(-1).bad,true);
+  assert.match(config,/EASYSTORE_SUPPLIER_MASTER_INTAKE_V1\s*=\s*false/);
+});
+console.log('ACC289_SUPPLIER_IDENTITY_RETRY_ZERO_ONLY_OFFLINE=PASS');
