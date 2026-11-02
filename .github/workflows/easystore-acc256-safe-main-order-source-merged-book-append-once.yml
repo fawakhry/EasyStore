@@ -1,0 +1,79 @@
+name: ACC256 append verified main-order source merge to canonical Accounting Book once
+on:
+  push:
+    branches: ['docs/acc214-finance-read-scope-no-go-20261020']
+    paths: ['.github/workflows/easystore-acc256-safe-main-order-source-merged-book-append-once.yml']
+permissions:
+  contents: write
+concurrency:
+  group: easystore-original-accounting-book-append-preserve
+  cancel-in-progress: false
+jobs:
+  append-canonical-book-with-blob-cas:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Exact blob SHA check and append-only original accounting book; no provider access
+        shell: bash
+        env:
+          BOOK_GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import os,pathlib,json,base64,urllib.request,urllib.error,subprocess
+          repo=os.environ['GITHUB_REPOSITORY'];branch=os.environ['GITHUB_REF_NAME']
+          if repo!='fawakhry/EasyStore' or branch!='docs/acc214-finance-read-scope-no-go-20261020':
+           raise SystemExit('ACC256_WRONG_ACCOUNTING_REPOSITORY_BRANCH')
+          path='EASYSTORE_ACCOUNTING_MASTER_BOOK.md'
+          original=pathlib.Path(path).read_bytes()
+          marker=b'### ACC256-PLATFORM-ORDER-SOURCE-CANDIDATE-SAFE-MERGE-CROSSBOOK-20261025'
+          if marker in original:
+           print('ACC256_ACCOUNTING_BOOK_ALREADY_CONTAINS_RECORD_NO_WRITE')
+           raise SystemExit(0)
+          if (len(original)<1000000 or original.count(b'\n')<7000 or
+              not original.startswith(b'# EasyStore Accounting Master Book\n') or
+              b'ACC255-REAL-TRENDOS-MAIN-ORDER-D1-CATALOG-CROSSBOOK-20261025' not in original):
+           raise SystemExit('ACC256_CANONICAL_ACCOUNTING_BOOK_INCOMPLETE_NO_WRITE')
+          note="""### ACC256-PLATFORM-ORDER-SOURCE-CANDIDATE-SAFE-MERGE-CROSSBOOK-20261025 — original TrendOS T12 source selected, NO LIVE FINANCE CONNECTION
+
+          **User task:** Make TrendOS native platform orders the authoritative accounting integration source and merge only finished green source components. No copy of original orders into EasyStore/Stage and no mixing with legacy sheet mirror.
+
+          **Real Cloudflare source proof:** Existing `trendos-d1-api` platform Worker uses `trendos-main` Cloudflare D1 UUID `5c4b92bf-e043-4f6e-bd6d-d514a92cd825`. Actual [ACC255 catalog-only provider run #40214770444](https://github.com/fawakhry/TrendOs/actions/runs/40214770444) succeeded: native `0005` order-create tables 6/6, `0006` runtime 2/2, native customer table present, legacy `orders`/`sheet_rows` present. Original `0035` at-create customer capture tables **0/2 ABSENT**. Only table NAMES were queried, no real customers/orders, database mutations, finance data, or secrets. Separate `trendos-staging` is not this authoritative operational source.
+
+          **Actual integration progress:** New narrow [TrendOS PR #261](https://github.com/fawakhry/TrendOs/pull/261) adds only another UNDEPLOYED/PRIVATE/OFF Wrangler candidate pointing to existing `trendos-main`, plus isolated synthetic regressions on earlier ACC252/ACC253 HMAC/source reader. Corrected a fake D1 prepared-statement adapter (not production code) at [22ba8c94](https://github.com/fawakhry/TrendOs/commit/22ba8c945ed4a93b89b5809b03054c472efe376f); [GitHub CI run #40216054883](https://github.com/fawakhry/TrendOs/actions/runs/40216054883) **20/20 PASS**. Exact pinned 3-file diff was **squash-MERGED into isolated NO_GO integration branch only** at [f0ea54a1](https://github.com/fawakhry/TrendOs/commit/f0ea54a1bd53ad463f6d3f28ba5546f2a7c55c85), not main. Original operations/source details in [TrendOS Master Book ACC256 fab5254e](https://github.com/fawakhry/TrendOs/commit/fab5254e4fa73f60372c462e1043e929c96a32b1).
+
+          **Accounting gate:** Absence of `0035` means strict original ACC228–253 reader CANNOT prove customer-at-create ownership; do not silently treat same order number, external-customer-id, name or phone as an authorized invoice relationship. `order_created` remains `prepare_context_only`; genuine source-issued signed Wael/Gaber departmental approvals, private HMAC key custody, actual Worker service binding and real EasyStore signed inbox/replay/ACK remain unqualified. This config has no route, secret, deployment or live production reads. Independent EasyStore accountant's D1/Stage/invoices/session controls are not touched.
+
+          `ACC256_TRENDOS_MAIN_D1=PROVIDER_CATALOG_VERIFIED`, `ACC256_SOURCE_CONFIG=SAFE_MERGED_OFF_ONLY`, `ACC256_TESTS=20_PASS`, `ACC256_0035_AT_CREATE=NOT_PRESENT`, `ACC256_LIVE_FINANCE_CONNECTOR=NOT_ENABLED`, `FINANCE_WRITES=OFF`, `FINANCE_RELEASE=NO_GO`.
+          """.strip().encode('utf-8')+b'\n'
+          local_sha=subprocess.check_output(['git','hash-object','--',path],text=True).strip()
+          api='https://api.github.com/repos/'+repo+'/contents/'+path
+          headers={'Authorization':'Bearer '+os.environ['BOOK_GITHUB_TOKEN'],'Accept':'application/vnd.github+json',
+                   'X-GitHub-Api-Version':'2022-11-28','User-Agent':'ACC256-accounting-book-preserve'}
+          with urllib.request.urlopen(urllib.request.Request(api+'?ref='+branch,headers=headers),timeout=40) as response:
+           remote=json.load(response)
+          if remote.get('sha')!=local_sha:
+           raise SystemExit('ACC256_ORIGINAL_ACCOUNTING_BOOK_CONCURRENT_CHANGE_NO_WRITE')
+          output=original.rstrip(b'\n')+b'\n\n'+note
+          if not output.startswith(original.rstrip(b'\n')) or len(output)<=len(original):
+           raise SystemExit('ACC256_BOOK_APPEND_ONLY_NOT_PROVEN')
+          payload=json.dumps({'message':'docs(accounting-book): ACC256 20/20 safe TrendOS main source candidate merged offline NO_GO',
+             'content':base64.b64encode(output).decode('ascii'),
+             'sha':local_sha,'branch':branch},separators=(',',':')).encode('utf-8')
+          try:
+           with urllib.request.urlopen(urllib.request.Request(api,data=payload,headers={
+             **headers,'Content-Type':'application/json'},method='PUT'),timeout=60) as response:
+            saved=json.load(response)
+          except urllib.error.HTTPError as e:
+           raise SystemExit('ACC256_BOOK_EXACT_BLOB_CAS_REJECTED_HTTP_'+str(e.code))
+          if not saved.get('commit',{}).get('sha'):
+           raise SystemExit('ACC256_BOOK_COMMIT_UNCONFIRMED')
+          print('ACC256_ACCOUNTING_BOOK_APPEND=SUCCESS')
+          print('ACC256_BOOK_PREVIOUS_BYTES='+str(len(original)))
+          print('ACC256_BOOK_NEW_BYTES='+str(len(output)))
+          print('ACC256_FINANCE_PROVIDER_DATA_WRITES=ZERO')
+          PY

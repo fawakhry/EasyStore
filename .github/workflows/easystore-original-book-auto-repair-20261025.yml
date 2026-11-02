@@ -1,0 +1,95 @@
+name: EasyStore restore ORIGINAL master book after accidental concurrent truncation
+# Stage/docs ONLY. Does not touch account DB, Workers or production.
+# Automated append-only repair because the prior check-only CI cannot prevent
+# simultaneous agents from landing another document-only truncation.
+on:
+  push:
+    branches: ['docs/acc214-finance-read-scope-no-go-20261020']
+    paths:
+      - 'EASYSTORE_ACCOUNTING_MASTER_BOOK.md'
+      - '.github/workflows/easystore-original-book-auto-repair-20261025.yml'
+permissions:
+  contents: write
+concurrency:
+  group: easystore-original-accounting-book-append-preserve
+  cancel-in-progress: false
+jobs:
+  original-master-book-safe-restoration:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Preserve canonical original historical book and any new entry, only with exact blob lease
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          EXPECTED_REPO: fawakhry/EasyStore
+          EXPECTED_BRANCH: docs/acc214-finance-read-scope-no-go-20261020
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import os,subprocess,pathlib,json,base64,urllib.request,urllib.error
+          repo=os.environ['GITHUB_REPOSITORY']
+          branch=os.environ['GITHUB_REF_NAME']
+          if repo!=os.environ['EXPECTED_REPO'] or branch!=os.environ['EXPECTED_BRANCH']:
+              raise SystemExit('CANONICAL_BOOK_JOB_SCOPE_INVALID')
+          name='EASYSTORE_ACCOUNTING_MASTER_BOOK.md'
+          original=pathlib.Path(name).read_bytes()
+          marker=b'# EasyStore Accounting Master Book\n'
+          anchors=[b'ACC228-DB-31',b'ACC249-OPS-STAGE-0009',
+                   b'ACC250-EASYSTORE-NATIVE-LIVE-D1-HEALTH']
+          def whole(data):
+              return len(data)>=1000000 and data.startswith(marker) and all(x in data for x in anchors)
+          history=subprocess.check_output([
+              'git','log','-n','35','--format=%H','HEAD','--',name],text=True).splitlines()
+          prior=None
+          for rev in history:
+              val=subprocess.run(['git','show',rev+':'+name],capture_output=True)
+              if val.returncode==0 and whole(val.stdout):
+                  prior=val.stdout.rstrip(b'\n')+b'\n';break
+          if prior is None:raise SystemExit('NO_VERIFIABLE_HISTORICAL_CANONICAL_BOOK_NO_AUTO_REPAIR')
+          if whole(original):
+              if not original.startswith(prior.rstrip(b'\n')):
+                  raise SystemExit('LARGE_BOOK_NON_APPEND_EDIT_MANUAL_REVIEW_REQUIRED')
+              print('ORIGINAL_MASTER_BOOK_INTACT_NO_WRITE')
+              raise SystemExit(0)
+          fragment=original.strip()
+          if not fragment.startswith(b'### ACC') or len(fragment)>100000 or len(fragment)<50:
+              raise SystemExit('FRAGMENT_SHAPE_NOT_SAFE_FOR_RECOVERY')
+          if fragment in prior:
+              repaired=prior
+              print('TRUNCATION_CONTAINED_DUPLICATE_ENTRY_RESTORING_HISTORY')
+          else:
+              repaired=prior.rstrip(b'\n')+b'\n\n'+fragment+b'\n'
+              print('RESTORING_COMPLETE_HISTORY_AND_PRESERVING_NEW_ENTRY')
+          if not whole(repaired) or repaired.count(b'\n')<7000:
+              raise SystemExit('RECONSTRUCTED_BOOK_INVALID')
+          auth={'Authorization':'Bearer '+os.environ['GITHUB_TOKEN'],
+                'Accept':'application/vnd.github+json',
+                'X-GitHub-Api-Version':'2022-11-28',
+                'User-Agent':'EasyStore-original-book-only-self-repair'}
+          base='https://api.github.com/repos/'+repo+'/contents/'+name
+          req=urllib.request.Request(base+'?ref='+branch,headers=auth)
+          with urllib.request.urlopen(req,timeout=25) as r:
+              current=json.load(r)
+          gitsha=subprocess.check_output(['git','hash-object',name],text=True).strip()
+          if current.get('sha')!=gitsha:
+              raise SystemExit('NEWER_REMOTE_BOOK_CHANGE_DETECTED_NO_OVERWRITE')
+          data=json.dumps({'message':'fix(book): auto-restore full original master preserving latest ACC fragment',
+                           'content':base64.b64encode(repaired).decode('ascii'),
+                           'sha':current['sha'],'branch':branch},separators=(',',':')).encode('utf-8')
+          req=urllib.request.Request(base,method='PUT',headers={
+              **auth,'Content-Type':'application/json'},data=data)
+          try:
+              with urllib.request.urlopen(req,timeout=60) as resp:
+                  out=json.load(resp)
+          except urllib.error.HTTPError as exc:
+              raise SystemExit('BOOK_CAS_REPAIR_API_STOP_HTTP_'+str(exc.code))
+          if not out.get('commit',{}).get('sha'):raise SystemExit('CANONICAL_BOOK_REPAIR_NOT_CONFIRMED')
+          print('ORIGINAL_CANONICAL_BOOK_REPAIRED_WITH_BLOB_LEASE=YES')
+          print('ORIGINAL_CANONICAL_BOOK_REPAIRED_LINES='+str(repaired.count(b'\n')))
+          print('NO_D1_OR_PRODUCTION_MUTATIONS=YES')
+          PY

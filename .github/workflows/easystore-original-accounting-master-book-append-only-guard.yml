@@ -1,0 +1,59 @@
+name: EasyStore ORIGINAL Accounting Master Book Integrity and Append-Only Guard
+# Prevent repeat of the 2026-10-25 concurrent accidental ~7,000-line truncation.
+# READ-ONLY source check: no provider secrets, deploy, money or D1 writes.
+on:
+  push:
+    branches: ['docs/acc214-finance-read-scope-no-go-20261020']
+  pull_request:
+    paths:
+      - 'EASYSTORE_ACCOUNTING_MASTER_BOOK.md'
+      - '.github/workflows/easystore-original-accounting-master-book-append-only-guard.yml'
+permissions:
+  contents: read
+jobs:
+  canonical-book-not-truncated:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+          persist-credentials: false
+      - name: Verify original canonical book stays whole and existing history is retained
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import pathlib,subprocess,sys
+          p=pathlib.Path('EASYSTORE_ACCOUNTING_MASTER_BOOK.md')
+          if not p.is_file():
+              raise SystemExit('ORIGINAL_ACCOUNTING_MASTER_BOOK_MISSING')
+          data=p.read_bytes()
+          n=data.count(b'\n')+int(bool(data) and data[-1]!=10)
+          required=[
+              b'# EasyStore Accounting Master Book',
+              b'ACC228-DB-31',
+              b'ACC228-DB-33',
+              b'ACC228-DB-34',
+              b'ACC249-OPS-STAGE-0009',
+              b'ACC250-TRENDOS-ACCOUNTING-FIRST-USE-CROSSBOOK-20261025',
+              b'ACC250-EASYSTORE-NATIVE-LIVE-D1-HEALTH'
+          ]
+          if len(data)<1000000 or n<7000 or not data.startswith(required[0]+b'\n'):
+              raise SystemExit('ORIGINAL_BOOK_TRUNCATED_OR_REPLACED')
+          if any(marker not in data for marker in required):
+              raise SystemExit('ORIGINAL_BOOK_MISSING_PINNED_HISTORICAL_ENTRY')
+          # If parent contained the full book, any update must be append-only.
+          # A prior truncated parent may occur in the recovery commit itself,
+          # but future writers must never use a partial read to overwrite.
+          before=subprocess.run(['git','show','HEAD^:EASYSTORE_ACCOUNTING_MASTER_BOOK.md'],
+              capture_output=True,check=False)
+          if before.returncode==0 and len(before.stdout)>=1000000:
+              prior=before.stdout.rstrip(b'\n')
+              if not data.startswith(prior):
+                  raise SystemExit('ORIGINAL_BOOK_EXISTING_HISTORY_WAS_REWRITTEN_OR_DELETED')
+          print('CANONICAL_EASYSTORE_FINANCE_BOOK_INTACT=PASS')
+          print('ORIGINAL_BOOK_LINES='+str(n))
+          print('ORIGINAL_BOOK_BYTES='+str(len(data)))
+          print('APPEND_ONLY_HISTORICAL_PRESERVATION=PASS')
+          PY
