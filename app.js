@@ -188,6 +188,8 @@
     active: initialScreen(),
     accountingScope: initialAccountingScope(),
     loading: false,
+    // ACC288: preserve published ACC281 R0 D1 supplier directory truth.
+    supplierDirectory: {status:'unchecked',rows:[]},
     data: {
       materials: [], templates: [], suppliers: [], purchases: [], dailyPurchases: [], sales: [], customers: [],
       stockMoves: [], wasteLines: [], deptLines: [], finalInvoices: [], custodyEntries: [], custodySummary: [], departmentDayCloses: [], unclassifiedRows: [], summary: {}
@@ -628,8 +630,19 @@
   }
 
   function screenSuppliers(){
-    // ACC281 R2: supplier ZERO-master activation must not depend on opening
-    // liability/instalment drafts, and is OFF until original Stage gates clear.
+    // ACC288 R0 + R2: only a verified fresh original-finance D1 GET may
+    // populate this table. Local/cache and getAccounting fallback are NEVER
+    // evidence of an empty or populated live supplier directory.
+    const directory=state.supplierDirectory||{status:'unchecked',rows:[]};
+    const verified=directory.status==='verified'&&Array.isArray(directory.rows);
+    const readMessage=verified
+      ? 'تم التحقق من قراءة دليل الموردين من D1. عدد الموردين: '+directory.rows.length
+      : directory.status==='loading'||directory.status==='unchecked'
+        ? 'جارٍ التحقق من دليل الموردين عبر قاعدة D1 الأصلية.'
+        : 'تعذر التحقق من قراءة الموردين من D1. القائمة غير مؤكدة؛ راجع تسجيل الدخول ثم اضغط تحديث البيانات.';
+    const readStatus=`<div class="card" role="status" aria-live="polite"><strong>${esc(readMessage)}</strong></div>`;
+    // R2 supplier-only registration remains independently OFF by default,
+    // visible only for the authorized full-role employee. No historic debt.
     const supplierOnlyOn=window.EASYSTORE_SUPPLIER_MASTER_INTAKE_V1===true &&
       window.EASYSTORE_ACCOUNTING_D1_READONLY===true &&
       String(window.EASYSTORE_ACCOUNTING_D1_WRITE_MODE||'OFF').toUpperCase()==='OFF' &&
@@ -643,11 +656,17 @@
           <div class="field"><label>عنوان / ملاحظات</label><input id="supAddress"></div></div>
         <button class="btn" onclick="ES27.saveSupplier()">حفظ المورد في D1 والتحقق من قراءته</button>`
       : '<p class="hint">قراءة الموردين فقط؛ تسجيل مورد جديد مقفول حتى اعتماد وتفعيل صلاحيات الموردين في قاعدة D1 الأصلية.</p><button class="btn" disabled aria-disabled="true">حفظ المورد — غير مفعل</button>';
-    return intro+form+'</div>'+
-      table(state.data.suppliers,['المورد','الهاتف','رصيد افتتاحي','إجراء'],
-        (s,i)=>[esc(s.name||s.supplier),esc(s.phone||''),money(s.opening||s.openingBalance),
-        supplierOnlyOn?`<button class="btn small secondary" onclick="ES27.editSupplier(${i})">تعديل</button>`:'—'])
-      +acc278OpeningDraftCard();
+    const verifiedList=verified
+      ? table(directory.rows,['معرف المورد','اسم المورد','الهاتف','رصيد افتتاحي','إجراء'],
+          (row,i)=>[
+            esc(row.partyId||row.id||row.supplierId||'—'),
+            esc(row.name||row.supplierName||row.supplier||'—'),
+            esc(row.phone||''),
+            money(row.opening||row.openingBalance),
+            supplierOnlyOn?`<button class="btn small secondary" onclick="ES27.editSupplier(${i})">تعديل</button>`:'—'
+          ])
+      : '<div class="card">لا يمكن عرض موردين على أنهم بيانات مؤكدة قبل نجاح قراءة D1.</div>';
+    return intro+form+'</div>'+readStatus+verifiedList+acc278OpeningDraftCard();
   }
 
   function screenCustomers(){
@@ -1247,6 +1266,7 @@
   async function load(silent){
     if(state.loading) return;
     state.loading = true;
+    state.supplierDirectory={status:'loading',rows:[]};
     if(!silent) msg('جاري تحميل البيانات...');
     try{
       const r = await api('getAccounting',{requestedRole:isAdmin()?'admin':isFinal()?'final':isLaser()?'laser':isPrint()?'print':'employee',requestedDepartment:userDept()});
@@ -1259,7 +1279,13 @@
         isAdmin()?api('previewAccountingAutomationV1921',{workDate:dailyPurchaseTodayKey()}).catch(()=>({})):Promise.resolve({})
       ]);
       if(extras[0]&&extras[0].success)customerRows=extras[0].customers||[];
-      if(extras[1]&&extras[1].success)supplierRows=extras[1].suppliers||extras[1].rows||[];
+      // ACC288: no successful-empty illusion on bad/unavailable D1 GET.
+      if(extras[1]&&extras[1].success===true&&Array.isArray(extras[1].suppliers)){
+        supplierRows=extras[1].suppliers;
+        state.supplierDirectory={status:'verified',rows:supplierRows};
+      }else{
+        state.supplierDirectory={status:'failed',rows:[]};
+      }
       if(extras[2]&&extras[2].success)state.automationPreview=extras[2].preview||null;
       mergeData(normalizeIncomingData({
         materials: r.materials || r.rawMaterials || [],
@@ -1281,6 +1307,7 @@
       }));
       saveLocal(); state.lastLoadedAt=Date.now(); state.formDirty=false; render(); if(state.active==='sales' && (qs.get('pullLines') || qs.get('autoLoadCustomer') || qs.get('customer'))){ setTimeout(()=>{ try{ ES27.loadSaleCustomerFromInput(true); }catch(e){ try{ ES27.pullDeptCandidates(); }catch(x){} } },160); } msg('تم التحديث من الشيتات: ' + now());
     }catch(e){
+      state.supplierDirectory={status:'failed',rows:[]};
       mergeData(); render(); msg('تنبيه: يعمل بنسخة محلية مؤقتة - ' + e.message, true);
     }finally{ state.loading = false; }
   }
@@ -1513,12 +1540,13 @@
         const match=verified.suppliers.find(v=>nkey(v.name||v.supplierName)===nkey(s.name)&&!!(v.partyId||v.id));
         if(!match) throw new Error('لم يظهر المورد في قاعدة الحسابات بعد الحفظ؛ احتفظ بمعرف الطلب ولا تكرر إدخاله.');
         state.data.suppliers=verified.suppliers;
+        state.supplierDirectory={status:'verified',rows:verified.suppliers};
         state.supplierRequestId='';state.supplierRequestFingerprint='';
         saveLocal();shell();
         flash('تم حفظ المورد والتأكد من ظهوره بمعرّفه في قاعدة الحسابات الأصلية.');
       }catch(e){flash('تعذر تأكيد الحفظ النهائي: '+(e.message||e),true);}
     },
-    editSupplier(i){ const s=state.data.suppliers[i]; if(!s) return; set('supName',s.name||s.supplier); set('supPhone',s.phone); set('supOpening',s.opening||s.openingBalance); set('supAddress',s.address); },
+    editSupplier(i){ const d=state.supplierDirectory; const s=d&&d.status==='verified'&&Array.isArray(d.rows)?d.rows[i]:null; if(!s) return; set('supName',s.name||s.supplier); set('supPhone',s.phone); set('supOpening',s.opening||s.openingBalance); set('supAddress',s.address); },
     filterCustomers(){ const q=nkey(val('custSearch')); const rows=(state.data.customers||[]).filter(c=>nkey([c.name,c.customerName,c.phone,c.mobile].join(' ')).includes(q)); const box=$('custTable'); if(box) box.innerHTML=customersTable(rows); },
     resetCustomerAccountRequest(){ state.customerAccountRequestId=''; },
     closeCustomerAccount(){ state.customerAccountSelected=''; state.customerAccount=null; state.customerAccountRequestId=''; render(); },
