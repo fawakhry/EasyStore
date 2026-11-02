@@ -188,13 +188,15 @@
     active: initialScreen(),
     accountingScope: initialAccountingScope(),
     loading: false,
+    // ACC288: preserve published ACC281 R0 D1 supplier directory truth.
+    supplierDirectory: {status:'unchecked',rows:[]},
     data: {
       materials: [], templates: [], suppliers: [], purchases: [], dailyPurchases: [], sales: [], customers: [],
       stockMoves: [], wasteLines: [], deptLines: [], finalInvoices: [], custodyEntries: [], custodySummary: [], departmentDayCloses: [], unclassifiedRows: [], summary: {}
     },
     recipeComps: [], salePulledLines: [], saleSelectedCustomer: null, saleCustomerContext: null, customerSearchTimer: null, customerSearchSeq: 0, customerDropdownLocked: false,
     laserQuote: null, saleRequestId: '', finalRequestId: '', purchaseRequestId: '', dailyPurchaseRequestId: '',
-    customerAccount: null, customerAccountSelected: '', customerAccountRequestId: '', dailyReport: null, dailyReportDate: '', dailyReportDepartment: 'ليزر',
+    customerAccount: null, customerAccountSelected: '', customerAccountRequestId: '', standaloneCustomerRequestId:'', supplierRequestId:'', supplierRequestFingerprint:'', openingIntake:{header:{batchId:'OPEN-2026-11-01',cutoverDate:'2026-11-01',sourceEvidenceRef:''},suppliers:[],installments:[],requestId:'',verified:null}, dailyReport: null, dailyReportDate: '', dailyReportDepartment: 'ليزر',
     automationPreview: null, lastLoadedAt: 0, formDirty: false
   };
 
@@ -212,6 +214,11 @@
   }
 
   const D1_ACCOUNTING_READ_ACTIONS = new Set(['getAccounting','getDeptInvoiceDraftV1887','getPartyAccountV1858','getCustomerAccountV1915','getEasyStoreCustomers','searchCustomers','getEasyStoreSuppliers','easyStoreSystemHealth','calculateAccountingLaserQuoteV1913','getDailyDepartmentReportV1920','previewAccountingAutomationV1921']);
+  // Preserve the original 21-action inventory pinned to the existing native Worker.
+  // Standalone customer creation is opt-in and independently checked by the server.
+  const ACC269_OPTIONAL_NATIVE_WRITE_ACTIONS = new Set(['saveEasyStoreCustomer']);
+  const ACC278_OPTIONAL_DRAFT_WRITE_ACTIONS = new Set(['saveEasyStoreOpeningDraftV1']);
+  const ACC278_OPTIONAL_DRAFT_READ_ACTIONS = new Set(['getEasyStoreOpeningDraftV1']);
   const D1_ACCOUNTING_WRITE_ACTIONS = new Set([
     'saveAccountingMaterial','saveAccountingTemplate','archiveAccountingTemplate','recalcAccountingMaterialsCascade',
     'saveAccountingDeptLine','approveAccountingDeptInvoice','saveAccountingFinalInvoice','reopenAccountingFinalInvoice',
@@ -229,8 +236,23 @@
   async function api(action, data){
     const actionName=String(action||'');
     if(RETIRED_ACCOUNTING_ACTIONS.has(actionName)) throw new Error('تم إيقاف أداة الترحيل القديمة بعد بدء الحسابات من قاعدة نظيفة.');
-    const readActionRequested = D1_ACCOUNTING_READ_ACTIONS.has(actionName);
-    const writeActionRequested = D1_ACCOUNTING_WRITE_ACTIONS.has(actionName);
+    const readActionRequested = D1_ACCOUNTING_READ_ACTIONS.has(actionName) || ACC278_OPTIONAL_DRAFT_READ_ACTIONS.has(actionName);
+    const standaloneCustomerAction = ACC269_OPTIONAL_NATIVE_WRITE_ACTIONS.has(actionName);
+    const openingDraftWrite = ACC278_OPTIONAL_DRAFT_WRITE_ACTIONS.has(actionName);
+    const openingDraftRead = actionName==='getEasyStoreOpeningDraftV1';
+    // ACC281: supplier-master-only intake is independently gated.
+    // Enabling this flag does not turn on supplier opening/instalment drafts.
+    const draftSupplierMasterIntake = actionName==='saveEasyStoreSupplier' &&
+      (window.EASYSTORE_SUPPLIER_MASTER_INTAKE_V1===true ||
+       window.EASYSTORE_OPENING_DRAFT_INTAKE_V1===true);
+    if((openingDraftWrite||openingDraftRead) && window.EASYSTORE_OPENING_DRAFT_INTAKE_V1!==true)
+      throw new Error('تسجيل مسودات الأرصدة الافتتاحية غير معتمد بعد.');
+    if((openingDraftWrite||draftSupplierMasterIntake) && window.EASYSTORE_ACCOUNTING_D1_READONLY !== true)
+      throw new Error('نقل مسودة الجرد إلى D1 غير متاح؛ تم منع مسار السيرفر القديم.');
+    // A disabled optional D1 action must fail closed here, never fall back to Apps Script.
+    if(standaloneCustomerAction && window.EASYSTORE_STANDALONE_CUSTOMERS_V1 !== true)
+      throw new Error('تسجيل عميل EasyStore المستقل غير مفعّل.');
+    const writeActionRequested = D1_ACCOUNTING_WRITE_ACTIONS.has(actionName) || standaloneCustomerAction || openingDraftWrite;
     // Only explicitly inventoried accounting actions may leave this client.
     if(!readActionRequested && !writeActionRequested) throw new Error('عملية الحسابات غير معروفة؛ تم منع الطلب دون استخدام السيرفر القديم.');
     // Read-only flag is not permission to route accounting data to the legacy API.
@@ -240,10 +262,15 @@
     const configuredWriteMode = String(window.EASYSTORE_ACCOUNTING_D1_WRITE_MODE || 'OFF').trim().toUpperCase();
     const configuredCanaryActions = new Set((Array.isArray(window.EASYSTORE_ACCOUNTING_D1_WRITE_CANARY_ACTIONS) ? window.EASYSTORE_ACCOUNTING_D1_WRITE_CANARY_ACTIONS : []).map(String));
     if(writeActionRequested && !['OFF','CANARY','GENERAL'].includes(configuredWriteMode)) throw new Error('وضع كتابة D1 للحسابات غير صالح؛ تم منع الحركة.');
-    if(writeActionRequested && configuredWriteMode === 'OFF') throw new Error('كتابة D1 للحسابات غير مفعلة.');
-    if(writeActionRequested && configuredWriteMode === 'CANARY' && !configuredCanaryActions.has(actionName)) throw new Error('هذه الحركة خارج نطاق كاناري الحسابات المسموح.');
-    const useD1Write = writeActionRequested && (configuredWriteMode === 'GENERAL' || (configuredWriteMode === 'CANARY' && configuredCanaryActions.has(actionName)));
-    const useD1Accounting = useD1Read || useD1Write;
+    if(openingDraftWrite && configuredWriteMode !== 'OFF')
+      throw new Error('حفظ مسودات الأرصدة متاح فقط بينما الترحيل المالي العام مقفول.');
+    if(writeActionRequested && configuredWriteMode === 'OFF'){
+      if(!openingDraftWrite&&!draftSupplierMasterIntake)throw new Error('كتابة D1 للحسابات غير مفعلة.');
+    }
+    if(writeActionRequested && !openingDraftWrite && configuredWriteMode === 'CANARY' && !configuredCanaryActions.has(actionName)) throw new Error('هذه الحركة خارج نطاق كاناري الحسابات المسموح.');
+    const useD1DraftWrite = (openingDraftWrite||draftSupplierMasterIntake) && configuredWriteMode==='OFF' && window.EASYSTORE_ACCOUNTING_D1_READONLY===true;
+    const useD1Write = writeActionRequested && !openingDraftWrite && (configuredWriteMode === 'GENERAL' || (configuredWriteMode === 'CANARY' && configuredCanaryActions.has(actionName)));
+    const useD1Accounting = useD1Read || useD1Write || useD1DraftWrite;
     const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),90000);
     try{
       if(useD1Accounting){
@@ -507,13 +534,147 @@
     return `<div class="card"><div class="toolbar"><h2>${esc(accountingScopeTitle('لوحة الحسابات'))}</h2><input class="searchInput" placeholder="بحث سريع" oninput="ES27.quickSearch(this.value)"></div><div class="grid four"><div class="kpi"><b>${money(sales)}</b><span>${salesLabel}</span></div><div class="kpi"><b>${money(actualCost)}</b><span>تكلفة الشغل الفعلية</span></div><div class="kpi"><b>${money(sales-actualCost-waste)}</b><span>الربح الفعلي</span></div><div class="kpi"><b>${lows.length}</b><span>خامات تحت الحد</span></div></div><div class="hint">مشتريات الفترة: ${money(purchases)} — للمتابعة فقط ولا تُخصم مرة ثانية من الربح.</div><div class="quickbar"><button class="btn" onclick="ES27.go('items')">الأصناف</button><button class="btn" onclick="ES27.go('purchase')">فاتورة شراء</button><button class="btn" onclick="ES27.go('sales')">فاتورة مبيعات</button><button class="btn" onclick="ES27.go('dailyClose')">مركز متابعة اليوم</button><button class="btn secondary" onclick="ES27.load(true)">تحديث الآن</button></div></div>${isAdmin()?automationCenterHtml():''}${lows.length?'<div class="card"><h3>تنبيهات النواقص</h3>'+table(lows,['الخامة','الرصيد','حد النقص','القسم'],r=>[esc(materialName(r)),esc(matStock(r)),esc(matMin(r)),esc(matDept(r))])+'</div>':''}`;
   }
 
+
+  // ACC278: source-only optional opening DRAFT UI in original EasyStore.
+  // No monetary ledger posting and no local-cache-as-authority.
+  function acc278ToCents(raw){
+    const s=String(raw==null?'':raw).trim();
+    if(!/^\d{1,12}(?:\.\d{1,2})?$/.test(s))throw new Error('اكتب المبلغ بالجنيه والقرش مثل 1250.50 بدون فواصل آلاف.');
+    const parts=s.split('.');
+    const cents=Number(parts[0])*100+Number((parts[1]||'').padEnd(2,'0'));
+    if(!Number.isSafeInteger(cents))throw new Error('المبلغ أكبر من الحد الآمن.');
+    return cents;
+  }
+  // ACC279: A matching grand total is NOT proof of matching creditor identities,
+  // installment contracts or source evidence. Compare every original D1 row.
+  function acc279OpeningDraftReadbackMatches(expected,actual){
+    if(!expected||!actual||actual.success!==true||actual.status!=='DRAFT'||
+      actual.posted!==false||actual.postingAllowed!==false||
+      actual.financeRelease!=='NO_GO'||actual.batchId!==expected.batchId||
+      actual.cutoverDate!==expected.cutoverDate||actual.currency!==expected.currency||
+      actual.sourceEvidenceRef!==expected.sourceEvidenceRef)return false;
+    const sameRows=(planned,stored,key,fields)=>{
+      if(!Array.isArray(planned)||!Array.isArray(stored)||planned.length!==stored.length)return false;
+      const index=new Map(),seen=new Set();
+      for(const row of planned){
+        if(!row||typeof row[key]!=='string'||!row[key]||index.has(row[key]))return false;
+        index.set(row[key],row);
+      }
+      for(const row of stored){
+        if(!row||typeof row[key]!=='string'||seen.has(row[key])||!index.has(row[key]))return false;
+        seen.add(row[key]);
+        for(const field of fields)if(row[field]!==index.get(row[key])[field])return false;
+      }
+      return true;
+    };
+    if(!sameRows(expected.suppliers,actual.suppliers,'supplierId',
+      ['supplierId','balanceCents','evidenceRef'])||
+      !sameRows(expected.installments,actual.installments,'contractId',
+      ['contractId','creditorRef','supplierId','liabilityTreatment',
+        'contractTotalCents','paidToCutoverCents','remainingCents',
+        'installmentCents','frequency','nextDueDate','evidenceRef']))return false;
+    const supplierCents=expected.suppliers.reduce((n,r)=>n+r.balanceCents,0);
+    const separateCents=expected.installments.reduce((n,r)=>n+
+      (r.liabilityTreatment==='SEPARATE_CREDITOR'?r.remainingCents:0),0);
+    const includedCents=expected.installments.reduce((n,r)=>n+
+      (r.liabilityTreatment==='INCLUDED_IN_SUPPLIER_OPENING'?r.remainingCents:0),0);
+    const total=supplierCents+separateCents;
+    return [supplierCents,separateCents,includedCents,total].every(Number.isSafeInteger)&&
+      actual.supplierTotalCents===supplierCents&&
+      actual.separateInstallmentTotalCents===separateCents&&
+      actual.includedInSupplierCents===includedCents&&
+      actual.totalLiabilityCents===total;
+  }
+  function acc278OpeningDraftCard(){
+    if(window.EASYSTORE_OPENING_DRAFT_INTAKE_V1!==true || !isAdmin())return '';
+    const d=state.openingIntake,h=d.header;
+    const vendors=(state.data.suppliers||[]).filter(s=>s.partyId||s.id);
+    const options=vendors.map(s=>`<option value="${esc(s.partyId||s.id)}">${esc(s.name||s.supplierName||s.partyId||s.id)}</option>`).join('');
+    const vendorRows=d.suppliers.map((s,i)=>`<tr><td>${esc(s.supplierId)}</td><td>${money(s.balanceCents/100)}</td><td>${esc(s.evidenceRef)}</td><td><button class="btn small secondary" onclick="ES27.removeOpeningSupplier(${i})">حذف</button></td></tr>`).join('');
+    const installmentRows=d.installments.map((s,i)=>`<tr><td>${esc(s.contractId)}</td><td>${esc(s.creditorRef)}</td><td>${money(s.remainingCents/100)}</td><td>${esc(s.nextDueDate)}</td><td><button class="btn small secondary" onclick="ES27.removeOpeningInstallment(${i})">حذف</button></td></tr>`).join('');
+    const result=d.verified?`<p class="hint">تم التأكد من مسودة D1 رقم ${esc(d.verified.batchId)} — ${money(d.verified.totalLiabilityCents/100)} ج — الحالة: DRAFT، غير مُرحّلة للخزنة أو كشف المورد.</p>`:'';
+    return `<div class="card" id="acc278OpeningDraftPanel">
+      <h2>تجهيز أرصدة الموردين والأقساط — مسودة الحسابات الأصلية</h2>
+      <p class="hint">تسجيل تمهيدي داخل D1 المالية الأصلية بعد اعتماد التفعيل فقط. لا يُضيف مديونية فعلية ولا حركة خزنة. كل مسودة مرتبطة بمراجع المستندات ولا تُعدّل بعد الحفظ؛ المراجعة والترحيل يتطلبان موافقة منفصلة.</p>
+      <div class="grid four">
+        <div class="field"><label>رقم دفعة الجرد</label><input id="openBatchId" maxlength="180" value="${esc(h.batchId)}"></div>
+        <div class="field"><label>تاريخ الرصيد</label><input id="openCutoverDate" type="date" value="${esc(h.cutoverDate)}"></div>
+        <div class="field"><label>مرجع مستند الجرد</label><input id="openSourceRef" maxlength="180" value="${esc(h.sourceEvidenceRef)}"></div>
+      </div>
+      <h3>رصيد مورد موجود في دليل الحسابات</h3>
+      <div class="grid four">
+        <div class="field"><label>المورد بمعرفه</label><select id="openSupplierId"><option value="">اختر المورد</option>${options}</select></div>
+        <div class="field"><label>المتبقي بالجنيه</label><input id="openSupplierBalance" inputmode="decimal" placeholder="مثال 1250.50"></div>
+        <div class="field"><label>مرجع كشف المورد</label><input id="openSupplierEvidence" maxlength="180" placeholder="مثال DOC-001"></div>
+      </div>
+      <button class="btn secondary" onclick="ES27.addOpeningSupplier()">إضافة رصيد مورد للمسودة</button>
+      <div class="muted">المورد لازم يكون مسجلًا بمعرّف رسمي في EasyStore قبل إضافة رصيده. ممنوع الاعتماد على تشابه الأسماء.</div>
+      <table class="table"><thead><tr><th>معرّف المورد</th><th>الرصيد</th><th>المستند</th><th></th></tr></thead><tbody>${vendorRows}</tbody></table>
+      <h3>الأقساط المستحقة</h3>
+      <div class="grid four">
+        <div class="field"><label>رقم العقد</label><input id="openContractId" maxlength="180"></div>
+        <div class="field"><label>طبيعة القسط</label><select id="openTreatment"><option value="INCLUDED_IN_SUPPLIER_OPENING">داخل مديونية المورد</option><option value="SEPARATE_CREDITOR">التزام مستقل</option></select></div>
+        <div class="field"><label>المورد / الدائن</label><select id="openIncludedSupplier"><option value="">اختر إن كان داخل المورد</option>${d.suppliers.map(s=>`<option value="${esc(s.supplierId)}">${esc(s.supplierId)}</option>`).join('')}</select></div>
+        <div class="field"><label>معرّف الدائن المستقل</label><input id="openSeparateCreditor" maxlength="180" placeholder="CREDITOR-001"></div>
+        <div class="field"><label>إجمالي العقد بالجنيه</label><input id="openContractTotal" inputmode="decimal"></div>
+        <div class="field"><label>المدفوع قبل الجرد بالجنيه</label><input id="openContractPaid" inputmode="decimal"></div>
+        <div class="field"><label>قيمة القسط بالجنيه</label><input id="openInstallmentAmount" inputmode="decimal"></div>
+        <div class="field"><label>دورية السداد</label><select id="openFrequency"><option value="monthly">شهري</option><option value="weekly">أسبوعي</option><option value="quarterly">ربع سنوي</option><option value="yearly">سنوي</option></select></div>
+        <div class="field"><label>موعد القسط القادم</label><input id="openNextDue" type="date"></div>
+        <div class="field"><label>مرجع العقد</label><input id="openContractEvidence" maxlength="180"></div>
+      </div>
+      <button class="btn secondary" onclick="ES27.addOpeningInstallment()">إضافة قسط للمسودة</button>
+      <table class="table"><thead><tr><th>العقد</th><th>الدائن</th><th>المتبقي</th><th>الاستحقاق</th><th></th></tr></thead><tbody>${installmentRows}</tbody></table>
+      <div class="actions"><button class="btn" onclick="ES27.saveOpeningDraft()">حفظ المسودة والتأكد من D1</button><button class="btn secondary" onclick="ES27.loadOpeningDraft()">استرجاع مسودة محفوظة</button></div>${result}
+    </div>`;
+  }
+
   function screenSuppliers(){
-    return `<div class="card"><h2>الموردين</h2><div class="grid four"><div class="field"><label>اسم المورد</label><input id="supName"></div><div class="field"><label>هاتف</label><input id="supPhone"></div><div class="field"><label>رصيد افتتاحي</label><input id="supOpening" type="number"></div><div class="field"><label>عنوان / ملاحظات</label><input id="supAddress"></div></div><button class="btn" onclick="ES27.saveSupplier()">حفظ / تحديث المورد</button></div>${table(state.data.suppliers,['المورد','الهاتف','رصيد افتتاحي','إجراء'],(s,i)=>[esc(s.name||s.supplier),esc(s.phone||''),money(s.opening||s.openingBalance),`<button class="btn small secondary" onclick="ES27.editSupplier(${i})">تعديل</button>`])}`;
+    // ACC288 R0 + R2: only a verified fresh original-finance D1 GET may
+    // populate this table. Local/cache and getAccounting fallback are NEVER
+    // evidence of an empty or populated live supplier directory.
+    const directory=state.supplierDirectory||{status:'unchecked',rows:[]};
+    const verified=directory.status==='verified'&&Array.isArray(directory.rows);
+    const readMessage=verified
+      ? 'تم التحقق من قراءة دليل الموردين من D1. عدد الموردين: '+directory.rows.length
+      : directory.status==='loading'||directory.status==='unchecked'
+        ? 'جارٍ التحقق من دليل الموردين عبر قاعدة D1 الأصلية.'
+        : 'تعذر التحقق من قراءة الموردين من D1. القائمة غير مؤكدة؛ راجع تسجيل الدخول ثم اضغط تحديث البيانات.';
+    const readStatus=`<div class="card" role="status" aria-live="polite"><strong>${esc(readMessage)}</strong></div>`;
+    // R2 supplier-only registration remains independently OFF by default,
+    // visible only for the authorized full-role employee. No historic debt.
+    const supplierOnlyOn=window.EASYSTORE_SUPPLIER_MASTER_INTAKE_V1===true &&
+      window.EASYSTORE_ACCOUNTING_D1_READONLY===true &&
+      String(window.EASYSTORE_ACCOUNTING_D1_WRITE_MODE||'OFF').toUpperCase()==='OFF' &&
+      isAdmin();
+    const intro='<div class="card"><h2>الموردين</h2>';
+    const form=supplierOnlyOn
+      ? `<p class="hint">تسجيل مورد برصيد صفر فقط في D1 الأصلية. المديونيات والأقساط القديمة لا تُرحّل من هذه الشاشة.</p>
+        <div class="grid four"><div class="field"><label>اسم المورد</label><input id="supName"></div>
+          <div class="field"><label>هاتف</label><input id="supPhone"></div>
+          <div class="field"><label>رصيد افتتاحي (صفر فقط)</label><input id="supOpening" type="number" value="0" disabled></div>
+          <div class="field"><label>عنوان / ملاحظات</label><input id="supAddress"></div></div>
+        <button class="btn" onclick="ES27.saveSupplier()">حفظ المورد في D1 والتحقق من قراءته</button>`
+      : '<p class="hint">قراءة الموردين فقط؛ تسجيل مورد جديد مقفول حتى اعتماد وتفعيل صلاحيات الموردين في قاعدة D1 الأصلية.</p><button class="btn" disabled aria-disabled="true">حفظ المورد — غير مفعل</button>';
+    const verifiedList=verified
+      ? table(directory.rows,['معرف المورد','اسم المورد','الهاتف','رصيد افتتاحي','إجراء'],
+          (row,i)=>[
+            esc(row.partyId||row.id||row.supplierId||'—'),
+            esc(row.name||row.supplierName||row.supplier||'—'),
+            esc(row.phone||''),
+            money(row.opening||row.openingBalance),
+            supplierOnlyOn?`<button class="btn small secondary" onclick="ES27.editSupplier(${i})">تعديل</button>`:'—'
+          ])
+      : '<div class="card">لا يمكن عرض موردين على أنهم بيانات مؤكدة قبل نجاح قراءة D1.</div>';
+    return intro+form+'</div>'+readStatus+verifiedList+acc278OpeningDraftCard();
   }
 
   function screenCustomers(){
     const drawer=state.customerAccountSelected ? `<div class="customerAccountDrawerBackdrop" onclick="ES27.closeCustomerAccount()" aria-hidden="true"></div><aside id="customerAccountPanel" class="customerAccountDrawer" role="dialog" aria-modal="true" aria-label="كشف حساب العميل"><div class="customerAccountDrawerBar"><strong>حساب العميل</strong><button class="btn small secondary" onclick="ES27.closeCustomerAccount()" aria-label="إغلاق كشف الحساب">إغلاق ×</button></div>${customerAccountPanel()}</aside>` : '';
-    return `<section class="customerAccountsHero"><div><span>حسابات العملاء</span><h2>كشف الحساب والتحصيل</h2><p>ضياء ورحمة وريفان يمكنهم فتح كشف العميل وتسجيل التحصيل. إضافة المديونية والتسويات متاحة لضياء فقط.</p></div><div class="customerAccountsRoles"><b>تحصيل: ضياء / رحمة / ريفان</b><b>تسويات: ضياء فقط</b></div></section><div class="card"><div class="toolbar"><div><h2>العملاء</h2><div class="muted">ابحث بالاسم أو رقم الهاتف ثم افتح الحساب؛ سيظهر الكشف بجانب القائمة مباشرة.</div></div><input id="custSearch" class="searchInput" placeholder="بحث عن عميل" oninput="ES27.filterCustomers()"></div><div id="custTable">${customersTable(state.data.customers)}</div></div>${drawer}`;
+    const standaloneCustomerCard=window.EASYSTORE_STANDALONE_CUSTOMERS_V1===true && isAdmin() && !financePostOff()
+      ? `<div class="card"><h2>تسجيل عميل في حسابات EasyStore</h2><p class="hint">مستقل عن أوردرات TrendOS. يمنع إضافة رصيد افتتاحي من هذه الشاشة؛ لا تستخدم أسماء مكررة.</p><div class="grid four"><div class="field"><label>اسم العميل</label><input id="esStandaloneCustomerName" maxlength="120"></div><div class="field"><label>رقم الهاتف (اختياري)</label><input id="esStandaloneCustomerPhone" maxlength="40"></div><div class="field"><label>عنوان (اختياري)</label><input id="esStandaloneCustomerAddress" maxlength="300"></div><div class="field"><label>ملاحظات</label><input id="esStandaloneCustomerNotes" maxlength="300"></div></div><button class="btn" onclick="ES27.saveStandaloneCustomer()">تسجيل العميل في حسابات EasyStore</button></div>`
+      : '';
+    return `${standaloneCustomerCard}<section class="customerAccountsHero"><div><span>حسابات العملاء</span><h2>كشف الحساب والتحصيل</h2><p>${financePostOff()?'قراءة فقط: استعراض الكشوف متاح حسب صلاحيات السيرفر، والتحصيل والتسويات مقفولة حتى اعتماد التشغيل المالي.':'التحصيل والتسويات متاحة فقط وفق صلاحيات السيرفر والتحقق من حالة التشغيل.'}</p></div><div class="customerAccountsRoles"><b>تحصيل: ضياء / رحمة / ريفان</b><b>تسويات: ضياء فقط</b></div></section><div class="card"><div class="toolbar"><div><h2>العملاء</h2><div class="muted">ابحث بالاسم أو رقم الهاتف ثم افتح الحساب؛ سيظهر الكشف بجانب القائمة مباشرة.</div></div><input id="custSearch" class="searchInput" placeholder="بحث عن عميل" oninput="ES27.filterCustomers()"></div><div id="custTable">${customersTable(state.data.customers)}</div></div>${drawer}`;
   }
   function customerAccountToken(name){ return encodeURIComponent(String(name||'')).replace(/'/g,'%27'); }
   function customersTable(rows){ return table(rows||[],['العميل','الهاتف','النوع/المسؤول','المديونية','الحساب'],c=>{ const name=customerMainName(c); const selected=nkey(state.customerAccountSelected)===nkey(name); return [esc(name),esc(c.phone||c.mobile||''),esc(c.type||c.manager||''),`<span class="customerDebtBadge ${customerDebtClass(c)}">${esc(customerDebtText(c))}</span>`,`<button class="btn small ${selected?'':'secondary'}" onclick="ES27.openCustomerAccount('${customerAccountToken(name)}')">${selected?'الحساب مفتوح':'فتح الحساب'}</button>`]; }); }
@@ -533,11 +694,12 @@
     if(!account || !account.success) return '<div class="card customerAccountEmpty"><h3>اختر عميلًا لعرض حسابه.</h3></div>';
     const customer=account.customer||{};
     const balance=num(account.balance);
-    const canAdjust=isAdmin() && (!account.permissions || account.permissions.canAdjust!==false);
+    const financeOff=financePostOff();
+    const canAdjust=!financeOff && isAdmin() && (!account.permissions || account.permissions.canAdjust!==false);
     const transactions=Array.isArray(account.transactions)?account.transactions:[];
     const movementOptions=`<option value="payment_received">تحصيل من العميل</option>${canAdjust?'<option value="opening_debt">إضافة مديونية</option><option value="adjustment_increase">تسوية بالزيادة</option><option value="adjustment_decrease">تسوية بالنقص</option>':''}`;
-    const movementForm=(balance>0 || canAdjust) ? `<div class="customerMovementForm"><div class="field"><label>نوع الحركة</label><select id="caOperation" onchange="ES27.resetCustomerAccountRequest()">${movementOptions}</select></div><div class="field"><label>المبلغ</label><input id="caAmount" type="number" min="0.01" step="0.01" placeholder="0.00" oninput="ES27.resetCustomerAccountRequest()"></div><div class="field"><label>طريقة الدفع</label><select id="caMethod" onchange="ES27.resetCustomerAccountRequest()"><option>نقدي</option><option>إنستا باي</option><option>فودافون كاش</option><option>تحويل بنكي</option><option>فيزا</option><option>أخرى</option></select></div><div class="field"><label>رقم مرجع / إيصال</label><input id="caRef" placeholder="اختياري" oninput="ES27.resetCustomerAccountRequest()"></div><div class="field customerMovementNotes"><label>ملاحظات</label><input id="caNotes" placeholder="سبب الحركة أو أي تفاصيل" oninput="ES27.resetCustomerAccountRequest()"></div><div class="customerMovementAction"><button id="caSaveBtn" class="btn" onclick="ES27.saveCustomerAccountMovement()">حفظ الحركة</button></div></div>` : '<div class="customerAccountSettled">✓ لا توجد مديونية لتحصيلها من هذا العميل.</div>';
-    return `<section class="card customerAccountCard"><div class="customerAccountHead"><div><span class="customerAccountEyebrow">كشف حساب العميل</span><h2>${esc(customer.name||state.customerAccountSelected)}</h2><p>${customer.phone?esc(customer.phone):'لا يوجد رقم هاتف مسجل'}${customer.type?' · '+esc(customer.type):''}${customer.manager?' · المسؤول: '+esc(customer.manager):''}</p></div><div class="customerBalanceBox ${balance>0?'hasDebt':'isClear'}"><span>الرصيد المستحق</span><b>${money(balance)}</b><small>${balance>0?'مطلوب من العميل':'الحساب مسدد'}</small></div></div><div class="customerPermissionNote">${canAdjust?'يمكنك التحصيل وإضافة المديونية أو عمل تسوية إدارية.':'يمكنك تسجيل تحصيل من مديونية العميل فقط.'}</div>${movementForm}<div class="customerLedgerTitle"><h3>حركات الحساب</h3><span>${transactions.length} حركة</span></div>${table(transactions,['الوقت','الحركة','المبلغ','طريقة الدفع','المرجع','قبل','بعد','سجل بواسطة','ملاحظات'],t=>[esc(customerAccountDate(t.createdAt)),esc(customerAccountOperationLabel(t)),money(t.amount),esc(t.paymentMethod||'-'),esc(t.refNo||'-'),money(t.balanceBefore),money(t.balanceAfter),esc(t.createdBy||'-'),esc(t.notes||'-')])}</section>`;
+    const movementForm=financeOff?'<div class="customerAccountSettled" role="status">كشف حساب للقراءة فقط؛ التحصيل والتسويات المالية مقفولة.</div>':(balance>0 || canAdjust) ? `<div class="customerMovementForm"><div class="field"><label>نوع الحركة</label><select id="caOperation" onchange="ES27.resetCustomerAccountRequest()">${movementOptions}</select></div><div class="field"><label>المبلغ</label><input id="caAmount" type="number" min="0.01" step="0.01" placeholder="0.00" oninput="ES27.resetCustomerAccountRequest()"></div><div class="field"><label>طريقة الدفع</label><select id="caMethod" onchange="ES27.resetCustomerAccountRequest()"><option>نقدي</option><option>إنستا باي</option><option>فودافون كاش</option><option>تحويل بنكي</option><option>فيزا</option><option>أخرى</option></select></div><div class="field"><label>رقم مرجع / إيصال</label><input id="caRef" placeholder="اختياري" oninput="ES27.resetCustomerAccountRequest()"></div><div class="field customerMovementNotes"><label>ملاحظات</label><input id="caNotes" placeholder="سبب الحركة أو أي تفاصيل" oninput="ES27.resetCustomerAccountRequest()"></div><div class="customerMovementAction"><button id="caSaveBtn" class="btn" onclick="ES27.saveCustomerAccountMovement()">حفظ الحركة</button></div></div>` : '<div class="customerAccountSettled">✓ لا توجد مديونية لتحصيلها من هذا العميل.</div>';
+    return `<section class="card customerAccountCard"><div class="customerAccountHead"><div><span class="customerAccountEyebrow">كشف حساب العميل</span><h2>${esc(customer.name||state.customerAccountSelected)}</h2><p>${customer.phone?esc(customer.phone):'لا يوجد رقم هاتف مسجل'}${customer.type?' · '+esc(customer.type):''}${customer.manager?' · المسؤول: '+esc(customer.manager):''}</p></div><div class="customerBalanceBox ${balance>0?'hasDebt':'isClear'}"><span>الرصيد المستحق</span><b>${money(balance)}</b><small>${balance>0?'مطلوب من العميل':'الحساب مسدد'}</small></div></div><div class="customerPermissionNote">${financeOff?'قراءة فقط — جميع عمليات التحصيل والتسوية المالية غير مفعلة.':canAdjust?'يمكنك التحصيل وإضافة المديونية أو عمل تسوية إدارية.':'يمكنك تسجيل تحصيل من مديونية العميل فقط.'}</div>${movementForm}<div class="customerLedgerTitle"><h3>حركات الحساب</h3><span>${transactions.length} حركة</span></div>${table(transactions,['الوقت','الحركة','المبلغ','طريقة الدفع','المرجع','قبل','بعد','سجل بواسطة','ملاحظات'],t=>[esc(customerAccountDate(t.createdAt)),esc(customerAccountOperationLabel(t)),money(t.amount),esc(t.paymentMethod||'-'),esc(t.refNo||'-'),money(t.balanceBefore),money(t.balanceAfter),esc(t.createdBy||'-'),esc(t.notes||'-')])}</section>`;
   }
 
   function screenItems(){
@@ -918,10 +1080,17 @@
     box.__rows=rows; box.classList.remove('hidden');
   }
   function operatingExpenseRows(){ const rows=isAdmin()?accountingScopedRows(materials(),false):materials(); return rows.filter(r=>/تشغيل|مصروف|operation/i.test(String(r.materialClass||r.operationExpense||r['تصنيف الخامة']||r['ضم إلى مصروفات التشغيل']||matType(r)||''))); }
+  // ACC286 Day-1 viewer mode: financial posting is not a UI-ready action
+  // while server finance release remains NO_GO and D1 write mode is OFF.
+  function financePostOff(){
+    return String(window.EASYSTORE_ACCOUNTING_D1_WRITE_MODE||'OFF').trim().toUpperCase()==='OFF';
+  }
   function screenSales(){
+    const financeOff=financePostOff();
     const qOrder = esc(qs.get('orderId') || qs.get('order') || '');
     const qCustomer = esc(qs.get('customer') || qs.get('customerName') || '');
     return `<div class="card"><h2>فاتورة مبيعات موحدة</h2>
+      ${financeOff?'<div class="hint" role="status">وضع مراجعة فقط — كتابة الحسابات OFF؛ الحفظ والترحيل المالي غير متاحين. يمكن عرض البيانات دون اعتبارها حركات مالية معتمدة.</div>':''}
       <div class="hint">وائل وجابر يسجلوا بنود كل قسم، والبند المشترك يظهر للطرف الآخر. ضياء/رحمه/ريفان من هنا يسحبوا فاتورتي القسمين ويقفلوهم كفاتورة واحدة للعميل.</div>
       <div class="grid five">
         <div class="field"><label>رقم الفاتورة</label><input id="saNo" value="SAL-${Date.now().toString().slice(-6)}"></div>
@@ -940,7 +1109,7 @@
         <div class="field"><label>مدفوع</label><input id="saPaid" type="number" value="0" oninput="ES27.calcSale()"></div>
       </div>
       <div class="grid two"><div class="field"><label>متبقي</label><input id="saRemain" readonly></div><div class="field"><label>ملاحظات</label><input id="saNotes"></div></div>
-      <div class="actions"><button class="btn secondary" onclick="ES27.pullDeptCandidates()">سحب فاتورتي وائل وجابر</button><button class="btn" onclick="ES27.addPickedDeptLines()">ضم البنود المحددة</button><button class="btn" onclick="ES27.saveSale()">حفظ الفاتورة الموحدة</button><span class="menuWrap"><button class="btn secondary" onclick="ES27.toggleClientInvoiceMenu(event)">فاتورة العميل ▾</button><span id="clientInvoiceMenu" class="clientInvoiceMenu hidden"><button onclick="ES27.showPricePreview()">عرض التسعير</button><button onclick="ES27.printSale()">PDF / طباعة</button><button onclick="ES27.downloadSaleImage()">صورة</button><button onclick="ES27.copySaleText()">نسخ نص الفاتورة</button><button onclick="ES27.openSaleWhatsApp()">إرسال واتساب</button></span></span></div>
+      <div class="actions"><button class="btn secondary" onclick="ES27.pullDeptCandidates()">سحب فاتورتي وائل وجابر</button><button class="btn" onclick="ES27.addPickedDeptLines()">ضم البنود المحددة</button><button class="btn" onclick="ES27.saveSale()" ${financeOff?'disabled aria-disabled="true"':''}>حفظ الفاتورة الموحدة</button><span class="menuWrap"><button class="btn secondary" onclick="ES27.toggleClientInvoiceMenu(event)">فاتورة العميل ▾</button><span id="clientInvoiceMenu" class="clientInvoiceMenu hidden"><button onclick="ES27.showPricePreview()">عرض التسعير</button><button onclick="ES27.printSale()">PDF / طباعة</button><button onclick="ES27.downloadSaleImage()">صورة</button><button onclick="ES27.copySaleText()">نسخ نص الفاتورة</button><button onclick="ES27.openSaleWhatsApp()">إرسال واتساب</button></span></span></div>
       <div id="salePulledSummary" class="softBox"></div>
     </div>
     <div class="split"><div class="card"><h3>بنود غير مفوترة من الأقسام</h3><div id="saleCandidatesBox">${saleCandidateTable()}</div></div><div class="card"><h3>البنود المضمومة للفاتورة</h3><div id="salePulledBox">${salePulledTable()}</div></div></div>
@@ -1097,6 +1266,7 @@
   async function load(silent){
     if(state.loading) return;
     state.loading = true;
+    state.supplierDirectory={status:'loading',rows:[]};
     if(!silent) msg('جاري تحميل البيانات...');
     try{
       const r = await api('getAccounting',{requestedRole:isAdmin()?'admin':isFinal()?'final':isLaser()?'laser':isPrint()?'print':'employee',requestedDepartment:userDept()});
@@ -1109,7 +1279,13 @@
         isAdmin()?api('previewAccountingAutomationV1921',{workDate:dailyPurchaseTodayKey()}).catch(()=>({})):Promise.resolve({})
       ]);
       if(extras[0]&&extras[0].success)customerRows=extras[0].customers||[];
-      if(extras[1]&&extras[1].success)supplierRows=extras[1].suppliers||extras[1].rows||[];
+      // ACC288: no successful-empty illusion on bad/unavailable D1 GET.
+      if(extras[1]&&extras[1].success===true&&Array.isArray(extras[1].suppliers)){
+        supplierRows=extras[1].suppliers;
+        state.supplierDirectory={status:'verified',rows:supplierRows};
+      }else{
+        state.supplierDirectory={status:'failed',rows:[]};
+      }
       if(extras[2]&&extras[2].success)state.automationPreview=extras[2].preview||null;
       mergeData(normalizeIncomingData({
         materials: r.materials || r.rawMaterials || [],
@@ -1131,8 +1307,26 @@
       }));
       saveLocal(); state.lastLoadedAt=Date.now(); state.formDirty=false; render(); if(state.active==='sales' && (qs.get('pullLines') || qs.get('autoLoadCustomer') || qs.get('customer'))){ setTimeout(()=>{ try{ ES27.loadSaleCustomerFromInput(true); }catch(e){ try{ ES27.pullDeptCandidates(); }catch(x){} } },160); } msg('تم التحديث من الشيتات: ' + now());
     }catch(e){
+      state.supplierDirectory={status:'failed',rows:[]};
       mergeData(); render(); msg('تنبيه: يعمل بنسخة محلية مؤقتة - ' + e.message, true);
     }finally{ state.loading = false; }
+  }
+
+  // ACC286: no optimistic customer-create success. A successful POST still
+  // requires matching exact finance-local D1 identity in a fresh directory GET.
+  // If readback fails, keep the original request ID for safe idempotent retry.
+  function acc286StandaloneCustomerReadbackMatches(saved,directory,name){
+    if(!saved||saved.success!==true ||
+       saved.version!=='EASYSTORE_STANDALONE_V1' ||
+       !/^ESC-[A-F0-9]{20}$/.test(String(saved.customerId||'')) ||
+       !directory||directory.success!==true ||
+       directory.identitySource!=='EASYSTORE_FINANCE_LOCAL' ||
+       directory.version!=='EASYSTORE_STANDALONE_V1' ||
+       !Array.isArray(directory.customers))return false;
+    return directory.customers.some(c=>
+      String(c.customerId||c.id||'')===String(saved.customerId) &&
+      String(c.name||c.customerName||'').trim()===String(name||'').trim()
+    );
   }
 
   window.ES27 = {
@@ -1198,8 +1392,180 @@
       try{const reply=await api('reverseApprovedPurchaseV1920',{id,invoiceNo,reason,requestId:stableAccountingRequestId('PUR-REV',id+'|'+invoiceNo)});if(!reply||reply.success===false)throw new Error((reply&&reply.message)||'تعذر عكس المشتريات.');await load(true);flash(reply.message||'تم عكس المشتريات.');}catch(e){flash(e.message||'تعذر عكس المشتريات.',true);}
     },
     quickSearch(q){ q=nkey(q); if(!q) return; const found = templates().find(r=>nkey(templateName(r)).includes(q)) || materials().find(r=>nkey(materialName(r)).includes(q)); if(found) flash('تم العثور على: ' + (templateName(found)||materialName(found))); },
-    async saveSupplier(){ if(!canManageAccounting()) return deny(); const s={name:val('supName'),phone:val('supPhone'),opening:num(val('supOpening')),address:val('supAddress')}; if(!s.name) return flash('اكتب اسم المورد',true); try{ const reply=await api('saveEasyStoreSupplier',Object.assign({requestId:newAccountingRequestId('SUP')},s)); if(!reply||reply.success===false) throw new Error((reply&&reply.message)||'تعذر حفظ المورد'); const i=state.data.suppliers.findIndex(x=>nkey(x.name||x.supplier)===nkey(s.name)); if(i>=0) state.data.suppliers[i]=s; else state.data.suppliers.unshift(s); saveLocal(); shell(); flash('تم حفظ المورد على السيرفر'); }catch(e){ flash('لم يتم حفظ المورد: '+(e.message||e),true); } },
-    editSupplier(i){ const s=state.data.suppliers[i]; if(!s) return; set('supName',s.name||s.supplier); set('supPhone',s.phone); set('supOpening',s.opening||s.openingBalance); set('supAddress',s.address); },
+    async saveStandaloneCustomer(){
+      if(window.EASYSTORE_STANDALONE_CUSTOMERS_V1!==true || !canManageAccounting())
+        return deny('إضافة عميل للحسابات المستقلة غير متاحة.');
+      if(!state.standaloneCustomerRequestId)
+        state.standaloneCustomerRequestId=newAccountingRequestId('ESC');
+      const customerName=val('esStandaloneCustomerName').trim();
+      if(customerName.length<2) return flash('اكتب اسم العميل الصحيح.',true);
+      const p={requestId:state.standaloneCustomerRequestId,customerName,
+        phone:val('esStandaloneCustomerPhone'),address:val('esStandaloneCustomerAddress'),
+        notes:val('esStandaloneCustomerNotes'),openingDebt:0};
+      try{
+        const result=await api('saveEasyStoreCustomer',p);
+        if(!result||result.success===false)
+          throw new Error((result&&result.message)||(result&&result.code)||'تعذر تسجيل العميل');
+        // Do not clear the stable request ID until finance D1 confirms the
+        // precise identity. A timeout or stale/foreign list is AMBIGUOUS,
+        // not proof of a failed write; retry the SAME idempotency key.
+        const list=await api('getEasyStoreCustomers',{limit:1000});
+        if(!acc286StandaloneCustomerReadbackMatches(result,list,customerName))
+          throw new Error('لم يتم تأكيد هوية العميل من قاعدة D1. أعد المحاولة بنفس البيانات دون فتح طلب جديد.');
+        state.data.customers=list.customers;
+        state.standaloneCustomerRequestId='';
+        saveLocal();shell();flash('تم تسجيل العميل والتحقق من وجوده في قاعدة D1 الأصلية.');
+      }catch(e){flash('التسجيل غير مؤكد؛ احتفظ بنفس الطلب: '+(e.message||e),true)}
+    },
+
+    captureOpeningDraftHeader(){
+      const d=state.openingIntake;
+      d.header={batchId:val('openBatchId'),cutoverDate:val('openCutoverDate'),
+        sourceEvidenceRef:val('openSourceRef')};
+      return d.header;
+    },
+    addOpeningSupplier(){
+      if(!isAdmin()||window.EASYSTORE_OPENING_DRAFT_INTAKE_V1!==true)return deny();
+      const d=state.openingIntake;
+      this.captureOpeningDraftHeader();
+      try{
+        const supplierId=val('openSupplierId'),evidenceRef=val('openSupplierEvidence');
+        const cents=acc278ToCents(val('openSupplierBalance'));
+        if(!supplierId||!evidenceRef)return flash('اختر المورد بمعرّفه واكتب مرجع كشفه.',true);
+        if(d.suppliers.some(s=>s.supplierId===supplierId))return flash('المورد موجود بالفعل في نفس دفعة الجرد؛ لا تكرره.',true);
+        d.suppliers.push({supplierId,balanceCents:cents,evidenceRef});
+        d.requestId='';d.verified=null;render();
+      }catch(e){flash(e.message||String(e),true);}
+    },
+    removeOpeningSupplier(i){
+      if(!isAdmin())return deny();
+      const d=state.openingIntake;this.captureOpeningDraftHeader();
+      if(!Number.isInteger(i)||i<0||i>=d.suppliers.length)return;
+      const id=d.suppliers[i].supplierId;
+      if(d.installments.some(x=>x.supplierId===id))return flash('احذف الأقساط المرتبطة بالمورد أولًا.',true);
+      d.suppliers.splice(i,1);d.requestId='';d.verified=null;render();
+    },
+    addOpeningInstallment(){
+      if(!isAdmin()||window.EASYSTORE_OPENING_DRAFT_INTAKE_V1!==true)return deny();
+      const d=state.openingIntake;this.captureOpeningDraftHeader();
+      try{
+        const contractId=val('openContractId'),treatment=val('openTreatment'),
+          evidenceRef=val('openContractEvidence'),nextDueDate=val('openNextDue');
+        const included=treatment==='INCLUDED_IN_SUPPLIER_OPENING';
+        const supplierId=included?val('openIncludedSupplier'):'';
+        const creditorRef=included?supplierId:val('openSeparateCreditor');
+        const contractTotalCents=acc278ToCents(val('openContractTotal')),
+          paidToCutoverCents=acc278ToCents(val('openContractPaid')),
+          installmentCents=acc278ToCents(val('openInstallmentAmount'));
+        const remainingCents=contractTotalCents-paidToCutoverCents;
+        if(!contractId||!creditorRef||!evidenceRef||!nextDueDate)
+          return flash('أكمل رقم العقد والدائن وتاريخ الاستحقاق ومرجع العقد.',true);
+        if(remainingCents<=0||installmentCents<=0||installmentCents>remainingCents)
+          return flash('إجمالي العقد والمدفوع والمتبقي وقيمة القسط غير متوازنين.',true);
+        if(d.installments.some(i=>i.contractId===contractId))
+          return flash('رقم العقد مكرر في مسودة الجرد؛ لا يمكن إضافته مرتين.',true);
+        d.installments.push({contractId,creditorRef,supplierId,
+          liabilityTreatment:treatment,contractTotalCents,paidToCutoverCents,
+          remainingCents,installmentCents,frequency:val('openFrequency'),
+          nextDueDate,evidenceRef});
+        d.requestId='';d.verified=null;render();
+      }catch(e){flash(e.message||String(e),true);}
+    },
+    removeOpeningInstallment(i){
+      if(!isAdmin())return deny();
+      const d=state.openingIntake;this.captureOpeningDraftHeader();
+      if(!Number.isInteger(i)||i<0||i>=d.installments.length)return;
+      d.installments.splice(i,1);d.requestId='';d.verified=null;render();
+    },
+    async saveOpeningDraft(){
+      if(!isAdmin()||window.EASYSTORE_OPENING_DRAFT_INTAKE_V1!==true)return deny();
+      const d=state.openingIntake;
+      this.captureOpeningDraftHeader();
+      if(!d.header.batchId||!d.header.cutoverDate||!d.header.sourceEvidenceRef)
+        return flash('اكتب رقم دفعة الجرد وتاريخها ومرجع المستند.',true);
+      if(!d.suppliers.length&&!d.installments.length)
+        return flash('أضف مديونية مورد أو قسطًا واحدًا على الأقل.',true);
+      if(d.verified)return flash('المسودة محفوظة بالفعل؛ استخدم الاسترجاع للتحقق من نفس رقم الدفعة.',true);
+      if(!d.requestId)d.requestId=newAccountingRequestId('ODRAFT');
+      const payload={...d.header,currency:'EGP',requestId:d.requestId,
+        suppliers:d.suppliers.map(s=>({...s})),installments:d.installments.map(i=>({...i}))};
+      try{
+        const saved=await api('saveEasyStoreOpeningDraftV1',payload);
+        if(!saved||saved.success!==true||saved.status!=='DRAFT'||saved.posted!==false)
+          throw new Error('لم تؤكد D1 حفظ مسودة فقط.');
+        const verified=await api('getEasyStoreOpeningDraftV1',{batchId:d.header.batchId});
+        if(!acc279OpeningDraftReadbackMatches(payload,verified)||
+          verified.supplierTotalCents!==saved.supplierTotalCents||
+          verified.separateInstallmentTotalCents!==saved.separateInstallmentTotalCents||
+          verified.totalLiabilityCents!==saved.totalLiabilityCents)
+          throw new Error('استجابة الحفظ لا تطابق قراءة القاعدة الأصلية؛ لا تعيد الإدخال بمعرّف جديد.');
+        d.verified=verified;render();
+        flash('تم حفظ مسودة الجرد والتحقق من قراءتها من D1؛ لم تُرحّل أي أموال.');
+      }catch(e){flash('فشل تأكيد مسودة الجرد: '+(e.message||e),true);}
+    },
+    async loadOpeningDraft(){
+      if(!isAdmin()||window.EASYSTORE_OPENING_DRAFT_INTAKE_V1!==true)return deny();
+      const d=state.openingIntake;this.captureOpeningDraftHeader();
+      try{
+        if(!d.header.batchId)return flash('اكتب رقم دفعة الجرد المطلوب استرجاعها.',true);
+        const v=await api('getEasyStoreOpeningDraftV1',{batchId:d.header.batchId});
+        if(!v||v.success!==true||v.status!=='DRAFT'||v.posted!==false)
+          throw new Error('لم ترجع القاعدة مسودة مؤكدة.');
+        d.header={batchId:v.batchId,cutoverDate:v.cutoverDate,sourceEvidenceRef:v.sourceEvidenceRef};
+        d.suppliers=v.suppliers||[];d.installments=v.installments||[];
+        d.requestId='';d.verified=v;render();
+        flash('تم استرجاع مسودة الجرد من D1، بدون أي ترحيل مالي.');
+      }catch(e){flash('تعذر استرجاع المسودة: '+(e.message||e),true);}
+    },
+    async saveSupplier(){
+      // ACC289: direct action calls cannot bypass the separate supplier-only
+      // release switch. Finance general writes and historic draft opening OFF.
+      if(window.EASYSTORE_SUPPLIER_MASTER_INTAKE_V1!==true ||
+         window.EASYSTORE_ACCOUNTING_D1_READONLY!==true ||
+         String(window.EASYSTORE_ACCOUNTING_D1_WRITE_MODE||'OFF').trim().toUpperCase()!=='OFF')
+        return flash('حفظ المورد مقفول حتى اعتماد صلاحية إضافة الموردين فقط.',true);
+      if(!canManageAccounting()) return deny();
+      const rawOpening=String(val('supOpening')||'').trim();
+      if(rawOpening && (!Number.isFinite(Number(rawOpening)) || Number(rawOpening)!==0))
+        return flash('تسجيل مديونيات الموردين والأقساط القديمة متوقف حتى اعتماد الأرصدة الافتتاحية؛ لم يتم حفظ أي حركة مالية.',true);
+      const s={name:val('supName'),phone:val('supPhone'),opening:0,address:val('supAddress')};
+      if(!s.name) return flash('اكتب اسم المورد',true);
+      const fingerprint=JSON.stringify(s);
+      if(state.supplierRequestFingerprint!==fingerprint || !state.supplierRequestId){
+        state.supplierRequestId=newAccountingRequestId('SUP');
+        state.supplierRequestFingerprint=fingerprint;
+      }
+      try{
+        const reply=await api('saveEasyStoreSupplier',{...s,requestId:state.supplierRequestId});
+        if(!reply||reply.success!==true ||
+           reply.version!=='A2_D1_ACCOUNTING_V1' ||
+           !/^SUP-[A-Z0-9-]+$/.test(String(reply.partyId||'')) ||
+           String(reply.supplierId||'')!==String(reply.partyId||'') ||
+           nkey(reply.name||reply.supplierName)!==nkey(s.name) ||
+           Number(reply.openingBalance)!==0 || reply.active!==true)
+          throw new Error('رد إنشاء المورد غير مكتمل أو لا يطابق عملية الحفظ؛ احتفظ بمعرف الطلب.');
+        // A response or name-only list match is not proof of persistence.
+        // Enforce exact ID, canonical version, name, active state and ZERO.
+        const verified=await api('getEasyStoreSuppliers',{limit:1000});
+        if(!verified||verified.success!==true ||
+           verified.version!=='A1_D1_READ_MODEL_V1' ||
+           !Array.isArray(verified.suppliers))
+          throw new Error('لم يتم تأكيد قراءة دليل الموردين من D1؛ لا تعيد الحفظ بمعرف جديد.');
+        const match=verified.suppliers.find(v=>
+          String(v.partyId||'')===String(reply.partyId) &&
+          nkey(v.name||v.supplierName)===nkey(s.name) &&
+          v.active===true &&
+          Number(v.currentBalance??v.balance)===0
+        );
+        if(!match) throw new Error('هوية المورد أو رصيده لم يتطابقا مع تأكيد D1؛ احتفظ بمعرف الطلب ولا تكرر إدخاله.');
+        state.data.suppliers=verified.suppliers;
+        state.supplierDirectory={status:'verified',rows:verified.suppliers};
+        state.supplierRequestId='';state.supplierRequestFingerprint='';
+        saveLocal();shell();
+        flash('تم حفظ المورد والتأكد من ظهوره بمعرّفه في قاعدة الحسابات الأصلية.');
+      }catch(e){flash('تعذر تأكيد الحفظ النهائي: '+(e.message||e),true);}
+    },
+    editSupplier(i){ const d=state.supplierDirectory; const s=d&&d.status==='verified'&&Array.isArray(d.rows)?d.rows[i]:null; if(!s) return; set('supName',s.name||s.supplier); set('supPhone',s.phone); set('supOpening',s.opening||s.openingBalance); set('supAddress',s.address); },
     filterCustomers(){ const q=nkey(val('custSearch')); const rows=(state.data.customers||[]).filter(c=>nkey([c.name,c.customerName,c.phone,c.mobile].join(' ')).includes(q)); const box=$('custTable'); if(box) box.innerHTML=customersTable(rows); },
     resetCustomerAccountRequest(){ state.customerAccountRequestId=''; },
     closeCustomerAccount(){ state.customerAccountSelected=''; state.customerAccount=null; state.customerAccountRequestId=''; render(); },
@@ -1368,6 +1734,7 @@
     applySaleItem(){ const r=selectedSaleTemplate(); if(!r) return; set('saUnit',matSale(r)); this.calcSale(); },
     calcSale(){ updateSaleTotalsFromPulled(); },
     async saveSale(){
+      if(financePostOff())return flash('الحفظ المالي غير متاح: وضع D1 الحالي OFF.',true);
       if(!canFinalize()) return deny();
       this.calcSale();
       const r=selectedSaleTemplate();
@@ -1380,11 +1747,26 @@
       const desc = pulledRows.map(x=>rowDept(x)+': '+rowItem(x)+' × '+rowQty(x)).join(' / ');
       const pulledOrders=salePulledDeptSummary().orders;
       if(!val('saCustomer')) return flash('اختار العميل قبل حفظ الفاتورة.',true);
+      if(window.EASYSTORE_STANDALONE_CUSTOMERS_V1===true){
+        if(lineIds.length) return flash('فواتير الأقسام والربط التلقائي مؤجلان. اختار بيعًا مباشرًا.',true);
+        if(!state.saleSelectedCustomer || !(state.saleSelectedCustomer.customerId||state.saleSelectedCustomer.id))
+          return flash('اختار عميلًا مسجّلًا بمعرّفه من قائمة حسابات EasyStore، مش بالاسم فقط.',true);
+      }
       if(lineIds.length && !val('saOrder')) return flash('رقم الأوردر مطلوب لتقفيل بنود وائل/جابر.',true);
       if(lineIds.length && pulledOrders.length>1) return flash('لا يمكن تقفيل أكتر من أوردر في نفس الفاتورة. اختار رقم أوردر واحد ثم اسحب البنود.',true);
       if(!lineIds.length && !manualDescription && !manualAmount) return flash('أضف بند يدوي أو اسحب بنود وائل/جابر أولًا.',true);
       if(/^DRAFT/i.test(val('saNo')) || !val('saNo')) set('saNo', officialSaleNo());
       const p={no:val('saNo'),customer:val('saCustomer'),customerPhone:customerMainPhone(state.saleSelectedCustomer||{}),orderId:val('saOrder'),paymentType:val('saPay'),department:val('saDept'),item:desc || manualDescription || 'فاتورة مبيعات موحدة',qty:manualQty||pulledRows.length||1,unit:manualUnit,discount:num(val('saDiscount')),paid:num(val('saPaid')),total:num(val('saTotal')),remain:num(val('saRemain')),notes:val('saNotes'),lineIds:JSON.stringify(lineIds),date:new Date().toISOString()};
+      if(window.EASYSTORE_STANDALONE_CUSTOMERS_V1===true){
+        const exactCustomerId=String(state.saleSelectedCustomer.customerId||state.saleSelectedCustomer.id||'');
+        if(!/^ESC-[A-F0-9]{20}$/.test(exactCustomerId))
+          return flash('المعرّف لا يخص عميل حسابات EasyStore مستقل.',true);
+        if(Math.abs(p.total-p.paid)>0.00001||!['نقدي','cash'].includes(String(p.paymentType).toLowerCase()))
+          return flash('المرحلة الأولى للبيع النقدي المدفوع بالكامل فقط.',true);
+        p.customerId=exactCustomerId;
+        p.customerName=p.customer;p.invoiceNo=p.no;p.unitPrice=p.unit;
+        p.paymentMethod='نقدي';p.orderId='';
+      }
       if(!state.saleRequestId) state.saleRequestId='SALE-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,10);
       p.requestId=state.saleRequestId;
       flash('جاري حفظ الفاتورة على السيرفر...');
