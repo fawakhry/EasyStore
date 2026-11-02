@@ -8195,3 +8195,26 @@ No production D1 read/write, canary, secret generation, staff grant or deploy.
 Cloudflare plugin discovery found no matching integration, so private external
 build evidence is not available through a connected Cloudflare tool here.
 FINANCE_WRITES=OFF; FINANCE_RELEASE=NO_GO.
+
+
+### ACC296 hosted exact-head result — targeted failures GREEN, older drift gates remain RED
+
+On original PR134 head 26c0d7ccd1c905572d637a301e61d33c734a7e01, hosted
+Node22 checks offline-native-accounting (125121924202), fake-d1-stock
+(125121924370) and role-matrix-no-go (125121924672) all COMPLETED SUCCESS.
+Targeted waste-test repair is provider-CI verified, not just local.
+The branch is NOT all green and was NOT merged. Other checks now reveal
+three historical platform pin/freshness STOPs: discover-actual-merge-conflicts
+125121924723 => ACC178_SHARED_HEAD_DRIFT=BLOCKED; attest-actual-merged-worker-source
+125121924399 and dryrun-actual-merged-worker-source 125121924524 =>
+ACC182_SHARED_HEAD_DRIFT=STOP_NOT_A_RELEASE. They compare current shared
+platform branch with old pinned commit; no fresh merge/build compatibility
+was attested. Do not blindly bump those pins or bypass the checks.
+read-only-version-preflight 125121925005 => ACC176_PUBLIC_SERVER_READONLY=FAIL,
+ALL_CANARY_ALLOWANCES_ZEROED=FAIL and PUBLIC_SAFE_IDLE=FAIL; these are failures
+of the diagnostic acceptance, not proof that live money authority is open.
+The actual ACC220 hosted health result independently lacks writeAuthorityMode.
+External Cloudflare Worker Build check also still fails (125122093768);
+no private build log or root cause available. No automatic rerun/deploy or
+financial mutation. Next work remains actual deployed contract reconciliation
+and separately reviewed platform compatibility; all G1–G5 remain unqualified.
