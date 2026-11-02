@@ -1,0 +1,72 @@
+name: ACC257 append native platform order read architecture to canonical accounting book
+on:
+  push:
+    branches: ['docs/acc214-finance-read-scope-no-go-20261020']
+    paths: ['.github/workflows/easystore-acc257-native-platform-orders-book-append-once.yml']
+permissions:
+  contents: write
+concurrency:
+  group: easystore-original-accounting-book-append-preserve
+  cancel-in-progress: false
+jobs:
+  append-only-acc257:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Verify full original book and exact blob CAS before no-delete append
+        env:
+          GH_BOOK_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import pathlib,os,json,subprocess,base64,urllib.request,urllib.error
+          repo=os.environ['GITHUB_REPOSITORY'];branch=os.environ['GITHUB_REF_NAME']
+          if repo!='fawakhry/EasyStore' or branch!='docs/acc214-finance-read-scope-no-go-20261020':
+           raise SystemExit('ACC257_WRONG_BOOK_OWNER_OR_BRANCH')
+          name='EASYSTORE_ACCOUNTING_MASTER_BOOK.md'
+          old=pathlib.Path(name).read_bytes()
+          marker=b'### ACC257-TRENDOS-EXISTING-NATIVE-ORDER-SOURCE-ACCOUNTING-CROSSBOOK-20261025'
+          if marker in old:
+           print('ACC257_ACCOUNTING_BOOK_ALREADY_PRESENT_NO_WRITE');raise SystemExit(0)
+          if (len(old)<1000000 or old.count(b'\n')<7000 or not old.startswith(b'# EasyStore Accounting Master Book\n') or
+              b'ACC256-PLATFORM-ORDER-SOURCE-CANDIDATE-SAFE-MERGE-CROSSBOOK-20261025' not in old):
+           raise SystemExit('ACC257_ACCOUNTING_BOOK_INCOMPLETE_ABORT')
+          entry="""### ACC257-TRENDOS-EXISTING-NATIVE-ORDER-SOURCE-ACCOUNTING-CROSSBOOK-20261025 — use actual operational TrendOS platform order source; never create duplicate original orders table (READ ONLY / NO_GO)
+
+          **Owner source rule:** Source everything order-, customer-, and operations-related from the EXISTING LIVE WORKING TRENDOS PLATFORM instead of recreating source tables in EasyStore or a parallel Stage copy. Real Cloudflare `trendos-main` already confirmed by [ACC255 D1 metadata-only #40214770444](https://github.com/fawakhry/TrendOs/actions/runs/40214770444): original `0005` 6/6 tables; original `0006` 2/2; native `t12_customers` present; old `orders` and `sheet_rows` mirror exists separately; original `0035` at-create customer capture 0/2 absent. This `0035` is relevant to original customer-at-create provenance, NOT evidence that the PLATFORM cannot work normally or the original T12 order record itself is missing.
+
+          **Source-only code actually implemented and merged:** The TrendOS bridge agent created `cloudflare-d1/src/t12-platform-order-context-readonly-acc257.mjs` and 10 executable disposable SQLite regressions on exact existing source 0005/0006 DDL WITHOUT needing any 0008/customer or 0035/customer-at-create tables. It reads one original T12 committed order/ledger, original Print+Laser lines/events/outbox and native runtime snapshot in one D1 `batch`, returns only namespaced operational `sourceSystem='trendos_t12_native'`, source order ID, created_at, line IDs/department/ordinal and native revision. It does NOT query or return customer names, phones or financial prices; does not touch old Sheet mirror, finance DB, any active customer database, signed line approval or invoices. It strictly returns `customerIdentity='UNVERIFIED_NOT_INCLUDED'`, `customerOwnershipAttested=false`, `realSignedLineApprovalsVerified=false`, `financeAuthorized=false`, `canRequestInvoice=false`, `productionRelease='NO_GO'`. The earlier separate strict financial-customer source reader remains unchanged.
+
+          **GitHub evidence:** [TrendOS PR #267](https://github.com/fawakhry/TrendOs/pull/267) green [GitHub Actions #40218788402](https://github.com/fawakhry/TrendOs/actions/runs/40218788402) **10/10 PASS** and squash MERGED only to isolated NO_GO integration branch at [`8c157440`](https://github.com/fawakhry/TrendOs/commit/8c157440755a44cc7e3dd0513e254a330373e5fd). Original TrendOS Master Book updated [`21a88404`](https://github.com/fawakhry/TrendOs/commit/21a88404ab21c123a3174e36c7f8c39b2f06227c). No public/private Worker deployment or authorized production record read occurred as part of ACC257; all tested operational data were synthetic in SQLite.
+
+          **Accounting contract gate (retain until independently proven):** Operational context `order_created` may prepare reference only. Actual official order-to-customer ownership from original platform (NOT phone/name/legacy mirror fallback), authentic source-issued Print/Wael and Laser/Gaber `order_line_approved` with real financial grants, secure private service binding/HMAC and EasyStore receiver replay/ACK/invoice controls remain unqualified. Existing accountant Stage finance D1, original invoice/receipt/ledger, personnel sessions, 3 private Workers and current accounts program are NOT changed by this integration entry. `ACC257_TRENDOS_OPERATIONAL_CONTEXT=OFFLINE_MERGED_10_PASS`, `ACC257_INDEPENDENT_CUSTOMER_FINANCIAL_OWNER=NO`, `ACC257_LIVE_EASYSTORE_CONNECTOR=NOT_DEPLOYED`, `FINANCE_WRITES=OFF`, `FINANCE_RELEASE=NO_GO`.
+          """.strip().encode('utf-8')+b'\n'
+          sha=subprocess.check_output(['git','hash-object','--',name],text=True).strip()
+          hdr={'Authorization':'Bearer '+os.environ['GH_BOOK_TOKEN'],'Accept':'application/vnd.github+json',
+               'X-GitHub-Api-Version':'2022-11-28','User-Agent':'acc257-book-exact-CAS-only'}
+          uri='https://api.github.com/repos/'+repo+'/contents/'+name
+          with urllib.request.urlopen(urllib.request.Request(uri+'?ref='+branch,headers=hdr),timeout=40) as x:
+           remote=json.load(x)
+          if remote.get('sha')!=sha:raise SystemExit('ACC257_REMOTE_BOOK_CHANGED_ABORT')
+          new=old.rstrip(b'\n')+b'\n\n'+entry
+          if not new.startswith(old.rstrip(b'\n')) or len(new)<=len(old):
+           raise SystemExit('ACC257_APPEND_INTEGRITY_FAILURE')
+          payload=json.dumps({'message':'docs(accounting-book): ACC257 existing TrendOS platform native T12 source read, strict finance NO_GO',
+             'content':base64.b64encode(new).decode(),'sha':sha,'branch':branch},separators=(',',':')).encode()
+          try:
+           with urllib.request.urlopen(urllib.request.Request(uri,headers={**hdr,'Content-Type':'application/json'},
+            data=payload,method='PUT'),timeout=60) as response:
+            out=json.load(response)
+          except urllib.error.HTTPError as e:
+           raise SystemExit('ACC257_BOOK_CAS_HTTP_'+str(e.code))
+          if not out.get('commit',{}).get('sha'):raise SystemExit('ACC257_BOOK_WRITE_NOT_CONFIRMED')
+          print('ACC257_ORIGINAL_ACCOUNTING_BOOK_APPEND=SUCCESS')
+          print('ACC257_BOOK_OLD_BYTES='+str(len(old)))
+          print('ACC257_BOOK_NEW_BYTES='+str(len(new)))
+          print('ACC257_EASYSTORE_FINANCE_D1_MUTATIONS=ZERO')
+          PY

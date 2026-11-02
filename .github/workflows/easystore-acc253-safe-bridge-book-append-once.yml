@@ -1,0 +1,81 @@
+name: EasyStore append ACC253 completed TrendOS bridge only to ORIGINAL Accounting Master Book
+on:
+  push:
+    branches: ['docs/acc214-finance-read-scope-no-go-20261020']
+    paths: ['.github/workflows/easystore-acc253-safe-bridge-book-append-once.yml']
+permissions:
+  contents: write
+concurrency:
+  group: easystore-original-accounting-book-append-preserve
+  cancel-in-progress: false
+jobs:
+  acc253-original-book-only:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Append tested isolated TrendOS source merge only with exact blob CAS
+        env:
+          GH_BOOK_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import os,pathlib,subprocess,json,base64,urllib.request,urllib.error
+          repo=os.environ['GITHUB_REPOSITORY']
+          branch=os.environ['GITHUB_REF_NAME']
+          if repo!='fawakhry/EasyStore' or branch!='docs/acc214-finance-read-scope-no-go-20261020':
+              raise SystemExit('ACC253_ACCOUNTING_BOOK_WRONG_REPOSITORY_OR_BRANCH')
+          path='EASYSTORE_ACCOUNTING_MASTER_BOOK.md'
+          current=pathlib.Path(path).read_bytes()
+          anchors=[b'# EasyStore Accounting Master Book\n',b'ACC228-DB-31',
+                   b'ACC249-OPS-STAGE-0009',b'ACC250-TRENDOS-ACCOUNTING-FIRST-USE']
+          if (len(current)<1000000 or current.count(b'\n')<7000 or
+              not current.startswith(anchors[0]) or any(a not in current for a in anchors)):
+              raise SystemExit('ACC253_ACCOUNTING_BOOK_NOT_COMPLETE_STOP_NO_WRITE')
+          note="""### ACC253-TRENDOS-BRIDGE-SAFE-MERGE-20261025 — verified source-only original T12 bridge merged in NO_GO integration (NOT FINANCE LIVE)
+
+          **Accounting boundary:** The TrendOS↔EasyStore integration agent fulfilled the owner's instruction to MERGE independently completed passing bridge components, without touching EasyStore financial code, native Stage Worker, financial D1/ledger, real customer data, cash, credentials, or production. This bookkeeping receipt does not mean finance personnel or operator approved a live invoice.
+
+          **Actual evidence:** After ACC252 inert private HMAC order-context contract safely merged, TrendOS [PR #257](https://github.com/fawakhry/TrendOs/pull/257) introduced the original five-SELECT T12 source inspector and a private Cloudflare POST/HMAC source Worker configured OFF with workers_dev=false, plus four exact original 0005/0006/0008/0035 source SQL files COPIED ONLY as plain-text disposable SQLite test fixtures (not active migrations), and isolated tests. [Dedicated GitHub Actions #40209198173](https://github.com/fawakhry/TrendOs/actions/runs/40209198173) was 7/7 PASS on pinned head 88291f9cd666d9829d6465e46af52e606326adf6. [PR #257](https://github.com/fawakhry/TrendOs/pull/257) was squash-MERGED into isolated non-production `integration/trendos-easystore-verified-offline-no-go-20261025` at [e0dbcfaaa6b5641fac6ac1bf5726201a3fcf7603](https://github.com/fawakhry/TrendOs/commit/e0dbcfaaa6b5641fac6ac1bf5726201a3fcf7603), not `main`. Previous ACC252 isolated merge [12235c60](https://github.com/fawakhry/TrendOs/commit/12235c602b82ca1848fd2cb1b8e3e39b7b632db8) preserved. Operational record in [original TrendOS book be79827f](https://github.com/fawakhry/TrendOs/commit/be79827f226d3d383958420ee868cf8fedb7c4e9).
+
+          **Actual finance source blocker:** [Cloudflare provider read-only inventory #40205241615](https://github.com/fawakhry/TrendOs/actions/runs/40205241615) still showed operational `trendos-staging` missing original 0005 CREATE 6/6, 0006 runtime 2/2, and 0035 customer-at-create 2/2 tables. The copied tests did not deploy schemas or source Worker; no new order HMAC provisioned; no independently authenticated actual order/customer ownership, genuine source-issued signed Wael/Gaber `order_line_approved`, consumer replay/ACK, invoice or receipt. `ACC253_BRIDGE=MERGED_ISOLATED_OFFLINE_ONLY`, `EASYSTORE_FINANCE_DB_UNTOUCHED=YES`, `REAL_ORIGINAL_SOURCE_STAGE=BLOCKED`, `FINANCE_WRITES=OFF`, `FINANCE_RELEASE=NO_GO`.
+          """.strip().encode('utf-8')+b'\n'
+          marker=b'### ACC253-TRENDOS-BRIDGE-SAFE-MERGE-20261025'
+          if marker in current:
+              print('ACC253_ALREADY_IN_ORIGINAL_ACCOUNTING_BOOK_NO_WRITE')
+              raise SystemExit(0)
+          # Verify local exact Git blob and refuse concurrent remote book changes.
+          localsha=subprocess.check_output(['git','hash-object','--',path],text=True).strip()
+          token=os.environ['GH_BOOK_TOKEN']
+          headers={'Authorization':'Bearer '+token,'Accept':'application/vnd.github+json',
+                   'X-GitHub-Api-Version':'2022-11-28','User-Agent':'acc253-book-CAS-only'}
+          api='https://api.github.com/repos/'+repo+'/contents/'+path
+          with urllib.request.urlopen(urllib.request.Request(
+              api+'?ref='+branch,headers=headers),timeout=35) as reply:
+              info=json.load(reply)
+          if info['sha']!=localsha:
+              raise SystemExit('ACC253_REMOTE_BOOK_CHANGED_STOP_NO_OVERWRITE')
+          new=current.rstrip(b'\n')+b'\n\n'+note
+          if not new.startswith(current.rstrip(b'\n')) or new.count(b'\n')<current.count(b'\n'):
+              raise SystemExit('ACC253_BOOK_APPEND_ONLY_INVARIANT_FAILED')
+          packet=json.dumps({'message':'docs(accounting-book): append ACC253 7/7 source-only safe merged bridge, finance NO_GO',
+                             'content':base64.b64encode(new).decode('ascii'),
+                             'sha':info['sha'],'branch':branch},separators=(',',':')).encode()
+          req=urllib.request.Request(api,method='PUT',headers={
+              **headers,'Content-Type':'application/json'},data=packet)
+          try:
+              with urllib.request.urlopen(req,timeout=60) as reply:
+                  updated=json.load(reply)
+          except urllib.error.HTTPError as exc:
+              raise SystemExit('ACC253_BOOK_CAS_WRITE_STOP_HTTP_'+str(exc.code))
+          if not updated.get('commit',{}).get('sha'):
+              raise SystemExit('ACC253_BOOK_COMMIT_NOT_CONFIRMED')
+          print('ACC253_ORIGINAL_ACCOUNTING_BOOK_APPEND=COMMITTED')
+          print('ACC253_ORIGINAL_ACCOUNTING_BOOK_OLD_BYTES='+str(len(current)))
+          print('ACC253_ORIGINAL_ACCOUNTING_BOOK_NEW_BYTES='+str(len(new)))
+          print('ACC253_NO_FINANCE_D1_OR_STAGE_WRITES=YES')
+          PY
