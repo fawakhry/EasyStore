@@ -8135,3 +8135,26 @@ with TrendOS automatic order linkage and AI automation deferred per ACC274.
 Missing nonzero-opening final ledger and Stage CASH entrypoint qualification
 are still real work, not removed by merging drafts. No reliable completion time
 can be asserted without credentials/provider access and signed source facts.
+
+
+### ACC295 exact repair CI follow-up — live contract drift, not waived (2026-11-02 Cairo)
+
+Repair head dbbb84a1dd65435b1a5c84cb8dda80eb08d77f6c has successful
+canonical-book-not-truncated (both runs), original-master-book-safe-restoration
+and offline-owner-policy-guard. The prior historical-prefix defect is repaired.
+However joined-accounting-offline job 125116452654 now fails in the actual
+ACC220 anonymous public health GET: SCHEMA_READY, LIVE_CONTROL_READONLY and
+LIVE_FINANCE_AUTHORITY_OFF passed, but `writeAuthorityMode` is absent
+(undefined versus required OFF). Remaining assertions after that point did
+not execute. The public config GET passed. This is current hosted-run evidence,
+not an inference that money writes are enabled; missing diagnostic evidence is
+UNKNOWN and must not be defaulted to OFF. PR #75 remains open, not merged.
+No test assertions weakened, no failure bypassed. Current workspace public GET
+independently returned HTTPError, so it does not supersede the hosted response.
+Next release review must resolve actual deployed health-contract drift and
+Cloudflare build failure alongside original G1–G5. Source integration into a
+nonproduction candidate is not final money release.
+
+Full prose reading of the 1.3MB canonical book is still incomplete; whole-file
+retrieval, structural entry inventory and targeted policy/result review are
+not claimed to satisfy owner's request for full end-to-end reading.
