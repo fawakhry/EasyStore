@@ -1518,6 +1518,12 @@
       }catch(e){flash('تعذر استرجاع المسودة: '+(e.message||e),true);}
     },
     async saveSupplier(){
+      // ACC289: direct action calls cannot bypass the separate supplier-only
+      // release switch. Finance general writes and historic draft opening OFF.
+      if(window.EASYSTORE_SUPPLIER_MASTER_INTAKE_V1!==true ||
+         window.EASYSTORE_ACCOUNTING_D1_READONLY!==true ||
+         String(window.EASYSTORE_ACCOUNTING_D1_WRITE_MODE||'OFF').trim().toUpperCase()!=='OFF')
+        return flash('حفظ المورد مقفول حتى اعتماد صلاحية إضافة الموردين فقط.',true);
       if(!canManageAccounting()) return deny();
       const rawOpening=String(val('supOpening')||'').trim();
       if(rawOpening && (!Number.isFinite(Number(rawOpening)) || Number(rawOpening)!==0))
@@ -1531,14 +1537,27 @@
       }
       try{
         const reply=await api('saveEasyStoreSupplier',{...s,requestId:state.supplierRequestId});
-        if(!reply||reply.success===false) throw new Error((reply&&reply.message)||'تعذر حفظ المورد');
-        // A successful write response or local cache is not sufficient evidence.
-        // Read the same canonical finance D1 through the verified server session.
+        if(!reply||reply.success!==true ||
+           reply.version!=='A2_D1_ACCOUNTING_V1' ||
+           !/^SUP-[A-Z0-9-]+$/.test(String(reply.partyId||'')) ||
+           String(reply.supplierId||'')!==String(reply.partyId||'') ||
+           nkey(reply.name||reply.supplierName)!==nkey(s.name) ||
+           Number(reply.openingBalance)!==0 || reply.active!==true)
+          throw new Error('رد إنشاء المورد غير مكتمل أو لا يطابق عملية الحفظ؛ احتفظ بمعرف الطلب.');
+        // A response or name-only list match is not proof of persistence.
+        // Enforce exact ID, canonical version, name, active state and ZERO.
         const verified=await api('getEasyStoreSuppliers',{limit:1000});
-        if(!verified||verified.success!==true||!Array.isArray(verified.suppliers))
+        if(!verified||verified.success!==true ||
+           verified.version!=='A1_D1_READ_MODEL_V1' ||
+           !Array.isArray(verified.suppliers))
           throw new Error('لم يتم تأكيد قراءة دليل الموردين من D1؛ لا تعيد الحفظ بمعرف جديد.');
-        const match=verified.suppliers.find(v=>nkey(v.name||v.supplierName)===nkey(s.name)&&!!(v.partyId||v.id));
-        if(!match) throw new Error('لم يظهر المورد في قاعدة الحسابات بعد الحفظ؛ احتفظ بمعرف الطلب ولا تكرر إدخاله.');
+        const match=verified.suppliers.find(v=>
+          String(v.partyId||'')===String(reply.partyId) &&
+          nkey(v.name||v.supplierName)===nkey(s.name) &&
+          v.active===true &&
+          Number(v.currentBalance??v.balance)===0
+        );
+        if(!match) throw new Error('هوية المورد أو رصيده لم يتطابقا مع تأكيد D1؛ احتفظ بمعرف الطلب ولا تكرر إدخاله.');
         state.data.suppliers=verified.suppliers;
         state.supplierDirectory={status:'verified',rows:verified.suppliers};
         state.supplierRequestId='';state.supplierRequestFingerprint='';
