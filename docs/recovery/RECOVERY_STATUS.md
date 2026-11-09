@@ -1,9 +1,23 @@
-# Recovery checkpoint
+# Recovery checkpoint — compiler reached
 
-Decompilation completed using ILSpy 9.1.0.7988. The recovered project targets .NET Framework 3.5 Windows Forms. This is not a verified rebuild.
+Decompilation completed using ILSpy 9.1.0.7988. The recovered project targets .NET Framework 3.5 Windows Forms. It is not a verified rebuild.
 
-The deliverable is EasyStore_Recovered_Code_and_DB.zip (~35 MB), containing decompiled source/resources, recovered DLLs/configuration/reports, database files, dependency inventory and first build log. It excludes installer executables, PDBs and nested package archives. The larger scratch-only EasyStore_Recovery_Checkpoint.zip is not the delivered artifact.
+## Latest verified progress
+Downloaded Microsoft's Microsoft.NETFramework.ReferenceAssemblies.net35 1.0.3 package. MSBuild successfully passed framework reference resolution and NuGet restore, then invoked the C# compiler. The previous MSB3644 blocker is resolved in the current environment.
 
-Build attempt stopped at MSB3644 (missing .NET Framework 3.5 reference assemblies). Four CrystalDecisions references at 10.5.3700.0 are absent from the extracted installer files. Obfuscation and decompiler warnings remain to be resolved. No Trend integration or database migration was performed.
+The compiler emitted 63,234 error diagnostics. These are cascading diagnostics, not necessarily distinct bugs:
 
-Source and database are delivered privately, not published in this public repository. Next: framework references, reporting dependencies, compile diagnostics and Windows execution test with an isolated database copy.
+| Code | Count |
+|---|---:|
+| CS0102 duplicate definitions | 24633 |
+| CS0579 duplicate attributes | 14772 |
+| CS0246 missing types/namespaces | 11241 |
+| CS0104 ambiguous references | 9506 |
+| CS0111 duplicate members | 3034 |
+| Other compiler errors | 48 |
+
+Obfuscated identifiers collide in the decompiled C# representation. Repairing source with naive global replacements would risk changing bindings and behavior. Recovery requires metadata-aware normalization and re-decompilation with correct dependencies, or the original source. CrystalDecisions 10.5.3700.0 reporting dependencies are also absent from the installer files inspected.
+
+No runnable rebuilt EXE exists. No licensing/activation logic was modified. No Trend data was imported and no database was attached or modified.
+
+The previously delivered EasyStore_Recovered_Code_and_DB.zip remains the initial checkpoint; it does not contain this later build log or the downloaded framework reference package. The original executable remains available in the user-provided installer. Public repository contains documentation only.
