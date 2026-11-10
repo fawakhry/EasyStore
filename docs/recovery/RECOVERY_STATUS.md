@@ -1,27 +1,15 @@
-# Windows startup attempt failed — diagnosis pending (2026-11-10)
+# Resource startup failure identified; targeted fix passed (2026-11-10)
 
-The user attempted to start the rebuilt candidate on Windows and received the generic "Easy Store V4.2 has stopped working" dialog. The exception and faulting module are not yet known. Compilation success and static data/resource checks remain valid; startup success is not established. A read-only event-log collector was delivered to obtain .NET Runtime/Application Error/WER details and .NET Framework installation state. No new rebuild or speculative fix was made from the screenshot alone.
+The user startup log reached EnableVisualStyles and then failed while constructing the first form: string-reader type initialization threw NullReferenceException because GetManifestResourceStream("Easy Store V4.2$") returned null.
 
----
+Original metadata contains a <Module>..cctor calling the resource resolver bootstrap; recovered C# had no module initializer. The embedded Easy Store V4.2& bytes were intact. Restored the original bootstrap call in diagnostic Main before the original entry point. The unpacker now reads DeflateStream until EOF instead of assuming full reads. No DES/format/license branch was removed.
 
-# Recovery checkpoint — first successful C# build (2026-11-10)
+Cold targeted smoke test on .NET 8 host, invoking the actual new bootstrap helper from EXE: resource missing before initialization, available after; packed resource assembly loads; a known UI string decodes to 144 characters. This is not a Windows/.NET 3.5 UI/runtime test.
 
-**Compilation succeeded with zero compiler errors. Windows runtime execution is not tested.**
+ComponentResourceManager source adaptation restores original simple type resource names after identifier normalization. All 312 constructor sites / 306 types map to actual packed resources. Full UI resource deserialization is not tested.
 
-| Milestone | Error diagnostics |
-|---|---:|
-| Initial recovery | 63,234 |
-| Identifier/source normalization | 15,594 |
-| Supplied matching Crystal 10.5.3700.0 references | 699 |
-| Remaining COM named-indexer repairs | 18 |
-| Final C# build | 0 |
+Compilation: zero errors. Post-build: 19 RVA fields byte-verified; original embedded resource matches. Database and Trend integration untouched. Windows test pending.
 
-A new EXE was built from recovered C# source. It is not the installer EXE. Entry-point wrapper invokes the original normalized entry method and retains STAThread. Repaired C# representations include metadata type qualification, QRCoder enum names, COM get_Range calls, null byte-ref/pointer expressions, a decimal ref declaration and an implicit object base constructor.
+Artifact: EasyStore_Resource_Startup_Fix_20261110.tar.gz (24,351,110 bytes). SHA-256: 00592f8e1bfa650f1e375af22b7a4260a577a3e2b717d567d70bdac265d63459. Contains 321 verified files, including 313 changed C# source files, diagnostic EXE and smoke/coverage evidence. Apply to the existing isolated runtime test folder, retain dependencies, run Run_EasyStore_Diagnostic.cmd and inspect the next startup log if necessary.
 
-Post-build RestoreRva restored and byte-verified 19 static-data fields. One embedded managed resource matches the original byte-for-byte. EXE SHA-256: `35357C62EE4FDF1E70B172F39FA2D7E9B988BBFF46BEC5CAEB87E7ABC1406D78`. Assembly version: 4.2.0.0. No activation/license branch was intentionally removed or disabled.
-
-Artifact: `EasyStore_Rebuilt_CSharp_Test_20261110.tar.gz`, 60,414,937 bytes. Archive SHA-256: `86294cacf5a53b5d69708f29f220b2d0ec8736b14ec45e4264edf68f4e8d194c`. 2,920 files fully read during archive validation. Includes runtime candidate, source, original database copies, dependencies, reports, mappings, repair records, logs and recovery tool sources.
-
-Not verified: Windows startup, SQL attachment, UI behavior, printing, reflection/resource-name binding, tamper/signing behavior, licensing, accounting correctness, or full semantic equivalence. Obfuscated control flow remains. Database copies are in database-template and were never attached/modified. Trend integration and data import have not started. Next step is a Windows smoke test with an isolated test database; this is not a production replacement.
-
-Public branch contains documentation and our recovery utilities only. Recovered application source, binary and database remain in the privately delivered artifact. Branch: recovery/easystore-4.2.2; main unchanged.
+Original startup crash evidence is now understood; successful full Windows startup is not yet established. Public branch remains documentation/our generic utilities only; original application source remains privately delivered.
