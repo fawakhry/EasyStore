@@ -1,23 +1,20 @@
-# Recovery checkpoint — compiler reached
+# Recovery checkpoint — 2026-11-10
 
-Decompilation completed using ILSpy 9.1.0.7988. The recovered project targets .NET Framework 3.5 Windows Forms. It is not a verified rebuild.
+Metadata identifier normalization and source repair completed experimentally. No runnable rebuild exists.
 
-## Latest verified progress
-Downloaded Microsoft's Microsoft.NETFramework.ReferenceAssemblies.net35 1.0.3 package. MSBuild successfully passed framework reference resolution and NuGet restore, then invoked the C# compiler. The previous MSB3644 blocker is resolved in the current environment.
-
-The compiler emitted 63,234 error diagnostics. These are cascading diagnostics, not necessarily distinct bugs:
-
-| Code | Count |
+| Stage | Compiler error diagnostics |
 |---|---:|
-| CS0102 duplicate definitions | 24633 |
-| CS0579 duplicate attributes | 14772 |
-| CS0246 missing types/namespaces | 11241 |
-| CS0104 ambiguous references | 9506 |
-| CS0111 duplicate members | 3034 |
-| Other compiler errors | 48 |
+| Previous recovered source | 63,234 |
+| First identifier normalization | 30,800 |
+| Whitespace/interface/debugger-attribute fixes | 15,994 |
+| Metadata-backed source qualification and repairs | 15,594 |
 
-Obfuscated identifiers collide in the decompiled C# representation. Repairing source with naive global replacements would risk changing bindings and behavior. Recovery requires metadata-aware normalization and re-decompilation with correct dependencies, or the original source. CrystalDecisions 10.5.3700.0 reporting dependencies are also absent from the installer files inspected.
+Latest diagnostics are exclusively CS0246 for missing Crystal Reports names. Counts are cascading diagnostics, not independent defects. Other errors may appear after references are supplied.
 
-No runnable rebuilt EXE exists. No licensing/activation logic was modified. No Trend data was imported and no database was attached or modified.
+79,780 definitions and 38,049 parameters were renamed; 14,772 repeated debugger attributes were removed. 2,721 C# files were recovered. Opcode/literal/branch fingerprints match for 62,798 method bodies before/after rewriting; member-reference operand equivalence, reflection, resource binding, signing, virtual dispatch and runtime behavior are not proven.
 
-The previously delivered EasyStore_Recovered_Code_and_DB.zip remains the initial checkpoint; it does not contain this later build log or the downloaded framework reference package. The original executable remains available in the user-provided installer. Public repository contains documentation only.
+Required dependencies: CrystalDecisions.CrystalReports.Engine, CrystalDecisions.ReportSource, CrystalDecisions.Windows.Forms and CrystalDecisions.Shared, referenced at 10.5.3700.0. Need the original compatible assemblies, not fabricated stubs. Static RVA initializer bytes are exported for later restoration; decompiled C# alone does not preserve those initializers. No activation/license check was intentionally removed or altered. Trend integration has not started.
+
+New checkpoint: EasyStore_Normalized_Source_20261110.tar.gz, containing source, dependencies available in installer, database copies, name map, RVA data, repair records and logs. The earlier saved ZIP failed archive opening on restore; this run regenerated from the original RAR. Verify the new archive checksum before relying on transfer integrity.
+
+Public repository contains our recovery utility and documentation only. Recovered third-party source/database remain in the privately delivered archive. Branch: recovery/easystore-4.2.2; main unchanged.
