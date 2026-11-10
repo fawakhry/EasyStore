@@ -59,6 +59,9 @@ static class Program {
   var report=new{experimental=true,duplicateDebugAttributes,renamedDefinitions=renames.Count,renamedParameters=parameters,typeReferences=typeRefs.Count,internalMemberReferences=memberRefs.Count,methodBodiesBefore=methodFingerprint.Count,methodBodiesAfter=after.Count,changedBodyFingerprints=changedBodies,resourcesBefore=module.Resources.Count,resourcesAfter=check.Resources.Count,reflectionAndResourceNameBindingVerified=false,activationModified=false};
   File.WriteAllText(args[1]+".map.json",JsonSerializer.Serialize(map,new JsonSerializerOptions{WriteIndented=true}));
   File.WriteAllText(args[1]+".report.json",JsonSerializer.Serialize(report,new JsonSerializerOptions{WriteIndented=true}));
+  File.WriteAllText(args[1]+".fields.json",JsonSerializer.Serialize(types.SelectMany(t=>t.Fields).Select(f=>new{name=f.Name,declaringType=f.DeclaringType.FullName,type=f.FieldType.FullName}),new JsonSerializerOptions{WriteIndented=true}));
+  File.WriteAllText(args[1]+".datatable-signatures.json",JsonSerializer.Serialize(types.SelectMany(t=>t.Methods).Where(m=>m.ReturnType.Name=="DataTable" || m.Parameters.Any(p=>p.ParameterType.Name=="DataTable")).Select(m=>new{type=m.DeclaringType.FullName,method=m.Name,returnType=m.ReturnType.FullName,parameters=m.Parameters.Select(p=>p.ParameterType.FullName)})));
+  File.WriteAllText(args[1]+".rva-data.json",JsonSerializer.Serialize(types.SelectMany(t=>t.Fields).Where(f=>f.InitialValue.Length>0).Select(f=>new{name=f.Name,declaringType=f.DeclaringType.FullName,type=f.FieldType.FullName,bytesBase64=Convert.ToBase64String(f.InitialValue)}),new JsonSerializerOptions{WriteIndented=true}));
   Console.WriteLine(JsonSerializer.Serialize(report));
   if(changedBodies!=0)Environment.Exit(2);
  }
