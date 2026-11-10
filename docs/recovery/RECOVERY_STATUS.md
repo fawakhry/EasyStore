@@ -1,20 +1,21 @@
-# Recovery checkpoint — 2026-11-10
+# Recovery checkpoint — first successful C# build (2026-11-10)
 
-Metadata identifier normalization and source repair completed experimentally. No runnable rebuild exists.
+**Compilation succeeded with zero compiler errors. Windows runtime execution is not tested.**
 
-| Stage | Compiler error diagnostics |
+| Milestone | Error diagnostics |
 |---|---:|
-| Previous recovered source | 63,234 |
-| First identifier normalization | 30,800 |
-| Whitespace/interface/debugger-attribute fixes | 15,994 |
-| Metadata-backed source qualification and repairs | 15,594 |
+| Initial recovery | 63,234 |
+| Identifier/source normalization | 15,594 |
+| Supplied matching Crystal 10.5.3700.0 references | 699 |
+| Remaining COM named-indexer repairs | 18 |
+| Final C# build | 0 |
 
-Latest diagnostics are exclusively CS0246 for missing Crystal Reports names. Counts are cascading diagnostics, not independent defects. Other errors may appear after references are supplied.
+A new EXE was built from recovered C# source. It is not the installer EXE. Entry-point wrapper invokes the original normalized entry method and retains STAThread. Repaired C# representations include metadata type qualification, QRCoder enum names, COM get_Range calls, null byte-ref/pointer expressions, a decimal ref declaration and an implicit object base constructor.
 
-79,780 definitions and 38,049 parameters were renamed; 14,772 repeated debugger attributes were removed. 2,721 C# files were recovered. Opcode/literal/branch fingerprints match for 62,798 method bodies before/after rewriting; member-reference operand equivalence, reflection, resource binding, signing, virtual dispatch and runtime behavior are not proven.
+Post-build RestoreRva restored and byte-verified 19 static-data fields. One embedded managed resource matches the original byte-for-byte. EXE SHA-256: `35357C62EE4FDF1E70B172F39FA2D7E9B988BBFF46BEC5CAEB87E7ABC1406D78`. Assembly version: 4.2.0.0. No activation/license branch was intentionally removed or disabled.
 
-Required dependencies: CrystalDecisions.CrystalReports.Engine, CrystalDecisions.ReportSource, CrystalDecisions.Windows.Forms and CrystalDecisions.Shared, referenced at 10.5.3700.0. Need the original compatible assemblies, not fabricated stubs. Static RVA initializer bytes are exported for later restoration; decompiled C# alone does not preserve those initializers. No activation/license check was intentionally removed or altered. Trend integration has not started.
+Artifact: `EasyStore_Rebuilt_CSharp_Test_20261110.tar.gz`, 60,414,937 bytes. Archive SHA-256: `86294cacf5a53b5d69708f29f220b2d0ec8736b14ec45e4264edf68f4e8d194c`. 2,920 files fully read during archive validation. Includes runtime candidate, source, original database copies, dependencies, reports, mappings, repair records, logs and recovery tool sources.
 
-New checkpoint: EasyStore_Normalized_Source_20261110.tar.gz, containing source, dependencies available in installer, database copies, name map, RVA data, repair records and logs. The earlier saved ZIP failed archive opening on restore; this run regenerated from the original RAR. Verify the new archive checksum before relying on transfer integrity.
+Not verified: Windows startup, SQL attachment, UI behavior, printing, reflection/resource-name binding, tamper/signing behavior, licensing, accounting correctness, or full semantic equivalence. Obfuscated control flow remains. Database copies are in database-template and were never attached/modified. Trend integration and data import have not started. Next step is a Windows smoke test with an isolated test database; this is not a production replacement.
 
-Public repository contains our recovery utility and documentation only. Recovered third-party source/database remain in the privately delivered archive. Branch: recovery/easystore-4.2.2; main unchanged.
+Public branch contains documentation and our recovery utilities only. Recovered application source, binary and database remain in the privately delivered artifact. Branch: recovery/easystore-4.2.2; main unchanged.
