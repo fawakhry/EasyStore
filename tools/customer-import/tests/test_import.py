@@ -44,5 +44,10 @@ class CustomerImportTest(unittest.TestCase):
   writes=re.findall(r'INSERT INTO\s+([^\s(]+)',s,re.I)
   self.assertEqual(set(writes),{'#Incoming','dbo.Clients','dbo.TrendOSCustomerLink'})
   self.assertFalse(re.search(r'\b(?:UPDATE|DELETE|MERGE|ALTER)\b',s,re.I))
+ def test_backup_precedes_customer_transaction_and_follows_preview(self):
+  s=generate_sql(read_customers('id,name\nA,Test\n'))
+  self.assertLess(s.index('IF @Apply=0'),s.index('BACKUP DATABASE'))
+  self.assertLess(s.index('BACKUP DATABASE'),s.index('RESTORE VERIFYONLY'))
+  self.assertLess(s.index('RESTORE VERIFYONLY'),s.index('BEGIN TRANSACTION'))
 
 if __name__=='__main__':unittest.main()
