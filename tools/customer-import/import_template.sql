@@ -12,7 +12,7 @@ BEGIN RAISERROR('Wrong database. Import stopped.',16,1); RETURN; END;
 IF CONVERT(nvarchar(128),SERVERPROPERTY('ServerName')) <> N'SERVER-PC\SQLEXPRESS'
 BEGIN RAISERROR('Wrong server. Import stopped.',16,1); RETURN; END;
 IF OBJECT_ID(N'dbo.Clients',N'U') IS NULL
- OR COLUMNPROPERTY(OBJECT_ID(N'dbo.Clients'),N'ID','IsIdentity') <> 1
+ OR ISNULL(COLUMNPROPERTY(OBJECT_ID(N'dbo.Clients'),N'ID','IsIdentity'),0) <> 1
 BEGIN RAISERROR('Expected Clients schema unavailable.',16,1); RETURN; END;
 IF EXISTS (SELECT 1 FROM sys.triggers WHERE parent_id=OBJECT_ID(N'dbo.Clients') AND is_disabled=0)
 BEGIN RAISERROR('Clients has enabled triggers. Review side effects before importing.',16,1); RETURN; END;
@@ -31,6 +31,12 @@ BEGIN
  RETURN;
 END;
 BEGIN TRY
+ -- Backup is mandatory before apply; failure stops before customer writes.
+ DECLARE @BackupFile nvarchar(4000);
+ SET @BackupFile=N'D:\Db\EasyStore_before_customers_'+REPLACE(CONVERT(nvarchar(36),NEWID()),N'-',N'')+N'.bak';
+ BACKUP DATABASE [EasyStoreDBEmpty] TO DISK=@BackupFile WITH COPY_ONLY,CHECKSUM;
+ RESTORE VERIFYONLY FROM DISK=@BackupFile WITH CHECKSUM;
+ SELECT @BackupFile AS VerifiedBackupFile;
  BEGIN TRANSACTION;
  DECLARE @LockResult int;
  EXEC @LockResult=sys.sp_getapplock @Resource=N'TrendOS-Customer-Import-V1',@LockMode='Exclusive',@LockOwner='Transaction',@LockTimeout=10000;
