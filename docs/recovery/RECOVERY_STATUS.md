@@ -13,3 +13,7 @@ Compilation: zero errors. Post-build: 19 RVA fields byte-verified; original embe
 Artifact: EasyStore_Resource_Startup_Fix_20261110.tar.gz (24,351,110 bytes). SHA-256: 00592f8e1bfa650f1e375af22b7a4260a577a3e2b717d567d70bdac265d63459. Contains 321 verified files, including 313 changed C# source files, diagnostic EXE and smoke/coverage evidence. Apply to the existing isolated runtime test folder, retain dependencies, run Run_EasyStore_Diagnostic.cmd and inspect the next startup log if necessary.
 
 Original startup crash evidence is now understood; successful full Windows startup is not yet established. Public branch remains documentation/our generic utilities only; original application source remains privately delivered.
+
+
+## Windows startup confirmed to registration screen
+The user supplied a screenshot after the resource fix showing the Arabic registration UI, with no startup-crash dialog. This verifies that startup progressed past the previous string-resource initialization failure to registration on the user's Windows machine. Original license validation remains intact. No activation key was supplied/tested in the evidence. SQL attachment, authenticated screens, accounting functions and Trend import remain unverified. Device identifier is not copied into this public documentation.
