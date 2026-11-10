@@ -1,3 +1,9 @@
+# Windows startup attempt failed — diagnosis pending (2026-11-10)
+
+The user attempted to start the rebuilt candidate on Windows and received the generic "Easy Store V4.2 has stopped working" dialog. The exception and faulting module are not yet known. Compilation success and static data/resource checks remain valid; startup success is not established. A read-only event-log collector was delivered to obtain .NET Runtime/Application Error/WER details and .NET Framework installation state. No new rebuild or speculative fix was made from the screenshot alone.
+
+---
+
 # Recovery checkpoint — first successful C# build (2026-11-10)
 
 **Compilation succeeded with zero compiler errors. Windows runtime execution is not tested.**
